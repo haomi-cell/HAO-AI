@@ -1,111 +1,73 @@
+// api/index.js
 const axios = require('axios');
 
+// Fungsi utama dari request kamu
 async function turboseekLogic(question) {
-    const inst = axios.create({
-        baseURL: 'https://www.turboseek.io/api',
-        timeout: 25000,
-        headers: {
-            origin: 'https://www.turboseek.io',
-            referer: 'https://www.turboseek.io/',
-            'user-agent': 'Mozilla/5.0'
-        }
-    });
-
-    console.log('STEP 1: Requesting sources');
-
-    const { data: sourcesData } = await inst.post('/getSources', {
-        question
-    });
-
-    console.log(
-        'SOURCES RESPONSE:',
-        JSON.stringify(sourcesData).slice(0, 1500)
-    );
-
-    const sources = Array.isArray(sourcesData)
-        ? sourcesData
-        : [];
-
-    console.log('STEP 2: Requesting similar questions');
-
-    const { data: similarData } = await inst.post(
-        '/getSimilarQuestions',
-        { question, sources }
-    );
-
-    console.log('STEP 3: Requesting answer');
-
-    const { data: answerData } = await inst.post('/getAnswer', {
-        question,
-        sources
-    });
-
-    console.log(
-        'ANSWER RESPONSE:',
-        JSON.stringify(answerData).slice(0, 3000)
-    );
-
-    let answer = '';
-
-    if (typeof answerData === 'string') {
-        answer = answerData;
-    } else if (answerData && typeof answerData === 'object') {
-        answer =
-            answerData.answer ??
-            answerData.data?.answer ??
-            answerData.text ??
-            answerData.content ??
-            answerData.result ??
-            '';
+    try {
+        if (!question) throw new Error('Question is required.');
+        
+        const inst = axios.create({
+            baseURL: 'https://www.turboseek.io/api',
+            headers: {
+                origin: 'https://www.turboseek.io',
+                referer: 'https://www.turboseek.io/',
+                'user-agent': 'Mozilla/5.0 (Linux; Android 15; SM-F958 Build/AP3A.240905.015) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.86 Mobile Safari/537.36'
+            }
+        });
+        
+        // 1. Get Sources
+        const { data: sources } = await inst.post('/getSources', {
+            question: question
+        });
+        
+        // 2. Get Similar Questions
+        const { data: similarQuestions } = await inst.post('/getSimilarQuestions', {
+            question: question,
+            sources: sources
+        });
+        
+        // 3. Get Answer
+        const { data: answer } = await inst.post('/getAnswer', {
+            question: question,
+            sources: sources
+        });
+        
+        // Cleaning answer logic as provided
+        const cleanAnswer = answer.match(/<p>(.*?)<\/p>/gs)?.map(match => {
+            return match.replace(/<\/?p>/g, '').replace(/<\/?strong>/g, '').replace(/<\/?em>/g, '').replace(/<\/?b>/g, '').replace(/<\/?i>/g, '').replace(/<\/?u>/g, '').replace(/<\/?[^>]+(>|$)/g, '').trim();
+        }).join('\n\n') || answer.replace(/<\/?[^>]+(>|$)/g, '').trim();
+        
+        return {
+            answer: cleanAnswer,
+            sources: sources.map(s => s.url), // Mengambil URL saja
+            similarQuestions
+        };
+    } catch (error) {
+        throw error;
     }
-
-    const cleanAnswer = String(answer)
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
-        .replace(/<[^>]*>/g, '')
-        .trim();
-
-    return {
-        answer: cleanAnswer,
-        sources: sources.map(item => item?.url).filter(Boolean),
-        similarQuestions: Array.isArray(similarData)
-            ? similarData
-            : []
-    };
 }
 
+// Vercel Serverless Handler
 module.exports = async (req, res) => {
-    const question = req.query?.question || req.body?.question;
+    // Handle CORS
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
 
-    if (typeof question !== 'string' || !question.trim()) {
-        return res.status(400).json({
-            error: 'Pertanyaan tidak boleh kosong.'
-        });
+    const { question } = req.query || req.body;
+
+    if (!question) {
+        return res.status(400).json({ error: 'Please provide a question' });
     }
 
     try {
-        const result = await turboseekLogic(question.trim());
-
-        if (!result.answer) {
-            console.error('EMPTY ANSWER: TurboSeek returned no readable text');
-
-            return res.status(502).json({
-                error: 'Jawaban dari TurboSeek kosong.'
-            });
-        }
-
+        const result = await turboseekLogic(question);
         return res.status(200).json(result);
     } catch (error) {
-        console.error('TURBOSEEK FAILURE:', {
-            stage: error.config?.url,
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message
-        });
-
-        return res.status(502).json({
-            error: 'Gagal mendapatkan jawaban dari TurboSeek.',
-            detail: error.response?.data || error.message
-        });
+        return res.status(500).json({ error: error.message });
     }
 };
