@@ -11,37 +11,40 @@ async function turboseekLogic(question) {
         }
     });
 
-    // 1. Ambil sumber
+    console.log('STEP 1: Requesting sources');
+
     const { data: sourcesData } = await inst.post('/getSources', {
         question
     });
+
+    console.log(
+        'SOURCES RESPONSE:',
+        JSON.stringify(sourcesData).slice(0, 1500)
+    );
 
     const sources = Array.isArray(sourcesData)
         ? sourcesData
         : [];
 
-    // 2. Ambil pertanyaan terkait
+    console.log('STEP 2: Requesting similar questions');
+
     const { data: similarData } = await inst.post(
         '/getSimilarQuestions',
-        {
-            question,
-            sources
-        }
+        { question, sources }
     );
 
-    // 3. Ambil jawaban asli
+    console.log('STEP 3: Requesting answer');
+
     const { data: answerData } = await inst.post('/getAnswer', {
         question,
         sources
     });
 
-    // Catat respons asli agar bisa diperiksa di Vercel Logs
     console.log(
-        'TURBOSEEK ANSWER:',
-        JSON.stringify(answerData)
+        'ANSWER RESPONSE:',
+        JSON.stringify(answerData).slice(0, 3000)
     );
 
-    // 4. Baca kemungkinan format respons
     let answer = '';
 
     if (typeof answerData === 'string') {
@@ -56,45 +59,23 @@ async function turboseekLogic(question) {
             '';
     }
 
-    if (typeof answer !== 'string') {
-        answer = '';
-    }
-
-    // 5. Bersihkan HTML jawaban
-    const cleanAnswer = answer
+    const cleanAnswer = String(answer)
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
         .replace(/<[^>]*>/g, '')
-        .replace(/&nbsp;/gi, ' ')
-        .replace(/&amp;/gi, '&')
-        .replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>')
-        .replace(/&quot;/gi, '"')
         .trim();
 
-    // 6. Kembalikan hasil ke website
     return {
         answer: cleanAnswer,
-        sources: sources
-            .map(item => item?.url)
-            .filter(Boolean),
+        sources: sources.map(item => item?.url).filter(Boolean),
         similarQuestions: Array.isArray(similarData)
             ? similarData
             : []
     };
 }
 
-// Handler Vercel
 module.exports = async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    const question =
-        req.query?.question ||
-        req.body?.question;
+    const question = req.query?.question || req.body?.question;
 
     if (typeof question !== 'string' || !question.trim()) {
         return res.status(400).json({
@@ -106,20 +87,21 @@ module.exports = async (req, res) => {
         const result = await turboseekLogic(question.trim());
 
         if (!result.answer) {
+            console.error('EMPTY ANSWER: TurboSeek returned no readable text');
+
             return res.status(502).json({
-                error: 'TurboSeek returned an empty answer.',
-                sources: result.sources
+                error: 'Jawaban dari TurboSeek kosong.'
             });
         }
 
         return res.status(200).json(result);
-
     } catch (error) {
-        console.error(
-            'TurboSeek API error:',
-            error.response?.status,
-            error.response?.data || error.message
-        );
+        console.error('TURBOSEEK FAILURE:', {
+            stage: error.config?.url,
+            status: error.response?.status,
+            data: error.response?.data,
+            message: error.message
+        });
 
         return res.status(502).json({
             error: 'Gagal mendapatkan jawaban dari TurboSeek.',
