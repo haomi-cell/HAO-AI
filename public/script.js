@@ -22,11 +22,9 @@
 
     const STORAGE_SESSIONS = 'smartAIChatSessions';
     const STORAGE_ACTIVE = 'smartAIActiveSession';
-    const OLD_STORAGE = 'smartAIConversations';
-    const OLD_HISTORY = 'turboHistory';
 
     // =====================================
-    // TAMPILAN DASAR
+    // TEMPLATE DAN AREA CHAT
     // =====================================
 
     resultTemplate.classList.add('hidden');
@@ -46,7 +44,7 @@
         resultTemplate
     );
 
-    // Tombol obrolan baru pada sidebar
+    // Tombol obrolan baru di sidebar
     const newChatButton = document.createElement('button');
 
     newChatButton.type = 'button';
@@ -73,22 +71,19 @@
     });
 
     const sidebarContent = $('.sidebar-content');
+    const historyContainer = historyList?.closest(
+        '.history-list-container'
+    );
 
-    if (sidebarContent && historyList) {
-        const historyContainer = historyList.closest(
-            '.history-list-container'
+    if (sidebarContent && historyContainer) {
+        sidebarContent.insertBefore(
+            newChatButton,
+            historyContainer
         );
-
-        if (historyContainer) {
-            sidebarContent.insertBefore(
-                newChatButton,
-                historyContainer
-            );
-        }
     }
 
     // =====================================
-    // PENYIMPANAN
+    // STORAGE
     // =====================================
 
     function readJSON(key, fallback) {
@@ -124,40 +119,43 @@
         sessions = [];
     }
 
-    // Migrasi data percakapan dari versi sebelumnya.
-    // Setiap percakapan lama dipertahankan sebagai sesi tersendiri.
+    // Migrasi data chat dari versi sebelumnya
     if (sessions.length === 0) {
-        const oldChats = readJSON(OLD_STORAGE, []);
+        const oldChats = readJSON(
+            'smartAIConversations',
+            []
+        );
 
-        if (Array.isArray(oldChats) && oldChats.length > 0) {
-            oldChats.forEach(oldChat => {
-                if (!oldChat.question) return;
+        if (Array.isArray(oldChats)) {
+            oldChats.forEach(chat => {
+                if (!chat.question) return;
 
                 sessions.push({
-                    id: oldChat.id || createId(),
-                    title: oldChat.question.slice(0, 45),
+                    id: chat.id || createId(),
+                    title: chat.question.slice(0, 45),
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
                     messages: [
                         {
                             id: createId(),
                             role: 'user',
-                            content: oldChat.question
+                            content: chat.question
                         },
                         {
                             id: createId(),
                             role: 'assistant',
-                            content: oldChat.answer || '',
-                            sources: oldChat.sources || [],
+                            content: chat.answer || '',
+                            sources: chat.sources || [],
                             similarQuestions:
-                                oldChat.similarQuestions || []
+                                chat.similarQuestions || []
                         }
                     ]
                 });
             });
-        } else {
-            // Migrasi riwayat pertanyaan lama jika tersedia.
-            const oldHistory = readJSON(OLD_HISTORY, []);
+        }
+
+        if (sessions.length === 0) {
+            const oldHistory = readJSON('turboHistory', []);
 
             if (Array.isArray(oldHistory)) {
                 oldHistory.forEach(question => {
@@ -176,17 +174,17 @@
                 });
             }
         }
-
-        saveSessions();
     }
 
-    let activeSessionId = localStorage.getItem(STORAGE_ACTIVE);
+    let activeSessionId = localStorage.getItem(
+        STORAGE_ACTIVE
+    );
 
     let activeSession = sessions.find(
         session => session.id === activeSessionId
     );
 
-    if (!activeSession && sessions.length > 0) {
+    if (!activeSession && sessions.length) {
         activeSession = [...sessions].sort(
             (a, b) => b.updatedAt - a.updatedAt
         )[0];
@@ -208,22 +206,11 @@
 
             localStorage.setItem(
                 STORAGE_ACTIVE,
-                activeSessionId || ''
+                activeSessionId
             );
         } catch (error) {
-            console.error('Gagal menyimpan sesi:', error);
+            console.error('Gagal menyimpan chat:', error);
         }
-    }
-
-    function touchSession() {
-        activeSession.updatedAt = Date.now();
-
-        sessions.sort(
-            (a, b) => b.updatedAt - a.updatedAt
-        );
-
-        saveSessions();
-        renderHistory();
     }
 
     // =====================================
@@ -254,17 +241,6 @@
     // =====================================
 
     function newChat() {
-        if (
-            activeSession &&
-            activeSession.messages.length === 0
-        ) {
-            conversationList.innerHTML = '';
-            welcomeScreen.classList.remove('hidden');
-            sidebarOverlay.classList.remove('sidebar-visible');
-            input?.focus();
-            return;
-        }
-
         activeSession = createSession();
         activeSessionId = activeSession.id;
 
@@ -284,50 +260,49 @@
     newChatButton.addEventListener('click', newChat);
 
     // =====================================
-    // RIWAYAT BERDASARKAN SESI
+    // HISTORY PER SESI
     // =====================================
 
     function renderHistory() {
         historyList.innerHTML = '';
 
-        const sortedSessions = [...sessions].sort(
-            (a, b) => b.updatedAt - a.updatedAt
-        );
+        [...sessions]
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+            .forEach(session => {
+                if (!session.messages.length) return;
 
-        sortedSessions.forEach(session => {
-            // Jangan tampilkan sesi kosong yang belum pernah dipakai.
-            if (session.messages.length === 0) return;
+                const li = document.createElement('li');
+                li.className = 'session-history-item';
 
-            const li = document.createElement('li');
+                if (session.id === activeSessionId) {
+                    li.classList.add('active-session');
+                }
 
-            li.className = 'session-history-item';
+                const title = document.createElement('div');
+                title.className = 'session-history-title';
+                title.textContent =
+                    session.title || 'Obrolan Baru';
 
-            if (session.id === activeSessionId) {
-                li.classList.add('active-session');
-            }
+                const preview = document.createElement('small');
+                preview.className = 'session-history-preview';
 
-            const title = document.createElement('div');
-            title.className = 'session-history-title';
-            title.textContent = session.title || 'Obrolan Baru';
+                const lastMessage = [...session.messages]
+                    .reverse()
+                    .find(message => message.role === 'user');
 
-            const preview = document.createElement('small');
-            preview.className = 'session-history-preview';
+                preview.textContent = lastMessage?.content || '';
 
-            const lastMessage = session.messages[
-                session.messages.length - 1
-            ];
+                li.append(title, preview);
 
-            preview.textContent = lastMessage?.content || '';
+                li.addEventListener('click', () => {
+                    openSession(session.id);
+                    sidebarOverlay.classList.remove(
+                        'sidebar-visible'
+                    );
+                });
 
-            li.append(title, preview);
-
-            li.addEventListener('click', () => {
-                openSession(session.id);
-                sidebarOverlay.classList.remove('sidebar-visible');
+                historyList.appendChild(li);
             });
-
-            historyList.appendChild(li);
-        });
     }
 
     function openSession(id) {
@@ -383,10 +358,9 @@
         card.removeAttribute('id');
         card.classList.remove('hidden');
 
-        const userBubble = $('.user-bubble', card);
-
-        // User bubble dibuat terpisah supaya tidak muncul dua kali.
-        userBubble?.remove();
+        // Hilangkan bubble user dari template karena
+        // pertanyaan sudah dirender sebagai pesan tersendiri.
+        $('.user-bubble', card)?.remove();
 
         const answer = $('#answer-text', card);
         const sources = $('#sources-list', card);
@@ -413,21 +387,23 @@
 
         const copyButton = $('.action-icons', card)?.children[0];
 
-        copyButton?.addEventListener('click', async () => {
-            try {
-                await navigator.clipboard.writeText(
-                    message.content || ''
-                );
+        if (copyButton) {
+            copyButton.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(
+                        message.content || ''
+                    );
 
-                copyButton.textContent = 'check';
+                    copyButton.textContent = 'check';
 
-                setTimeout(() => {
-                    copyButton.textContent = 'content_copy';
-                }, 1000);
-            } catch {
-                alert('Gagal menyalin jawaban.');
-            }
-        });
+                    setTimeout(() => {
+                        copyButton.textContent = 'content_copy';
+                    }, 1000);
+                } catch {
+                    alert('Gagal menyalin jawaban.');
+                }
+            });
+        }
 
         conversationList.appendChild(card);
     }
@@ -441,7 +417,7 @@
 
         element.innerHTML = '';
 
-        const card = element.closest('.info-card');
+        const infoCard = element.closest('.info-card');
 
         const validItems = Array.isArray(items)
             ? items.filter(item => {
@@ -454,7 +430,7 @@
             : [];
 
         if (!validItems.length) {
-            card?.classList.add('hidden');
+            infoCard?.classList.add('hidden');
             return;
         }
 
@@ -464,27 +440,27 @@
                 : item.url;
 
             const li = document.createElement('li');
-            const a = document.createElement('a');
+            const link = document.createElement('a');
 
-            a.href = url;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
 
             try {
-                a.textContent = new URL(url).hostname;
+                link.textContent = new URL(url).hostname;
             } catch {
-                a.textContent = url;
+                link.textContent = url;
             }
 
-            li.appendChild(a);
+            li.appendChild(link);
             element.appendChild(li);
         });
 
-        card?.classList.remove('hidden');
+        infoCard?.classList.remove('hidden');
     }
 
     // =====================================
-    // RELATED
+    // RELATED QUESTIONS
     // =====================================
 
     function renderRelated(element, items) {
@@ -492,7 +468,7 @@
 
         element.innerHTML = '';
 
-        const card = element.closest('.info-card');
+        const infoCard = element.closest('.info-card');
 
         const validItems = Array.isArray(items)
             ? items.filter(item => {
@@ -505,7 +481,7 @@
             : [];
 
         if (!validItems.length) {
-            card?.classList.add('hidden');
+            infoCard?.classList.add('hidden');
             return;
         }
 
@@ -515,7 +491,6 @@
                 : item.question || item.text;
 
             const li = document.createElement('li');
-
             li.textContent = question;
 
             li.addEventListener('click', () => {
@@ -525,11 +500,11 @@
             element.appendChild(li);
         });
 
-        card?.classList.remove('hidden');
+        infoCard?.classList.remove('hidden');
     }
 
     // =====================================
-    // KIRIM PESAN
+    // KIRIM PERTANYAAN
     // =====================================
 
     form.addEventListener('submit', event => {
@@ -548,7 +523,6 @@
         input.value = '';
         input.blur();
 
-        // Judul sesi diambil dari pertanyaan pertama.
         if (activeSession.messages.length === 0) {
             activeSession.title = question.length > 45
                 ? question.slice(0, 45) + '…'
@@ -572,10 +546,12 @@
 
         activeSession.messages.push(assistantMessage);
 
-        touchSession();
+        activeSession.updatedAt = Date.now();
+
+        saveSessions();
+        renderHistory();
         renderSession();
 
-        // Pindah ke pesan paling baru.
         const chatArea = $('.chat-area');
 
         if (chatArea) {
@@ -620,7 +596,10 @@
 
         assistantMessage.loading = false;
 
-        touchSession();
+        activeSession.updatedAt = Date.now();
+
+        saveSessions();
+        renderHistory();
         renderSession();
 
         if (chatArea) {
@@ -629,7 +608,7 @@
     }
 
     // =====================================
-    // HAPUS RIWAYAT
+    // HAPUS SEMUA HISTORY
     // =====================================
 
     clearHistoryBtn?.addEventListener('click', () => {
@@ -657,6 +636,7 @@
     // MULAI APLIKASI
     // =====================================
 
+    saveSessions();
     renderHistory();
     renderSession();
 
