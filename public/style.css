@@ -3462,3 +3462,202 @@ body.sidebar-collapsed .main-panel {
       font-size: 12.5px;
       text-decoration: none;
     }
+
+
+    /* =================================================================
+       DARK GLASS INPUT AUTOFILL FIX & UNIFIED BENTO DASHBOARD STYLING
+       ================================================================= */
+    .field-group input[type="text"],
+    .field-group input[type="url"],
+    .field-group input[type="email"],
+    .field-group input[type="tel"],
+    .field-group input[type="search"],
+    .field-group textarea,
+    .settings-inline-input input {
+      background: rgba(6, 14, 11, 0.72) !important;
+      color: var(--text-main) !important;
+      border: 1px solid rgba(16, 185, 129, 0.26) !important;
+      border-radius: 12px !important;
+      caret-color: var(--neon-emerald-bright) !important;
+    }
+
+    html[data-theme="light"] .field-group input[type="text"],
+    html[data-theme="light"] .field-group input[type="url"],
+    html[data-theme="light"] .field-group input[type="email"],
+    html[data-theme="light"] .field-group input[type="tel"],
+    html[data-theme="light"] .field-group textarea {
+      background: rgba(255, 255, 255, 0.88) !important;
+      color: #0f172a !important;
+      border-color: rgba(5, 150, 105, 0.3) !important;
+    }
+
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    textarea:-webkit-autofill {
+      -webkit-box-shadow: 0 0 0 1000px #07120e inset !important;
+      -webkit-text-fill-color: #ecfdf5 !important;
+      caret-color: #00e599 !important;
+      border: 1px solid rgba(16, 185, 129, 0.38) !important;
+      transition: background-color 9999s ease-in-out 0s;
+    }
+
+    html[data-theme="light"] input:-webkit-autofill,
+    html[data-theme="light"] input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 1000px #f2f8f5 inset !important;
+      -webkit-text-fill-color: #0f172a !important;
+    }
+
+    /* Custom File Upload Box (Web2APK & TmpFiles) */
+    .custom-file-upload-box {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 12px;
+      background: rgba(6, 14, 11, 0.72) !important;
+      border: 1px solid rgba(16, 185, 129, 0.28) !important;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .custom-file-upload-box:hover {
+      border-color: var(--neon-emerald-bright) !important;
+      background: rgba(16, 185, 129, 0.1) !important;
+    }
+
+    .custom-file-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #060908;
+      font-weight: 700;
+      font-size: 12.5px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    .custom-file-name {
+      font-size: 13px;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .custom-file-preview {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--border-accent);
+      flex-shrink: 0;
+    }
+
+    /* Sidebar Scroll & Guaranteed Riwayat Obrolan Visibility */
+    .sidebar {
+      display: flex !important;
+      flex-direction: column !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+    }
+
+    .history-section {
+      flex: 0 0 auto !important;
+      min-height: 150px !important;
+      max-height: 240px !important;
+      padding: 10px 14px !important;
+      border-top: none !important;
+      border-bottom: 1px solid var(--border-subtle) !important;
+    }
+
+    .conversation-list {
+      min-height: 92px !important;
+      max-height: 165px !important;
+      overflow-y: auto !important;
+      padding-right: 2px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.18s ease;
+    }
+
+    .history-item.selected {
+      background: var(--neon-emerald-soft) !important;
+      border-color: var(--border-accent) !important;
+    }
+
+    .history-open {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      color: var(--text-main);
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .history-open-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
+
+    .history-open-meta {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .history-item.selected .history-open-meta {
+      color: var(--neon-emerald-bright);
+    }
+
+    .sidebar-section {
+      flex: 1 0 auto !important;
+      padding: 10px 14px 12px !important;
+    }
+
+    /* Info Sistem Bento Modal */
+    .sys-bento-modal {
+      max-width: 560px !important;
+    }
+
+    .sys-modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sys-bento-panel {
+      padding: 14px !important;
+      margin: 0 !important;
+    }
+
+    .sys-actions-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px !important;
+    }
+
+    .sys-newchat-btn {
+      width: auto !important;
+      padding: 10px 16px !important;
+      margin: 0 !important;
+    }
