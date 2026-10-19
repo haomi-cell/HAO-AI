@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0c0f0d">
-  <meta name="description" content="HAOMI — ruang kerja AI dan berbagai alat digital.">
+  <meta name="theme-color" content="#0c100d">
+  <meta name="description" content="HAOMI — AI serbaguna dan workspace tools digital.">
   <title>HAOMI — AI Workspace</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,238 +16,366 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-top">
-        <a class="brand" href="/" aria-label="HAOMI beranda">
-          <span class="brand-mark">h<span>.</span></span>
-          <span class="brand-name">HAOMI</span>
+    <aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
+      <div class="sidebar-head">
+        <a href="#" class="brand" data-view="chat" aria-label="HAOMI beranda">
+          <span class="brand-mark">h.</span>
+          <span>HAOMI</span>
         </a>
-        <button class="icon-button sidebar-close" id="sidebar-close" type="button" aria-label="Tutup menu">×</button>
+        <button class="icon-button sidebar-close" id="closeSidebar" aria-label="Tutup menu">×</button>
       </div>
 
-      <button class="new-chat-button" id="new-chat" type="button">
-        <span class="new-chat-icon">＋</span>
+      <button class="new-chat-button" id="newChatButton">
+        <span class="plus-symbol">＋</span>
         <span>Obrolan baru</span>
       </button>
 
       <div class="sidebar-section">
-        <div class="section-label">RUANG KERJA</div>
-
-        <button class="nav-item active" data-view="chat" type="button">
-          <span class="nav-icon">◈</span>
+        <p class="section-label">RUANG KERJA</p>
+        <button class="nav-item active" data-view="chat">
+          <span class="nav-icon">◇</span>
           <span>Chat AI</span>
-          <span class="nav-indicator"></span>
+          <span class="nav-status"></span>
         </button>
-
-        <button class="nav-item" data-tool="alight-motion" type="button">
+        <button class="nav-item" data-view="alight">
           <span class="nav-icon">▶</span>
           <span>Alight Motion</span>
         </button>
-
-        <button class="nav-item" data-tool="urlscan" type="button">
+        <button class="nav-item" data-view="urlscan">
           <span class="nav-icon">⌕</span>
           <span>Scan URL</span>
         </button>
-
-        <button class="nav-item" data-tool="whatsapp-react" type="button">
-          <span class="nav-icon">◉</span>
+        <button class="nav-item" data-view="whatsapp">
+          <span class="nav-icon">◎</span>
           <span>Reaksi WhatsApp</span>
         </button>
       </div>
 
-      <div class="history-section" id="history-section">
-        <div class="history-title-row">
-          <span class="section-label">RIWAYAT CHAT</span>
-          <span class="history-count" id="history-count">0</span>
+      <div class="sidebar-section history-section">
+        <div class="section-heading">
+          <p class="section-label">RIWAYAT</p>
+          <span class="history-count" id="historyCount">0</span>
         </div>
-
         <label class="history-search">
           <span>⌕</span>
-          <input id="history-search" type="search" placeholder="Cari percakapan..." autocomplete="off">
+          <input id="historySearch" type="search" placeholder="Cari percakapan..." autocomplete="off">
         </label>
-
-        <div class="conversation-list" id="conversation-list"></div>
+        <div class="conversation-list" id="conversationList">
+          <p class="empty-history">Percakapanmu akan muncul di sini.</p>
+        </div>
       </div>
 
-      <div class="sidebar-footer">
-        <div class="plan-card">
-          <div class="plan-card-icon">✳</div>
-          <div class="plan-card-copy">
+      <div class="sidebar-bottom">
+        <div class="workspace-card">
+          <span class="workspace-symbol">✳</span>
+          <div>
             <strong>HAOMI Workspace</strong>
-            <span>AI dan alat digital</span>
+            <small>AI dan alat digital</small>
           </div>
-          <span class="plan-dot"></span>
+          <span class="online-dot"></span>
         </div>
-
-        <button class="profile-button" id="open-settings" type="button">
+        <button class="profile-button" id="openSettings">
           <span class="profile-avatar">H</span>
           <span class="profile-copy">
             <strong>HAOMI</strong>
             <small>Pengaturan aplikasi</small>
           </span>
-          <span class="profile-more">···</span>
+          <span class="profile-menu">···</span>
         </button>
       </div>
     </aside>
 
-    <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" aria-label="Tutup menu"></button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <main class="main-panel">
       <header class="topbar">
         <div class="topbar-left">
-          <button class="icon-button mobile-menu" id="sidebar-open" type="button" aria-label="Buka menu">☰</button>
-          <div class="breadcrumb">
-            <span class="breadcrumb-root">HAOMI</span>
+          <button class="icon-button menu-button" id="openSidebar" aria-label="Buka menu">☰</button>
+          <div class="breadcrumbs">
+            <strong>HAOMI</strong>
             <span class="breadcrumb-separator">/</span>
-            <span id="breadcrumb-current">Chat</span>
+            <span id="breadcrumbTitle">Chat AI</span>
           </div>
         </div>
-
         <div class="topbar-right">
-          <span class="connection-status"><span class="status-dot"></span> Workspace</span>
-          <button class="icon-button" id="topbar-settings" type="button" aria-label="Pengaturan">⚙</button>
+          <span class="workspace-indicator"><span class="online-dot"></span> Workspace</span>
+          <button class="icon-button settings-button" id="openSettingsTop" aria-label="Pengaturan">⚙</button>
         </div>
       </header>
 
-      <section class="welcome-screen" id="welcome-screen">
-        <div class="welcome-eyebrow"><span></span> HAOMI DIGITAL WORKSPACE</div>
-        <h1>Ada yang ingin<br><span>kamu selesaikan?</span></h1>
-        <p class="welcome-description">
-          Temukan jawaban, periksa tautan, kelola alat digital, dan mulai ide berikutnya.
-        </p>
+      <section class="view active" id="chatView" data-page="chat">
+        <div class="chat-scroll" id="chatScroll">
+          <section class="welcome-screen" id="welcomeScreen">
+            <div class="hero-mark">h.</div>
+            <p class="eyebrow">AI WORKSPACE</p>
+            <h1>Ruang untuk<br><span>berpikir lebih jauh.</span></h1>
+            <p class="hero-description">
+              Tanyakan sesuatu, kembangkan ide, atau selesaikan pekerjaanmu.
+              Mulai dari satu percakapan.
+            </p>
 
-        <div class="welcome-composer-anchor" id="welcome-composer-anchor"></div>
-
-        <div class="suggestions-heading">
-          <span>Mulai dengan HAO</span>
-          <span class="suggestions-caption">Pilih kebutuhanmu</span>
-        </div>
-
-        <div class="suggestion-grid">
-          <button class="suggestion-card" type="button" data-prompt="Jelaskan suatu topik yang sulit dengan bahasa sederhana, berikan contoh, dan rangkum poin pentingnya.">
-            <span class="suggestion-icon">↗</span>
-            <span class="suggestion-copy"><strong>Belajar sesuatu</strong><small>Pahami topik lebih cepat</small></span>
-            <span class="suggestion-arrow">↗</span>
-          </button>
-
-          <button class="suggestion-card" type="button" data-prompt="Bantu aku mengembangkan ide kreatif menjadi rencana yang jelas dan realistis.">
-            <span class="suggestion-icon">✳</span>
-            <span class="suggestion-copy"><strong>Cari ide</strong><small>Mulai dari ide sederhana</small></span>
-            <span class="suggestion-arrow">↗</span>
-          </button>
-
-          <button class="suggestion-card" type="button" data-prompt="Bantu aku menulis dengan struktur jelas, bahasa natural, dan hasil yang siap diedit.">
-            <span class="suggestion-icon">≡</span>
-            <span class="suggestion-copy"><strong>Menulis</strong><small>Susun tulisan lebih rapi</small></span>
-            <span class="suggestion-arrow">↗</span>
-          </button>
-
-          <button class="suggestion-card" type="button" data-prompt="Bantu aku memeriksa dan memperbaiki kode. Jelaskan penyebab masalah dan berikan solusi yang bisa diuji.">
-            <span class="suggestion-icon code-icon">&lt;/&gt;</span>
-            <span class="suggestion-copy"><strong>Coding</strong><small>Bangun dan perbaiki proyek</small></span>
-            <span class="suggestion-arrow">↗</span>
-          </button>
-        </div>
-      </section>
-
-      <section class="chat-view" id="chat-view" aria-label="Percakapan">
-        <div class="chat-scroll" id="chat-scroll">
-          <div class="messages" id="chat-messages" aria-live="polite"></div>
-        </div>
-      </section>
-
-      <section class="tool-view" id="tool-view" hidden>
-        <div class="tool-page">
-          <button class="back-to-chat" id="back-to-chat" type="button">← Kembali ke chat</button>
-
-          <div class="tool-page-heading">
-            <div class="tool-page-icon" id="tool-page-icon">⌕</div>
-            <div>
-              <div class="welcome-eyebrow" id="tool-page-eyebrow">HAOMI TOOLS</div>
-              <h1 id="tool-page-title">Scan URL</h1>
-              <p id="tool-page-description">Periksa sebuah tautan.</p>
+            <div class="prompt-grid">
+              <button class="prompt-card" data-prompt="Jelaskan suatu topik dengan bahasa sederhana dan berikan contoh praktis.">
+                <span class="prompt-icon">✳</span>
+                <span class="prompt-copy">
+                  <strong>Belajar sesuatu</strong>
+                  <small>Penjelasan yang mudah dipahami</small>
+                </span>
+                <span class="prompt-arrow">↗</span>
+              </button>
+              <button class="prompt-card" data-prompt="Bantu aku mengembangkan ide yang menarik dan menyusun langkah awalnya.">
+                <span class="prompt-icon">✧</span>
+                <span class="prompt-copy">
+                  <strong>Cari ide</strong>
+                  <small>Mulai dari gagasan sederhana</small>
+                </span>
+                <span class="prompt-arrow">↗</span>
+              </button>
+              <button class="prompt-card" data-prompt="Bantu aku menulis, memeriksa, dan memperbaiki kode program. Tanyakan detail yang diperlukan.">
+                <span class="prompt-icon">⌘</span>
+                <span class="prompt-copy">
+                  <strong>Bantu coding</strong>
+                  <small>Tulis dan perbaiki kode</small>
+                </span>
+                <span class="prompt-arrow">↗</span>
+              </button>
+              <button class="prompt-card" data-prompt="Bantu aku menyusun rencana kerja yang realistis, lengkap dengan urutan langkah dan prioritas.">
+                <span class="prompt-icon">◷</span>
+                <span class="prompt-copy">
+                  <strong>Susun rencana</strong>
+                  <small>Langkah yang lebih terarah</small>
+                </span>
+                <span class="prompt-arrow">↗</span>
+              </button>
             </div>
-          </div>
-
-          <form id="tool-form" class="tool-form" novalidate>
-            <div id="tool-fields"></div>
-            <button id="tool-submit" class="tool-submit" type="submit">Jalankan alat <span>→</span></button>
-          </form>
-
-          <div class="tool-notice" id="tool-notice">
-            Hasil berasal dari layanan API. Jangan memasukkan data pribadi yang tidak diperlukan.
-          </div>
-
-          <section class="tool-result" id="tool-result" hidden>
-            <div class="tool-result-header">
-              <strong>Hasil</strong>
-              <button type="button" class="message-action" id="copy-tool-result">Salin hasil</button>
-            </div>
-            <div id="tool-result-message"></div>
-            <pre id="tool-result-data"></pre>
           </section>
+
+          <div class="messages" id="messages" aria-live="polite"></div>
+          <div class="scroll-anchor" id="scrollAnchor"></div>
+        </div>
+
+        <div class="composer-area">
+          <form class="composer" id="chatForm">
+            <textarea id="chatInput" rows="1" maxlength="20000" placeholder="Tulis pesan untuk HAOMI..." aria-label="Pesan untuk HAOMI"></textarea>
+            <div class="composer-toolbar">
+              <div class="composer-left">
+                <button class="composer-plus" id="composerToolsButton" type="button" aria-label="Lihat tools">＋</button>
+                <label class="model-select-wrap">
+                  <span class="model-dot"></span>
+                  <select id="modelSelect" aria-label="Pilih model AI">
+                    <option value="openai/gpt-4o">GPT-4o</option>
+                    <option value="openai/gpt-4o-mini">GPT-4o mini</option>
+                    <option value="openai/gpt-5.6-terra">GPT-5.6 Terra</option>
+                    <option value="openai/gpt-5.5">GPT-5.5</option>
+                    <option value="openai/gpt-5.4">GPT-5.4</option>
+                    <option value="openai/gpt-5.3-chat">GPT-5.3 Chat</option>
+                    <option value="openai/gpt-5.1-instant">GPT-5.1 Instant</option>
+                    <option value="openai/gpt-5">GPT-5</option>
+                    <option value="chatday/ai-chat">Chatday AI</option>
+                    <option value="xai/grok-4.1-fast-non-reasoning">Grok 4.1 Fast</option>
+                    <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</option>
+                    <option value="anthropic/claude-sonnet-5">Claude Sonnet 5</option>
+                    <option value="anthropic/claude-sonnet-4.6">Claude Sonnet 4.6</option>
+                    <option value="anthropic/claude-opus-4.5">Claude Opus 4.5</option>
+                    <option value="anthropic/claude-opus-4.6">Claude Opus 4.6</option>
+                    <option value="anthropic/claude-opus-4.7">Claude Opus 4.7</option>
+                    <option value="anthropic/claude-opus-4.8">Claude Opus 4.8</option>
+                    <option value="deepseek/deepseek-v4-pro">DeepSeek V4 Pro</option>
+                    <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash</option>
+                    <option value="deepseek/deepseek-v3.2-thinking">DeepSeek V3.2 Thinking</option>
+                    <option value="google/gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
+                    <option value="google/gemini-3-pro-preview">Gemini 3 Pro</option>
+                    <option value="google/gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                    <option value="alibaba/qwen3-max">Qwen3 Max</option>
+                    <option value="meta/llama-4-maverick">Llama 4 Maverick</option>
+                    <option value="moonshotai/kimi-k2.6">Kimi K2.6</option>
+                  </select>
+                </label>
+              </div>
+              <button class="send-button" id="sendButton" type="submit" aria-label="Kirim pesan">
+                <span>↑</span>
+              </button>
+            </div>
+          </form>
+          <p class="disclaimer">HAOMI dapat membuat kesalahan. Periksa kembali informasi penting.</p>
         </div>
       </section>
 
-      <footer class="composer-area" id="composer-area">
-        <div class="composer-shell">
-          <form class="composer" id="chat-form">
-            <textarea id="chat-input" name="question" rows="1" maxlength="12000" placeholder="Tulis pesan untuk HAOMI..." aria-label="Tulis pesan untuk HAOMI" required></textarea>
-
-            <div class="composer-bottom">
-              <div class="composer-left-tools">
-                <button class="composer-tool" id="tools-toggle" type="button" aria-label="Buka alat">＋</button>
-
-                <div class="tools-popover" id="tools-popover" hidden>
-                  <div class="popover-heading">PILIH ALAT</div>
-                  <button type="button" class="tool-option" data-tool="alight-motion"><span>▶</span><span><strong>Alight Motion</strong><small>Kirim atau verifikasi permintaan akun</small></span></button>
-                  <button type="button" class="tool-option" data-tool="urlscan"><span>⌕</span><span><strong>Scan URL</strong><small>Periksa sebuah tautan</small></span></button>
-                  <button type="button" class="tool-option" data-tool="whatsapp-react"><span>◉</span><span><strong>Reaksi WhatsApp</strong><small>Kirim reaksi pada postingan kanal</small></span></button>
-                </div>
-
-                <div class="model-picker" id="model-picker">
-                  <button id="model-button" class="model-button" type="button" aria-haspopup="listbox" aria-expanded="false">
-                    <span class="model-status-dot"></span>
-                    <span id="model-button-label">GPT-4o</span>
-                    <span class="model-chevron">⌄</span>
-                  </button>
-
-                  <div class="model-menu" id="model-menu" hidden>
-                    <div class="model-menu-header"><strong>Pilih model</strong><span>26 model</span></div>
-                    <label class="model-search"><span>⌕</span><input id="model-search-input" type="search" placeholder="Cari model..." autocomplete="off"></label>
-                    <div id="model-options" class="model-options" role="listbox" aria-label="Daftar model"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="composer-right-tools">
-                <span id="composer-state" class="composer-state">Siap membantu</span>
-                <button id="send-button" class="send-button" type="submit" aria-label="Kirim pesan">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>
-                </button>
-              </div>
-            </div>
-          </form>
+      <section class="view tool-view" id="alightView" data-page="alight" hidden>
+        <button class="back-to-chat" data-view="chat">← Kembali ke chat</button>
+        <div class="tool-heading">
+          <div class="tool-icon">▶</div>
+          <div>
+            <p class="eyebrow">HAOMI TOOLS</p>
+            <h1>Alight Motion</h1>
+            <p>Kirim permintaan verifikasi atau proses tautan verifikasi akun.</p>
+          </div>
         </div>
-        <p class="composer-disclaimer">HAOMI dapat membuat kesalahan. Periksa kembali informasi penting.</p>
-      </footer>
+
+        <form class="tool-form" id="alightForm">
+          <label for="alightAction">Tindakan</label>
+          <select id="alightAction">
+            <option value="am-send">Kirim permintaan verifikasi</option>
+            <option value="am-verify">Verifikasi dengan tautan</option>
+          </select>
+
+          <label for="alightEmail">Email akun</label>
+          <input id="alightEmail" type="email" placeholder="nama@email.com" autocomplete="email" required>
+          <small>Gunakan email akun yang kamu miliki atau berwenang mengelolanya.</small>
+
+          <div id="verificationLinkGroup" hidden>
+            <label for="alightLink">Tautan verifikasi</label>
+            <textarea id="alightLink" rows="3" placeholder="Tempel tautan verifikasi milikmu di sini"></textarea>
+            <small>Jangan bagikan tautan autentikasi atau kode verifikasi kepada orang lain.</small>
+          </div>
+
+          <button class="primary-button" type="submit" id="alightSubmit">Jalankan alat <span>→</span></button>
+        </form>
+
+        <div class="notice-card">
+          Gunakan email dan tautan verifikasi milikmu sendiri. Hasil bergantung pada respons layanan API.
+        </div>
+        <section class="result-panel">
+          <div class="result-heading">
+            <h2>Hasil</h2>
+            <button class="text-button" data-copy-result="alightResult">Salin hasil</button>
+          </div>
+          <div class="tool-result" id="alightResult">Hasil proses akan ditampilkan di sini.</div>
+        </section>
+      </section>
+
+      <section class="view tool-view" id="urlscanView" data-page="urlscan" hidden>
+        <button class="back-to-chat" data-view="chat">← Kembali ke chat</button>
+        <div class="tool-heading">
+          <div class="tool-icon">⌕</div>
+          <div>
+            <p class="eyebrow">HAOMI TOOLS</p>
+            <h1>Scan URL</h1>
+            <p>Kirim URL ke layanan pemindai untuk mendapatkan hasil analisis.</p>
+          </div>
+        </div>
+
+        <form class="tool-form" id="urlscanForm">
+          <label for="scanUrl">URL yang ingin diperiksa</label>
+          <input id="scanUrl" type="url" placeholder="https://contoh.com" required>
+          <small>Hasil pemindaian bukan jaminan mutlak bahwa sebuah situs aman.</small>
+          <button class="primary-button" type="submit" id="urlscanSubmit">Periksa URL <span>→</span></button>
+        </form>
+
+        <div class="notice-card">Hindari membuka situs mencurigakan atau memasukkan kata sandi ke halaman yang belum kamu percayai.</div>
+        <section class="result-panel">
+          <div class="result-heading">
+            <h2>Hasil pemindaian</h2>
+            <button class="text-button" data-copy-result="urlscanResult">Salin hasil</button>
+          </div>
+          <div class="tool-result" id="urlscanResult">Hasil pemindaian akan ditampilkan di sini.</div>
+        </section>
+      </section>
+
+      <section class="view tool-view" id="whatsappView" data-page="whatsapp" hidden>
+        <button class="back-to-chat" data-view="chat">← Kembali ke chat</button>
+        <div class="tool-heading">
+          <div class="tool-icon">◎</div>
+          <div>
+            <p class="eyebrow">HAOMI TOOLS</p>
+            <h1>Reaksi WhatsApp</h1>
+            <p>Kirim permintaan reaksi menggunakan URL yang didukung endpoint.</p>
+          </div>
+        </div>
+
+        <form class="tool-form" id="whatsappForm">
+          <label for="whatsappUrl">URL pesan atau channel</label>
+          <input id="whatsappUrl" type="url" placeholder="https://whatsapp.com/channel/..." required>
+          <label for="whatsappReaction">Reaksi emoji</label>
+          <input id="whatsappReaction" type="text" value="❤️,😂,🥰" maxlength="200" required>
+          <small>Masukkan satu atau beberapa emoji, pisahkan dengan koma. Dukungan aktual bergantung pada layanan API.</small>
+          <button class="primary-button" type="submit" id="whatsappSubmit">Kirim reaksi <span>→</span></button>
+        </form>
+
+        <div class="notice-card">Gunakan tautan yang boleh kamu akses. Endpoint ini tidak menjamin semua jenis URL atau pesan didukung.</div>
+        <section class="result-panel">
+          <div class="result-heading">
+            <h2>Hasil</h2>
+            <button class="text-button" data-copy-result="whatsappResult">Salin hasil</button>
+          </div>
+          <div class="tool-result" id="whatsappResult">Hasil permintaan akan ditampilkan di sini.</div>
+        </section>
+      </section>
+
+      <footer class="app-footer">HAOMI dapat membuat kesalahan. Periksa kembali informasi penting.</footer>
     </main>
   </div>
 
-  <dialog class="settings-dialog" id="settings-dialog">
-    <div class="dialog-header">
-      <div><span class="dialog-eyebrow">PREFERENCES</span><h2>Pengaturan HAOMI</h2></div>
-      <button class="icon-button" id="settings-close" type="button" aria-label="Tutup pengaturan">×</button>
-    </div>
-    <div class="settings-content">
-      <div class="settings-row"><div><strong>Tampilan</strong><p>Gaya visual ruang kerja</p></div><span class="settings-value">Dark premium</span></div>
-      <div class="settings-row"><div><strong>Model default</strong><p>Model untuk obrolan</p></div><select id="default-model-setting" aria-label="Model default"></select></div>
-      <div class="settings-row"><div><strong>Riwayat lokal</strong><p>Tersimpan di browser ini</p></div><span class="settings-value">Aktif</span></div>
-      <div class="settings-notice"><strong>Privasi</strong><p>Riwayat chat tersimpan di browser. Jangan bagikan tautan verifikasi atau kode autentikasi kepada orang lain.</p></div>
-      <button class="danger-button" id="clear-history" type="button">Hapus semua riwayat lokal</button>
-    </div>
-  </dialog>
+  <div class="modal-backdrop" id="settingsModal" hidden>
+    <section class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">PREFERENCES</p>
+          <h2 id="settingsTitle">Pengaturan HAOMI</h2>
+        </div>
+        <button class="icon-button" id="closeSettings" aria-label="Tutup pengaturan">×</button>
+      </header>
 
-  <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
+      <div class="settings-row">
+        <div>
+          <strong>Tampilan</strong>
+          <p>Gaya visual ruang kerja</p>
+        </div>
+        <span>Dark premium</span>
+      </div>
+
+      <div class="settings-row">
+        <div>
+          <strong>Model default</strong>
+          <p>Model untuk obrolan baru</p>
+        </div>
+        <select id="defaultModelSelect" aria-label="Model default">
+          <option value="openai/gpt-4o">GPT-4o</option>
+          <option value="openai/gpt-4o-mini">GPT-4o mini</option>
+          <option value="openai/gpt-5.6-terra">GPT-5.6 Terra</option>
+          <option value="openai/gpt-5.5">GPT-5.5</option>
+          <option value="openai/gpt-5.4">GPT-5.4</option>
+          <option value="openai/gpt-5.3-chat">GPT-5.3 Chat</option>
+          <option value="openai/gpt-5.1-instant">GPT-5.1 Instant</option>
+          <option value="openai/gpt-5">GPT-5</option>
+          <option value="chatday/ai-chat">Chatday AI</option>
+          <option value="xai/grok-4.1-fast-non-reasoning">Grok 4.1 Fast</option>
+          <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</option>
+          <option value="anthropic/claude-sonnet-5">Claude Sonnet 5</option>
+          <option value="anthropic/claude-sonnet-4.6">Claude Sonnet 4.6</option>
+          <option value="anthropic/claude-opus-4.5">Claude Opus 4.5</option>
+          <option value="anthropic/claude-opus-4.6">Claude Opus 4.6</option>
+          <option value="anthropic/claude-opus-4.7">Claude Opus 4.7</option>
+          <option value="anthropic/claude-opus-4.8">Claude Opus 4.8</option>
+          <option value="deepseek/deepseek-v4-pro">DeepSeek V4 Pro</option>
+          <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash</option>
+          <option value="deepseek/deepseek-v3.2-thinking">DeepSeek V3.2 Thinking</option>
+          <option value="google/gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
+          <option value="google/gemini-3-pro-preview">Gemini 3 Pro</option>
+          <option value="google/gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+          <option value="alibaba/qwen3-max">Qwen3 Max</option>
+          <option value="meta/llama-4-maverick">Llama 4 Maverick</option>
+          <option value="moonshotai/kimi-k2.6">Kimi K2.6</option>
+        </select>
+      </div>
+
+      <div class="settings-row">
+        <div>
+          <strong>Riwayat lokal</strong>
+          <p>Percakapan tersimpan di browser ini</p>
+        </div>
+        <span class="settings-status">Aktif</span>
+      </div>
+
+      <div class="privacy-card">
+        <strong>Privasi dan penyimpanan</strong>
+        <p>Riwayat percakapan disimpan di browser ini. Menghapus data situs atau berganti perangkat dapat menghilangkan riwayat lokal. Memori percakapan AI bergantung pada dukungan sesi di layanan API.</p>
+      </div>
+
+      <button class="danger-button" id="clearAllHistory">Hapus semua riwayat lokal</button>
+    </section>
+  </div>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 </body>
 </html>
