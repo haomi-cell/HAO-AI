@@ -55,7 +55,7 @@ const ALLOWED_MODELS = [
 
 const http = axios.create({
   baseURL: BASE_URL,
-  timeout: 60000,
+  timeout: 120000,
   headers: {
     Accept: "application/json",
   },
@@ -144,6 +144,45 @@ function getApiError(error) {
   }
 
   return error?.message || "Terjadi kesalahan pada layanan API.";
+}
+
+function buildMultipartPayload(fields = {}, filePart = null) {
+  const boundary = `----HaomiFormBoundary${Date.now().toString(16)}${Math.random().toString(16).slice(2, 8)}`;
+  const chunks = [];
+
+  for (const [key, val] of Object.entries(fields)) {
+    if (val === undefined || val === null) continue;
+    chunks.push(
+      Buffer.from(
+        `--${boundary}\r\n` +
+          `Content-Disposition: form-data; name="${key}"\r\n\r\n` +
+          `${String(val)}\r\n`,
+        "utf-8"
+      )
+    );
+  }
+
+  if (filePart && filePart.buffer) {
+    const fieldName = filePart.fieldName || "file";
+    const fileName = (filePart.fileName || "icon.png").replace(/"/g, "");
+    const mimeType = filePart.mimeType || "application/octet-stream";
+    chunks.push(
+      Buffer.from(
+        `--${boundary}\r\n` +
+          `Content-Disposition: form-data; name="${fieldName}"; filename="${fileName}"\r\n` +
+          `Content-Type: ${mimeType}\r\n\r\n`,
+        "utf-8"
+      )
+    );
+    chunks.push(filePart.buffer);
+    chunks.push(Buffer.from("\r\n", "utf-8"));
+  }
+
+  chunks.push(Buffer.from(`--${boundary}--\r\n`, "utf-8"));
+  return {
+    boundary,
+    buffer: Buffer.concat(chunks),
+  };
 }
 
 function extractAiAnswer(data) {
@@ -253,6 +292,50 @@ async function callJerexd(endpoint, params = {}) {
   return response.data;
 }
 
+async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini-2.0-pro") {
+  try {
+    let data = await callJerexd("/api/ai/gemini", {
+      prompt: promptText,
+      model: preferredModel,
+      chatId: sessionId,
+    });
+    if (
+      data?.status === false &&
+      Array.isArray(data?.models) &&
+      data.models.length > 0
+    ) {
+      const resolvedModel = resolveBestGeminiModel(preferredModel, data.models);
+      data = await callJerexd("/api/ai/gemini", {
+        prompt: promptText,
+        model: resolvedModel,
+        chatId: sessionId,
+      });
+    }
+    if (data && data.status !== false) {
+      const ans = extractAiAnswer(data);
+      if (ans) return { data, answer: ans };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+async function tryCopilotFallback(queryText) {
+  try {
+    const data = await callJerexd("/api/ai/copilot", {
+      query: queryText,
+    });
+    if (data && data.status !== false) {
+      const ans = extractAiAnswer(data);
+      if (ans) return { data, answer: ans };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 async function handleGeminiModels(req, res) {
   const chatId = getInput(req, "chatId", getInput(req, "session_id", "HAOMI_XML"));
   const data = await callJerexd("/api/ai/gemini", {
@@ -343,6 +426,17 @@ async function handleChat(req, res) {
     }
 
     if (data?.status === false) {
+      const gemFallback = await tryGeminiFallback(rawPrompt || prompt, sessionId);
+      if (gemFallback) {
+        return sendJson(res, 200, {
+          success: true,
+          message: "Berhasil mendapatkan jawaban.",
+          session_id: sessionId,
+          model: "microsoft/copilot",
+          answer: gemFallback.answer,
+          raw: gemFallback.data,
+        });
+      }
       return sendJson(res, 502, {
         success: false,
         message: data.message || "Copilot AI belum berhasil menjawab.",
@@ -373,7 +467,12 @@ async function handleChat(req, res) {
       ...(targetUrl ? { url: targetUrl } : {}),
     };
 
-    let data = await callJerexd("/api/ai/gemini", geminiParams);
+    let data;
+    try {
+      data = await callJerexd("/api/ai/gemini", geminiParams);
+    } catch {
+      data = { status: false };
+    }
 
     if (
       data?.status === false &&
@@ -388,11 +487,33 @@ async function handleChat(req, res) {
       });
     }
 
+    if (data?.status === false && prompt !== rawPrompt && rawPrompt) {
+      try {
+        data = await callJerexd("/api/ai/gemini", {
+          prompt: rawPrompt,
+          model: "gemini-pro",
+          chatId: sessionId,
+        });
+      } catch {}
+    }
+
     if (data?.status === false) {
+      const copFallback = await tryCopilotFallback(rawPrompt || prompt);
+      if (copFallback) {
+        return sendJson(res, 200, {
+          success: true,
+          message: "Berhasil mendapatkan jawaban.",
+          session_id: sessionId,
+          chatId: sessionId,
+          model,
+          answer: copFallback.answer,
+          raw: copFallback.data,
+        });
+      }
       return sendJson(res, 502, {
         success: false,
-        message: data.message || "Gemini AI tidak berhasil menjawab.",
-        availableGeminiModels: data.models || undefined,
+        message: data?.message || "Gemini AI tidak berhasil menjawab.",
+        availableGeminiModels: data?.models || undefined,
         details: data,
         session_id: sessionId,
         chatId: sessionId,
@@ -413,18 +534,72 @@ async function handleChat(req, res) {
     });
   }
 
-  // 3. Endpoint AI Chat Multi-Model (/api/ai/aichat)
-  const data = await callJerexd("/api/ai/aichat", {
-    prompt,
-    model,
-    session_id: sessionId,
-    ...(isReset ? { reset: "true" } : {}),
-  });
+  // 3. Endpoint AI Chat Multi-Model (/api/ai/aichat) dengan Auto-Failover Berlapis
+  let data;
+  try {
+    data = await callJerexd("/api/ai/aichat", {
+      prompt,
+      model,
+      session_id: sessionId,
+      ...(isReset ? { reset: "true" } : {}),
+    });
+  } catch {
+    data = { status: false };
+  }
 
   if (data?.status === false) {
+    const freshSessionId = `HAOMI_XML_${Date.now()}`;
+    try {
+      data = await callJerexd("/api/ai/aichat", {
+        prompt: rawPrompt || prompt,
+        model,
+        session_id: freshSessionId,
+      });
+    } catch {
+      data = { status: false };
+    }
+  }
+
+  if (data?.status === false && model !== "openai/gpt-4o") {
+    try {
+      data = await callJerexd("/api/ai/aichat", {
+        prompt: rawPrompt || prompt,
+        model: "openai/gpt-4o",
+        session_id: sessionId,
+      });
+    } catch {
+      data = { status: false };
+    }
+  }
+
+  if (data?.status === false) {
+    const gemFallback = await tryGeminiFallback(rawPrompt || prompt, sessionId, "gemini-2.0-pro");
+    if (gemFallback) {
+      return sendJson(res, 200, {
+        success: true,
+        message: "Berhasil mendapatkan jawaban.",
+        session_id: extractSessionId(gemFallback.data, sessionId),
+        model,
+        answer: gemFallback.answer,
+        raw: gemFallback.data,
+      });
+    }
+
+    const copFallback = await tryCopilotFallback(rawPrompt || prompt);
+    if (copFallback) {
+      return sendJson(res, 200, {
+        success: true,
+        message: "Berhasil mendapatkan jawaban.",
+        session_id: sessionId,
+        model,
+        answer: copFallback.answer,
+        raw: copFallback.data,
+      });
+    }
+
     return sendJson(res, 502, {
       success: false,
-      message: data.message || "JERE-API tidak berhasil menjawab.",
+      message: data?.message || "JERE-API tidak berhasil menjawab.",
       details: data,
       session_id: sessionId,
     });
@@ -544,8 +719,6 @@ async function handleWhatsAppReact(req, res) {
   });
 }
 
-// ================= 5 FITUR BARU =================
-
 // 1. Viu Premium (/api/movie/viuprem)
 async function handleViuPrem(req, res) {
   const extraParams = {};
@@ -587,7 +760,7 @@ async function handleInfoKota(req, res) {
   });
 }
 
-// 3. Tmp Files (/api/tools/tmpfiles)
+// 3. Tmp Files (/api/tools/tmpfiles) - Mendukung POST multipart/form-data & GET
 async function handleTmpFiles(req, res) {
   const url = getInput(req, "url", "");
   const text = getInput(req, "text", "");
@@ -595,20 +768,14 @@ async function handleTmpFiles(req, res) {
   const fileName = getInput(req, "file_name", "upload.bin");
   const fileMime = getInput(req, "file_mime", "application/octet-stream");
 
-  // Jika ada file_base64 yang dikirim dari frontend, coba kirim multipart POST ke /api/tools/tmpfiles
   if (fileBase64) {
     try {
       const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, "");
       const buffer = Buffer.from(cleanBase64, "base64");
-      const boundary = `----HaomiFormBoundary${Date.now().toString(16)}`;
-      const header = Buffer.from(
-        `--${boundary}\r\n` +
-          `Content-Disposition: form-data; name="file"; filename="${fileName.replace(/"/g, "")}"\r\n` +
-          `Content-Type: ${fileMime}\r\n\r\n`,
-        "utf-8"
+      const { boundary, buffer: bodyBuffer } = buildMultipartPayload(
+        { apikey: API_KEY, ...(url ? { url } : {}) },
+        { fieldName: "file", fileName, mimeType: fileMime, buffer }
       );
-      const footer = Buffer.from(`\r\n--${boundary}--\r\n`, "utf-8");
-      const bodyBuffer = Buffer.concat([header, buffer, footer]);
 
       const postRes = await http.post("/api/tools/tmpfiles", bodyBuffer, {
         params: { apikey: API_KEY },
@@ -626,7 +793,7 @@ async function handleTmpFiles(req, res) {
         });
       }
     } catch {
-      // Fallback ke GET di bawah bila endpoint menggunakan GET
+      // Fallback di bawah
     }
   }
 
@@ -647,7 +814,7 @@ async function handleTmpFiles(req, res) {
   });
 }
 
-// 4. Web2APK (/api/tools/web2apk)
+// 4. Web2APK (/api/tools/web2apk) - Menggunakan POST multipart/form-data (URL, NAME, FILE UPLOAD) + fallback GET
 async function handleWeb2Apk(req, res) {
   const url = requireHttpUrl(
     getInput(req, "url", "https://hao-ai-kappa.vercel.app/"),
@@ -657,11 +824,47 @@ async function handleWeb2Apk(req, res) {
     getInput(req, "name", "Ai Haomi"),
     "Nama Aplikasi"
   );
+  const fileBase64 = getInput(req, "file_base64", "");
+  const fileName = getInput(req, "file_name", "icon.png");
+  const fileMime = getInput(req, "file_mime", "image/png");
 
-  const data = await callJerexd("/api/tools/web2apk", {
-    url,
-    name,
-  });
+  let filePart = null;
+  if (fileBase64) {
+    const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, "");
+    filePart = {
+      fieldName: "file",
+      fileName,
+      mimeType: fileMime,
+      buffer: Buffer.from(cleanBase64, "base64"),
+    };
+  }
+
+  let data = null;
+
+  // 1. Kirim dengan metode POST multipart/form-data sesuai cURL di docs api.jerexd.my.id
+  try {
+    const { boundary, buffer: bodyBuffer } = buildMultipartPayload(
+      { url, name, apikey: API_KEY },
+      filePart
+    );
+
+    const postRes = await http.post("/api/tools/web2apk", bodyBuffer, {
+      params: { apikey: API_KEY, url, name },
+      headers: {
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        "Content-Length": bodyBuffer.length,
+      },
+      timeout: 180000,
+    });
+    data = postRes.data;
+  } catch (postErr) {
+    // 2. Fallback ke GET apabila diperlukan
+    try {
+      data = await callJerexd("/api/tools/web2apk", { url, name });
+    } catch {
+      throw postErr;
+    }
+  }
 
   return sendJson(res, 200, {
     success: data?.status !== false,
@@ -669,7 +872,7 @@ async function handleWeb2Apk(req, res) {
       data?.message ||
       (data?.status === false
         ? "Pembuatan Web2APK gagal."
-        : "Aplikasi APK berhasil diproses."),
+        : "Aplikasi APK berhasil dibuat."),
     result: data,
   });
 }
