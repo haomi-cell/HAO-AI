@@ -61,22 +61,47 @@
   const responseStyleOrder = ["standard", "casual", "concise", "technical"];
 
   const responseStylePrompts = {
-    standard: "",
-    concise: "[Instruksi Gaya: Jawab secara singkat, padat, dan langsung ke inti permasalahan tanpa basa-basi.]\n\n",
-    technical: "[Instruksi Gaya: Jawab secara teknis, sistematis, terstruktur dengan poin atau kode yang presisi.]\n\n",
-    casual: "[Instruksi Gaya: Jawab dengan bahasa yang santai, natural, dan mudah dicerna.]\n\n"
+    standard: "[Gaya bicara: Gunakan bahasa Indonesia yang luwes, natural seperti teman ngobrol pintar, tidak kaku seperti terjemahan robot.]",
+    concise: "[Gaya bicara: Langsung ke inti, singkat, padat, dan praktis tanpa basa-basi.]",
+    technical: "[Gaya bicara: Fokus teknis, logika rapi, kode siap pakai, dan penjelasan to-the-point.]",
+    casual: "[Gaya bicara: Santai, akrab, ngalir enak dibaca, dan mudah dicerna.]"
   };
+
+  const responseLengthPrompts = {
+    auto: "",
+    short: "[Panjang jawaban: Buat singkat & padat, cukup poin paling penting saja.]",
+    detailed: "[Panjang jawaban: kupas secara lengkap, terstruktur, dan detail dari awal sampai akhir.]"
+  };
+
+  const INTERACTIVE_CHOICE_INSTRUCTION =
+    "[Aturan Opsi Interaktif: Jika pengguna meminta dibuatkan sesuatu (seperti kode bot, aplikasi, draf, atau rencana) yang memiliki beberapa pilihan (misal bahasa pemrograman, jenis fitur/tombol, atau nama tombol), ATAU jika kamu ingin menawarkan opsi lanjutan, wajib sertakan blok interaktif di bagian paling akhir jawabanmu dengan format persis berikut:\n" +
+    "[PILIHAN]\n" +
+    "Judul: Biar sesuai kebutuhanmu, mau dibuat pakai apa?\n" +
+    "1. Nama Kategori Pilihan | radio | Pilihan Pertama | Pilihan Kedua\n" +
+    "2. Nama Kategori Kedua | radio | Opsi A — keterangan singkat | Opsi B — keterangan singkat\n" +
+    "3. Nama Input Teks (opsional) | input | Label Pertama: Nilai Awal | Label Kedua: Nilai Awal\n" +
+    "Tombol: Buatkan Sekarang\n" +
+    "[/PILIHAN]\n" +
+    "Gunakan blok [PILIHAN] tersebut setiap kali ada opsi yang bisa dipilih pengguna.]";
 
   const defaultSettings = {
     theme: "dark",
     density: "standard",
     streamSpeed: "cyber",
+    streamDelayMs: 18,
     defaultModel: "openai/gpt-4o",
     responseStyle: "standard",
+    responseLength: "auto",
+    interactiveChoices: true,
+    customAiInstruction: "",
+    cmatrixEnabled: true,
+    cmatrixIntensity: "vivid",
+    glassLevel: "standard",
     enterToSend: true,
     saveHistory: true,
     soundFx: false,
-    defaultWaEmoji: "🙄,💦,🥰,😋"
+    defaultWaEmoji: "🙄,💦,🥰,😋",
+    customWaEmojis: []
   };
 
   // Pastikan kapsul Dynamic Island (khusus notifikasi on/off) & pengaturan suara tersedia
@@ -134,7 +159,7 @@
         .composer-dock {
           margin: 0 auto !important;
           padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-          background: var(--bg-base) !important;
+          background: transparent !important;
           border-top: none !important;
           border-bottom: none !important;
           box-shadow: none !important;
@@ -555,8 +580,53 @@
       btn.classList.toggle("active", (settings.streamSpeed || "cyber") === btn.dataset.streamChoice);
     });
 
-    if (els.defaultModel) els.defaultModel.value = getDefaultModel();
+    $$("[data-style-choice]").forEach(btn => {
+      btn.classList.toggle("active", (settings.responseStyle || "standard") === btn.dataset.styleChoice);
+    });
+
+    $$("[data-length-choice]").forEach(btn => {
+      btn.classList.toggle("active", (settings.responseLength || "auto") === btn.dataset.lengthChoice);
+    });
+
+    $$("[data-matrix-choice]").forEach(btn => {
+      btn.classList.toggle("active", (settings.cmatrixIntensity || "vivid") === btn.dataset.matrixChoice);
+    });
+
+    $$("[data-glass-choice]").forEach(btn => {
+      btn.classList.toggle("active", (settings.glassLevel || "standard") === btn.dataset.glassChoice);
+    });
+
+    document.documentElement.setAttribute("data-glass", settings.glassLevel || "standard");
+
+    const matrixOpacityMap = { soft: "0.42", vivid: "0.76", ultra: "0.95" };
+    const matrixAlpha = settings.cmatrixEnabled === false
+      ? "0"
+      : (matrixOpacityMap[settings.cmatrixIntensity || "vivid"] || "0.76");
+    document.documentElement.style.setProperty("--cmatrix-opacity", matrixAlpha);
+
+    const defMod = getDefaultModel();
+    if (els.defaultModel) els.defaultModel.value = defMod;
+    const settingsModelLabelEl = $("#settingsModelLabel");
+    if (settingsModelLabelEl) {
+      settingsModelLabelEl.textContent = `${modelName(defMod)} (${modelProvider(defMod)})`;
+    }
+
     if (els.responseStyle) els.responseStyle.value = settings.responseStyle || "standard";
+    const interactiveToggle = $("#interactiveChoicesToggle");
+    if (interactiveToggle) interactiveToggle.checked = settings.interactiveChoices !== false;
+    const customAiInput = $("#customAiInstructionInput");
+    if (customAiInput && document.activeElement !== customAiInput) {
+      customAiInput.value = settings.customAiInstruction || "";
+    }
+    const streamRange = $("#streamDelayRange");
+    const streamDelayVal = $("#streamDelayVal");
+    const delayMs = Number(settings.streamDelayMs) || 18;
+    if (streamRange) streamRange.value = String(delayMs);
+    if (streamDelayVal) streamDelayVal.textContent = String(delayMs);
+
+    const cmatrixToggle = $("#cmatrixToggle");
+    if (cmatrixToggle) cmatrixToggle.checked = settings.cmatrixEnabled !== false;
+
     if (els.enterToSend) els.enterToSend.checked = Boolean(settings.enterToSend);
     if (els.saveHistory) els.saveHistory.checked = Boolean(settings.saveHistory);
     if (els.soundFx) els.soundFx.checked = Boolean(soundEnabled);
@@ -921,8 +991,216 @@
     if (animateStream && !message.error && speedMode !== "instant") {
       streamAssistantText(article, bubble, actions, message.content, speedMode);
     } else {
-      bubble.innerHTML = markdown(message.content);
+      renderBubbleWithInteractiveChoices(bubble, message.content);
     }
+  }
+
+  function parseInteractiveChoiceSpec(rawText) {
+    const source = String(rawText ?? "");
+    const tagMatch = source.match(/\[PILIHAN\]([\s\S]*?)\[\/PILIHAN\]/i);
+    if (tagMatch) {
+      const cleanMarkdown = source.replace(tagMatch[0], "").trim();
+      const body = tagMatch[1].trim();
+      let title = "Biar sesuai kebutuhanmu, pilih opsi di bawah:";
+      let submitLabel = "Lanjutkan sesuai pilihan";
+      const groups = [];
+
+      body.split("\n").forEach(rawLine => {
+        const line = rawLine.trim();
+        if (!line) return;
+        if (/^judul\s*:/i.test(line)) {
+          title = line.replace(/^judul\s*:/i, "").trim() || title;
+          return;
+        }
+        if (/^tombol\s*:/i.test(line)) {
+          submitLabel = line.replace(/^tombol\s*:/i, "").trim() || submitLabel;
+          return;
+        }
+        if (line.includes("|")) {
+          const parts = line.split("|").map(item => item.trim()).filter(Boolean);
+          if (parts.length >= 3) {
+            const groupLabel = parts[0];
+            const groupType = parts[1].toLowerCase() === "input" ? "input" : "radio";
+            const items = parts.slice(2);
+            groups.push({ label: groupLabel, type: groupType, items });
+          }
+        }
+      });
+
+      if (groups.length) {
+        return { cleanMarkdown, spec: { title, submitLabel, groups } };
+      }
+    }
+
+    // Automatic fallback detector when AI writes numbered sections with bullet options
+    if (settings.interactiveChoices !== false) {
+      const lines = source.split("\n");
+      const autoGroups = [];
+      let currentGroup = null;
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        const numMatch = line.match(/^(\d+)[.)]\s+\*{0,2}([^*:]+?)\*{0,2}:?$/);
+        const bulletMatch = line.match(/^[-*•]\s+(.+)$/);
+
+        if (numMatch && numMatch[2].length < 75) {
+          if (currentGroup && currentGroup.items.length >= 2) {
+            autoGroups.push(currentGroup);
+          }
+          currentGroup = {
+            label: `${numMatch[1]}. ${numMatch[2].trim()}`,
+            type: "radio",
+            items: []
+          };
+        } else if (bulletMatch && currentGroup && currentGroup.items.length < 6) {
+          const optText = bulletMatch[1].replace(/\*\*/g, "").trim();
+          if (optText && optText.length <= 95) {
+            currentGroup.items.push(optText);
+          }
+        }
+      }
+      if (currentGroup && currentGroup.items.length >= 2) {
+        autoGroups.push(currentGroup);
+      }
+
+      if (autoGroups.length >= 1) {
+        return {
+          cleanMarkdown: source,
+          spec: {
+            title: "Pilih langsung opsi di bawah:",
+            submitLabel: "Kirim Pilihan",
+            groups: autoGroups.slice(0, 4)
+          }
+        };
+      }
+    }
+
+    return { cleanMarkdown: source, spec: null };
+  }
+
+  function renderBubbleWithInteractiveChoices(bubble, fullText) {
+    const { cleanMarkdown, spec } = parseInteractiveChoiceSpec(fullText);
+    bubble.innerHTML = markdown(cleanMarkdown || fullText);
+
+    if (!spec || settings.interactiveChoices === false) return;
+
+    const card = document.createElement("div");
+    card.className = "ai-choice-card";
+
+    if (spec.title) {
+      const titleEl = document.createElement("div");
+      titleEl.className = "ai-choice-card-title";
+      titleEl.textContent = spec.title;
+      card.appendChild(titleEl);
+    }
+
+    const selections = {};
+
+    spec.groups.forEach((group, gIdx) => {
+      const groupWrap = document.createElement("div");
+      groupWrap.className = "ai-choice-group";
+
+      const gTitle = document.createElement("div");
+      gTitle.className = "ai-choice-group-title";
+      gTitle.textContent = group.label;
+      groupWrap.appendChild(gTitle);
+
+      if (group.type === "input") {
+        const inputsWrap = document.createElement("div");
+        inputsWrap.className = "ai-choice-inputs";
+        selections[gIdx] = { type: "input", label: group.label, values: {} };
+
+        group.items.forEach((itemStr, iIdx) => {
+          const splitIdx = itemStr.indexOf(":");
+          const fieldLabel = splitIdx > 0 ? itemStr.slice(0, splitIdx).trim() : `Isian ${iIdx + 1}`;
+          const defaultVal = splitIdx > 0 ? itemStr.slice(splitIdx + 1).trim() : itemStr.trim();
+
+          const fieldWrap = document.createElement("div");
+          fieldWrap.className = "ai-choice-field";
+
+          const lbl = document.createElement("label");
+          lbl.textContent = fieldLabel;
+
+          const inp = document.createElement("input");
+          inp.type = "text";
+          inp.value = defaultVal;
+          inp.placeholder = fieldLabel;
+          selections[gIdx].values[fieldLabel] = defaultVal;
+
+          inp.addEventListener("input", () => {
+            selections[gIdx].values[fieldLabel] = inp.value.trim();
+          });
+
+          fieldWrap.append(lbl, inp);
+          inputsWrap.appendChild(fieldWrap);
+        });
+
+        groupWrap.appendChild(inputsWrap);
+      } else {
+        const radioList = document.createElement("div");
+        radioList.className = "ai-radio-list";
+        selections[gIdx] = { type: "radio", label: group.label, value: group.items[0] || "" };
+
+        group.items.forEach((optLabel, oIdx) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = `ai-radio-option${oIdx === 0 ? " is-selected" : ""}`;
+
+          const circle = document.createElement("span");
+          circle.className = "ai-radio-circle";
+          const dot = document.createElement("span");
+          dot.className = "ai-radio-dot";
+          circle.appendChild(dot);
+
+          const textSpan = document.createElement("span");
+          textSpan.textContent = optLabel;
+
+          btn.append(circle, textSpan);
+          btn.addEventListener("click", () => {
+            $$(".ai-radio-option", radioList).forEach(b => b.classList.remove("is-selected"));
+            btn.classList.add("is-selected");
+            selections[gIdx].value = optLabel;
+          });
+
+          radioList.appendChild(btn);
+        });
+
+        groupWrap.appendChild(radioList);
+      }
+
+      card.appendChild(groupWrap);
+    });
+
+    const submitBtn = document.createElement("button");
+    submitBtn.type = "button";
+    submitBtn.className = "ai-choice-submit-btn";
+    submitBtn.textContent = spec.submitLabel || "Kirim Pilihan";
+
+    submitBtn.addEventListener("click", () => {
+      if (busy) {
+        toast("Tunggu balasan sebelumnya selesai dulu ya.");
+        return;
+      }
+      const summaryLines = [];
+      Object.values(selections).forEach(sel => {
+        if (sel.type === "radio") {
+          summaryLines.push(`${sel.label}: ${sel.value}`);
+        } else if (sel.type === "input") {
+          const kv = Object.entries(sel.values)
+            .map(([k, v]) => `${k} = "${v}"`)
+            .join(", ");
+          summaryLines.push(`${sel.label}: ${kv}`);
+        }
+      });
+
+      submitBtn.classList.add("is-submitted");
+      submitBtn.textContent = "✓ Pilihan Dikirim";
+      const composedReply = `Berikut pilihan saya:\n${summaryLines.join("\n")}\n\nSilakan langsung buatkan sesuai pilihan di atas.`;
+      sendMessage(composedReply);
+    });
+
+    card.appendChild(submitBtn);
+    bubble.appendChild(card);
   }
 
   function streamAssistantText(article, bubble, actions, fullText, speedMode) {
@@ -935,7 +1213,9 @@
     skipBtn.textContent = "⚡ Tampilkan Langsung";
     actions.prepend(skipBtn);
 
-    const length = fullText.length;
+    const { cleanMarkdown } = parseInteractiveChoiceSpec(fullText);
+    const displayTarget = cleanMarkdown || fullText;
+    const length = displayTarget.length;
     let cursor = 0;
     let finished = false;
 
@@ -949,7 +1229,7 @@
       activeStreamCancel = null;
       article.classList.remove("is-streaming");
       skipBtn.remove();
-      bubble.innerHTML = markdown(fullText);
+      renderBubbleWithInteractiveChoices(bubble, fullText);
       scrollBottom();
     };
 
@@ -958,17 +1238,20 @@
 
     function step() {
       if (finished) return;
-      const sliceNext = fullText.slice(cursor, cursor + baseStep * 2);
+      const sliceNext = displayTarget.slice(cursor, cursor + baseStep * 2);
       const spaceIdx = sliceNext.indexOf(" ");
       const advance = spaceIdx > 0 ? spaceIdx + 1 : baseStep;
       cursor = Math.min(length, cursor + advance);
 
-      const partial = fullText.slice(0, cursor);
+      const partial = displayTarget.slice(0, cursor);
       bubble.innerHTML = markdown(partial) + `<span class="cyber-cursor">▋</span>`;
       scrollBottom();
 
+      const customDelay = Number(settings.streamDelayMs) || (speedMode === "turbo" ? 10 : 18);
+      const stepDelay = speedMode === "turbo" ? Math.max(5, Math.round(customDelay * 0.6)) : customDelay;
+
       if (cursor < length) {
-        window.setTimeout(() => requestAnimationFrame(step), speedMode === "turbo" ? 12 : 22);
+        window.setTimeout(() => requestAnimationFrame(step), stepDelay);
       } else {
         finishInstant();
       }
@@ -1327,6 +1610,23 @@
       endpoint = "/api/whatsapp/reactch";
       params.set("url", payload.url || "");
       params.set("reaction", payload.reaction || "❤️");
+    } else if (action === "viuprem" || action === "viu") {
+      endpoint = "/api/movie/viuprem";
+      if (payload.query) params.set("query", payload.query);
+    } else if (action === "infokota" || action === "kota") {
+      endpoint = "/api/search/infokota";
+      params.set("kota", payload.kota || "Jombang");
+    } else if (action === "tmpfiles" || action === "tmpfile") {
+      endpoint = "/api/tools/tmpfiles";
+      if (payload.url) params.set("url", payload.url);
+      if (payload.text) params.set("text", payload.text);
+    } else if (action === "web2apk") {
+      endpoint = "/api/tools/web2apk";
+      params.set("url", payload.url || "https://hao-ai-kappa.vercel.app/");
+      params.set("name", payload.name || "Ai Haomi");
+    } else if (action === "checkban" || action === "wa-checkban") {
+      endpoint = "/api/whatsapp/checkban";
+      params.set("number", String(payload.number || "").replace(/[^0-9]/g, ""));
     }
 
     const res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
@@ -1494,8 +1794,19 @@
     renderMessages(false);
 
     const loading = createLoading(sequence, model);
-    const stylePrefix = responseStylePrompts[settings.responseStyle] || "";
-    const effectivePrompt = stylePrefix ? `${stylePrefix}${prompt}` : prompt;
+    const styleParts = [];
+    const baseStyle = responseStylePrompts[settings.responseStyle] || responseStylePrompts.standard;
+    if (baseStyle) styleParts.push(baseStyle);
+    const lenRule = responseLengthPrompts[settings.responseLength || "auto"] || "";
+    if (lenRule) styleParts.push(lenRule);
+    if (settings.customAiInstruction && settings.customAiInstruction.trim()) {
+      styleParts.push(`[Instruksi khusus pengguna: ${settings.customAiInstruction.trim()}]`);
+    }
+    if (settings.interactiveChoices !== false) {
+      styleParts.push(INTERACTIVE_CHOICE_INSTRUCTION);
+    }
+    const stylePrefix = styleParts.length ? `${styleParts.join("\n")}\n\n` : "";
+    const effectivePrompt = stylePrefix ? `${stylePrefix}Pesan pengguna: ${prompt}` : prompt;
 
     let succeeded = false;
     try {
@@ -1611,6 +1922,11 @@
 
   const viewIds = {
     chat: "chatView",
+    viuprem: "viupremView",
+    infokota: "infokotaView",
+    tmpfiles: "tmpfilesView",
+    web2apk: "web2apkView",
+    checkban: "checkbanView",
     alight: "alightView",
     urlscan: "urlscanView",
     whatsapp: "whatsappView"
@@ -1618,6 +1934,11 @@
 
   const viewTitles = {
     chat: "Chat AI",
+    viuprem: "Viu Premium",
+    infokota: "Info Kota",
+    tmpfiles: "Tmp Files",
+    web2apk: "Web2APK",
+    checkban: "Cek Banned WA",
     alight: "Alight Motion",
     urlscan: "Cek Keamanan Link",
     whatsapp: "Reaksi Saluran WA"
@@ -1796,6 +2117,7 @@
 
     const conversation = ensureConversation();
     conversation.model = model;
+    saveSettings({ defaultModel: model });
     saveState();
 
     syncModelIndicators(model);
@@ -1870,7 +2192,18 @@
       k.textContent = key;
       const v = document.createElement("span");
       v.className = "summary-val";
-      v.textContent = String(val);
+      const strVal = String(val);
+      if (/^https?:\/\//i.test(strVal)) {
+        const a = document.createElement("a");
+        a.href = strVal;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.className = "apk-download-banner";
+        a.textContent = /apk|download/i.test(key) ? "⬇ Unduh File / APK Sekarang" : "↗ Buka Tautan Hasil";
+        v.appendChild(a);
+      } else {
+        v.textContent = strVal;
+      }
       row.append(k, v);
       summaryEl.appendChild(row);
     });
@@ -2146,8 +2479,7 @@
     els.boxAiStyle?.addEventListener("click", cycleResponseStyle);
     els.boxPingTest?.addEventListener("click", () => measureNetworkPing(true));
     els.boxSessionInfo?.addEventListener("click", () => {
-      newChat();
-      els.input?.focus();
+      openSystemInfoModal();
     });
 
     // Tombol pintasan di bagian atas
@@ -2496,9 +2828,267 @@
       });
     });
 
-    // Reaksi WhatsApp
-    $$(".emoji-chip[data-emoji]").forEach(chip => {
-      chip.addEventListener("click", () => toggleWaEmoji(chip.dataset.emoji));
+    // Reaksi WhatsApp & Custom Emoji (+)
+    renderCustomWaEmojis();
+    $("#waEmojiQuickBar")?.addEventListener("click", event => {
+      const chip = event.target.closest(".emoji-chip[data-emoji]");
+      if (chip) {
+        toggleWaEmoji(chip.dataset.emoji);
+      }
+    });
+
+    $("#addCustomEmojiBtn")?.addEventListener("click", () => {
+      const adder = $("#customEmojiAdder");
+      if (!adder) return;
+      adder.hidden = !adder.hidden;
+      if (!adder.hidden) {
+        $("#customEmojiInput")?.focus();
+      }
+    });
+
+    const handleAddCustomEmoji = () => {
+      const inp = $("#customEmojiInput");
+      if (!inp) return;
+      const raw = inp.value.trim();
+      if (!raw) {
+        toast("Ketik atau tempel minimal satu emoji dulu ya.", true);
+        return;
+      }
+      const newEmojis = raw
+        .split(/[\s,]+/)
+        .map(e => e.trim())
+        .filter(Boolean);
+      const existing = Array.isArray(settings.customWaEmojis) ? [...settings.customWaEmojis] : [];
+      newEmojis.forEach(em => {
+        if (!existing.includes(em)) existing.push(em);
+      });
+      saveSettings({ customWaEmojis: existing });
+      renderCustomWaEmojis();
+      newEmojis.forEach(em => toggleWaEmoji(em));
+      inp.value = "";
+      const adder = $("#customEmojiAdder");
+      if (adder) adder.hidden = true;
+      toast("Emoji baru berhasil ditambahkan!");
+    };
+
+    $("#saveCustomEmojiBtn")?.addEventListener("click", handleAddCustomEmoji);
+    $("#customEmojiInput")?.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleAddCustomEmoji();
+      }
+    });
+
+    // 5 Fitur Baru: Viu Premium, Info Kota, TmpFiles, Web2APK, Cek Banned WA
+    $("#viupremForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      runTool({
+        form: event.currentTarget,
+        button: $("#viupremSubmit"),
+        resultElement: $("#viupremResult"),
+        statusBadge: $("#viupremStatusBadge"),
+        timeBadge: $("#viupremTimeBadge"),
+        summaryEl: $("#viupremSummary"),
+        action: "viuprem",
+        payload: { query: ($("#viupremQuery")?.value || "").trim() },
+        loadingText: "Mengambil..."
+      });
+    });
+
+    $$(".city-chip[data-kota]").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const kotaInput = $("#infokotaInput");
+        if (kotaInput) kotaInput.value = chip.dataset.kota || "Jombang";
+        $$(".city-chip[data-kota]").forEach(c => c.classList.toggle("active", c === chip));
+      });
+    });
+
+    $("#infokotaForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      runTool({
+        form: event.currentTarget,
+        button: $("#infokotaSubmit"),
+        resultElement: $("#infokotaResult"),
+        statusBadge: $("#infokotaStatusBadge"),
+        timeBadge: $("#infokotaTimeBadge"),
+        summaryEl: $("#infokotaSummary"),
+        action: "infokota",
+        payload: { kota: ($("#infokotaInput")?.value || "Jombang").trim() },
+        loadingText: "Mencari..."
+      });
+    });
+
+    $("#tmpfilesForm")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const fileInput = $("#tmpfilesFile");
+      const urlVal = ($("#tmpfilesUrl")?.value || "").trim();
+      const file = fileInput?.files?.[0] || null;
+      const payload = { url: urlVal };
+
+      if (file) {
+        if (file.size > 4.5 * 1024 * 1024) {
+          toast("Ukuran file maksimal 4.5 MB ya.", true);
+          return;
+        }
+        try {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(new Error("Gagal membaca file"));
+            reader.readAsDataURL(file);
+          });
+          payload.file_base64 = base64;
+          payload.file_name = file.name;
+          payload.file_mime = file.type || "application/octet-stream";
+        } catch {
+          toast("File gagal dibaca.", true);
+          return;
+        }
+      }
+
+      runTool({
+        form,
+        button: $("#tmpfilesSubmit"),
+        resultElement: $("#tmpfilesResult"),
+        statusBadge: $("#tmpfilesStatusBadge"),
+        timeBadge: $("#tmpfilesTimeBadge"),
+        summaryEl: $("#tmpfilesSummary"),
+        action: "tmpfiles",
+        payload,
+        loadingText: "Memproses..."
+      });
+    });
+
+    $("#useCurrentWebBtn")?.addEventListener("click", () => {
+      const urlInput = $("#web2apkUrl");
+      if (urlInput) {
+        urlInput.value = window.location.origin.startsWith("http")
+          ? `${window.location.origin}/`
+          : "https://hao-ai-kappa.vercel.app/";
+        toast("Alamat web saat ini dimasukkan");
+      }
+    });
+
+    $("#web2apkForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      runTool({
+        form: event.currentTarget,
+        button: $("#web2apkSubmit"),
+        resultElement: $("#web2apkResult"),
+        statusBadge: $("#web2apkStatusBadge"),
+        timeBadge: $("#web2apkTimeBadge"),
+        summaryEl: $("#web2apkSummary"),
+        action: "web2apk",
+        payload: {
+          url: ($("#web2apkUrl")?.value || "").trim(),
+          name: ($("#web2apkName")?.value || "Ai Haomi").trim()
+        },
+        loadingText: "Membangun APK..."
+      });
+    });
+
+    $("#checkbanForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      runTool({
+        form: event.currentTarget,
+        button: $("#checkbanSubmit"),
+        resultElement: $("#checkbanResult"),
+        statusBadge: $("#checkbanStatusBadge"),
+        timeBadge: $("#checkbanTimeBadge"),
+        summaryEl: $("#checkbanSummary"),
+        action: "checkban",
+        payload: { number: ($("#checkbanNumber")?.value || "").trim() },
+        loadingText: "Memeriksa..."
+      });
+    });
+
+    // Settings Modal New Controls (No native <select>)
+    $("#openModelPickerFromSettings")?.addEventListener("click", () => {
+      closeSettings();
+      openModelDialog();
+    });
+
+    $$("[data-style-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const nextStyle = btn.dataset.styleChoice || "standard";
+        saveSettings({ responseStyle: nextStyle });
+        toast(`Gaya bicara AI: ${responseStyleLabels[nextStyle] || "Standar"}`);
+      });
+    });
+
+    $$("[data-length-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        saveSettings({ responseLength: btn.dataset.lengthChoice || "auto" });
+        toast("Panjang jawaban AI diperbarui");
+      });
+    });
+
+    $("#interactiveChoicesToggle")?.addEventListener("change", event => {
+      saveSettings({ interactiveChoices: event.currentTarget.checked });
+      toast(event.currentTarget.checked ? "Kartu pilihan interaktif diaktifkan" : "Kartu pilihan interaktif dimatikan");
+    });
+
+    $("#customAiInstructionInput")?.addEventListener("input", event => {
+      saveSettings({ customAiInstruction: event.currentTarget.value });
+    });
+
+    $("#clearCustomAiPromptBtn")?.addEventListener("click", () => {
+      const inp = $("#customAiInstructionInput");
+      if (inp) inp.value = "";
+      saveSettings({ customAiInstruction: "" });
+      toast("Instruksi manual dikosongkan");
+    });
+
+    $$(".preset-prompt-chip[data-preset]").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const preset = chip.dataset.preset || "";
+        const inp = $("#customAiInstructionInput");
+        if (inp) inp.value = preset;
+        saveSettings({ customAiInstruction: preset });
+        toast("Preset instruksi AI diterapkan");
+      });
+    });
+
+    $("#streamDelayRange")?.addEventListener("input", event => {
+      const val = Number(event.currentTarget.value) || 18;
+      const label = $("#streamDelayVal");
+      if (label) label.textContent = String(val);
+      saveSettings({ streamDelayMs: val });
+    });
+
+    $("#cmatrixToggle")?.addEventListener("change", event => {
+      saveSettings({ cmatrixEnabled: event.currentTarget.checked });
+      toast(event.currentTarget.checked ? "Efek CMatrix diaktifkan" : "Efek CMatrix dimatikan");
+    });
+
+    $$("[data-matrix-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        saveSettings({ cmatrixIntensity: btn.dataset.matrixChoice || "vivid", cmatrixEnabled: true });
+        toast("Ketajaman CMatrix diperbarui");
+      });
+    });
+
+    $$("[data-glass-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        saveSettings({ glassLevel: btn.dataset.glassChoice || "standard" });
+        toast("Efek kaca transparan diperbarui");
+      });
+    });
+
+    // System Monitor Modal Events
+    $("#closeSystemInfoModal")?.addEventListener("click", closeSystemInfoModal);
+    $("#systemInfoModal")?.addEventListener("click", event => {
+      if (event.target === $("#systemInfoModal")) closeSystemInfoModal();
+    });
+    $("#sysModalPingBtn")?.addEventListener("click", () => {
+      measureNetworkPing(true);
+      updateSystemInfoModalStats();
+    });
+    $("#sysModalNewChatBtn")?.addEventListener("click", () => {
+      closeSystemInfoModal();
+      newChat();
+      els.input?.focus();
     });
 
     $("#whatsappReaction")?.addEventListener("input", syncWaEmojiChips);
@@ -2591,10 +3181,192 @@
     });
   }
 
+
+  const consoleBootTime = Date.now();
+  let currentFpsValue = 60;
+
+  function renderCustomWaEmojis() {
+    const bar = $("#waEmojiQuickBar");
+    const addBtn = $("#addCustomEmojiBtn");
+    if (!bar || !addBtn) return;
+
+    $$(".emoji-chip.is-custom-emoji", bar).forEach(el => el.remove());
+
+    const customList = Array.isArray(settings.customWaEmojis) ? settings.customWaEmojis : [];
+    customList.forEach(emoji => {
+      if (!emoji) return;
+      const exists = $$(`.emoji-chip[data-emoji]`, bar).some(b => b.dataset.emoji === emoji);
+      if (exists) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "emoji-chip is-custom-emoji";
+      btn.dataset.emoji = emoji;
+      btn.textContent = emoji;
+      bar.insertBefore(btn, addBtn);
+    });
+    syncWaEmojiChips();
+  }
+
+  function formatUptime(ms) {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const hrs = String(Math.floor(totalSec / 3600)).padStart(2, "0");
+    const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
+    const secs = String(totalSec % 60).padStart(2, "0");
+    return `${hrs}:${mins}:${secs}`;
+  }
+
+  function updateSystemInfoModalStats() {
+    const cores = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} Core CPU` : "Multi-Core CPU";
+    const devMem = navigator.deviceMemory ? `${navigator.deviceMemory} GB RAM` : "RAM Optimal";
+    const dashMain = $("#dashSysMain");
+    const dashSub = $("#dashSessionSub");
+    if (dashMain) {
+      dashMain.textContent = `ONLINE · ${currentFpsValue} FPS`;
+    }
+    if (dashSub) {
+      dashSub.textContent = `${cores} · ${devMem}`;
+    }
+
+    const modal = $("#systemInfoModal");
+    if (!modal || modal.hidden) return;
+
+    const upEl = $("#sysModalUptime");
+    if (upEl) upEl.textContent = `Waktu aktif: ${formatUptime(Date.now() - consoleBootTime)}`;
+
+    const pingEl = $("#sysModalPing");
+    const avgPing = telemetry.totalRequests > 0
+      ? Math.round(telemetry.totalLatencyMs / telemetry.totalRequests)
+      : (lastMeasuredPing || 12);
+    if (pingEl) pingEl.textContent = `${avgPing} ms`;
+
+    const netEl = $("#sysModalNetType");
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (netEl) {
+      netEl.textContent = conn?.effectiveType
+        ? `Jaringan ${String(conn.effectiveType).toUpperCase()} (${conn.downlink || "Stabil"} Mbps)`
+        : "Jaringan Stabil · Siap";
+    }
+
+    const cpuRamEl = $("#sysModalCpuRam");
+    if (cpuRamEl) cpuRamEl.textContent = `${cores} · ${devMem}`;
+
+    const heapEl = $("#sysModalHeap");
+    if (heapEl) {
+      if (performance?.memory?.usedJSHeapSize) {
+        const usedMb = (performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1);
+        heapEl.textContent = `Memori web aktif: ${usedMb} MB`;
+      } else {
+        heapEl.textContent = `OS: ${$("#metricOS")?.textContent || "Aktif"} · ${$("#metricBrowser")?.textContent || "Browser"}`;
+      }
+    }
+
+    const fpsEl = $("#sysModalFps");
+    if (fpsEl) fpsEl.textContent = `${currentFpsValue} FPS · Layar ${window.innerWidth}×${window.innerHeight}`;
+
+    const scrEl = $("#sysModalScreen");
+    if (scrEl) scrEl.textContent = `Rasio piksel ${window.devicePixelRatio || 1}x · Baterai ${$("#metricBattery")?.textContent || "Siap"}`;
+
+    const modEl = $("#sysModalModel");
+    const activeMod = activeConversation()?.model || getDefaultModel();
+    if (modEl) modEl.textContent = `${modelName(activeMod)} (${modelProvider(activeMod)})`;
+
+    const reqEl = $("#sysModalRequests");
+    if (reqEl) reqEl.textContent = `${telemetry.totalRequests} Permintaan API`;
+
+    const sucEl = $("#sysModalSuccess");
+    const rate = telemetry.totalRequests > 0
+      ? Math.round((telemetry.successCount / telemetry.totalRequests) * 100)
+      : 100;
+    if (sucEl) sucEl.textContent = `Rasio sukses: ${rate}%`;
+  }
+
+  function openSystemInfoModal() {
+    const modal = $("#systemInfoModal");
+    if (!modal) return;
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    updateSystemInfoModalStats();
+  }
+
+  function closeSystemInfoModal() {
+    const modal = $("#systemInfoModal");
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  function initCMatrixRain() {
+    const canvas = $("#cmatrixCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const chars = "01HAOMIXMLｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ<>/*+=-0123456789";
+    const fontSize = 15;
+    let columns = 0;
+    let drops = [];
+
+    const resizeMatrix = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      columns = Math.ceil(canvas.width / fontSize);
+      drops = Array.from({ length: columns }, () => Math.floor(Math.random() * -40));
+    };
+
+    resizeMatrix();
+    window.addEventListener("resize", resizeMatrix);
+
+    let lastMatrixTick = 0;
+    function drawMatrix(now) {
+      requestAnimationFrame(drawMatrix);
+      if (settings.cmatrixEnabled === false) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+      if (now - lastMatrixTick < 42) return;
+      lastMatrixTick = now;
+
+      const isLight = document.documentElement.getAttribute("data-theme") === "light";
+      ctx.fillStyle = isLight ? "rgba(242, 247, 244, 0.14)" : "rgba(6, 9, 8, 0.12)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = `600 ${fontSize}px "JetBrains Mono", monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+
+        if (y > 0) {
+          // Head character bright mint
+          ctx.fillStyle = isLight ? "#047857" : "#6ee7b7";
+          ctx.fillText(char, x, y);
+
+          // Trail character emerald
+          if (drops[i] > 1) {
+            const prevChar = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillStyle = isLight ? "rgba(5, 150, 105, 0.65)" : "rgba(16, 185, 129, 0.85)";
+            ctx.fillText(prevChar, x, (drops[i] - 1) * fontSize);
+          }
+        }
+
+        if (y > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+
+    requestAnimationFrame(drawMatrix);
+  }
+
   function initialize() {
     applySettingsToUI();
     initDeviceMetrics();
+    initCMatrixRain();
     initSpotlightEffect();
+    updateSystemInfoModalStats();
+    window.setInterval(updateSystemInfoModalStats, 1500);
     renderTelemetryStats();
     measureNetworkPing(false);
 
