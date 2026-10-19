@@ -3,7 +3,7 @@
     'use strict';
 
     // ==========================================
-    // SMART-AI — CHAT ENGINE
+    // SMART-AI CHAT ENGINE
     // Desain HTML dan CSS tetap dipertahankan
     // ==========================================
 
@@ -28,10 +28,10 @@
     const STORAGE_CHAT = 'smartAIConversations';
     const STORAGE_HISTORY = 'turboHistory';
 
-    // Ambil template kartu sebelum membuat percakapan
+    // Template asli tidak dihapus dari DOM.
     resultTemplate.classList.add('hidden');
 
-    // Wadah untuk semua percakapan
+    // Wadah seluruh percakapan
     const conversationList = document.createElement('div');
     conversationList.id = 'conversation-list';
 
@@ -92,7 +92,7 @@
     }
 
     // ==========================================
-    // NAVIGATION
+    // NAVIGASI
     // ==========================================
 
     enterAppBtn?.addEventListener('click', () => {
@@ -108,14 +108,14 @@
         sidebarOverlay.classList.remove('sidebar-visible');
     });
 
-    sidebarOverlay?.addEventListener('click', (event) => {
+    sidebarOverlay?.addEventListener('click', event => {
         if (event.target === sidebarOverlay) {
             sidebarOverlay.classList.remove('sidebar-visible');
         }
     });
 
     // ==========================================
-    // HISTORY SIDEBAR
+    // RIWAYAT SIDEBAR
     // ==========================================
 
     function addToHistory(question) {
@@ -139,7 +139,6 @@
             li.style.cursor = 'pointer';
 
             li.addEventListener('click', () => {
-                // Buka percakapan lama jika sudah tersimpan
                 const existing = conversations.find(
                     chat => chat.question === question
                 );
@@ -158,7 +157,7 @@
     }
 
     clearHistoryBtn?.addEventListener('click', () => {
-        if (!confirm('Hapus riwayat pertanyaan dan percakapan?')) {
+        if (!confirm('Hapus semua riwayat dan percakapan?')) {
             return;
         }
 
@@ -175,101 +174,34 @@
     });
 
     // ==========================================
-    // CREATE CHAT CARD
+    // SOURCES
     // ==========================================
-
-    function createCard(chat) {
-        const card = resultTemplate.cloneNode(true);
-
-        card.removeAttribute('id');
-        card.classList.remove('hidden');
-
-        const questionElement = $('#user-query-display', card);
-        const answerElement = $('#answer-text', card);
-        const sourcesElement = $('#sources-list', card);
-        const relatedElement = $('#similar-list', card);
-
-        questionElement.textContent = chat.question;
-        answerElement.textContent = chat.answer || '';
-
-        // Loading khusus setiap percakapan
-        const loader = document.createElement('div');
-        loader.className = 'chat-loading';
-
-        const pulse = document.createElement('div');
-        pulse.className = 'loader-pulse';
-
-        const loadingText = document.createElement('p');
-        loadingText.textContent = 'Generating response...';
-
-        loader.append(pulse, loadingText);
-
-        if (chat.loading) {
-            card.insertBefore(loader, card.firstChild);
-        }
-
-        // Sources
-        renderSources(sourcesElement, chat.sources || []);
-
-        // Related
-        renderRelated(relatedElement, chat.similarQuestions || []);
-
-        // Tombol salin jawaban
-        const copyButton = $('.action-icons', card)?.children[0];
-
-        if (copyButton) {
-            copyButton.style.cursor = 'pointer';
-            copyButton.title = 'Salin jawaban';
-
-            copyButton.addEventListener('click', async () => {
-                try {
-                    await navigator.clipboard.writeText(
-                        answerElement.textContent
-                    );
-
-                    copyButton.textContent = 'check';
-                    setTimeout(() => {
-                        copyButton.textContent = 'content_copy';
-                    }, 1200);
-                } catch {
-                    alert('Tidak dapat menyalin jawaban.');
-                }
-            });
-        }
-
-        // Sembunyikan tombol feedback yang belum memiliki fungsi
-        const actionIcons = $('.action-icons', card);
-
-        if (actionIcons) {
-            const feedbackButtons = actionIcons.children;
-
-            if (feedbackButtons[1]) {
-                feedbackButtons[1].title = 'Fitur feedback belum tersedia';
-            }
-
-            if (feedbackButtons[2]) {
-                feedbackButtons[2].title = 'Fitur feedback belum tersedia';
-            }
-        }
-
-        conversationList.appendChild(card);
-
-        return card;
-    }
 
     function renderSources(element, sources) {
         element.innerHTML = '';
 
         const validSources = Array.isArray(sources)
-            ? sources
+            ? sources.filter(source => {
+                const url = typeof source === 'string'
+                    ? source.trim()
+                    : source?.url;
+
+                return Boolean(url);
+            })
             : [];
+
+        const infoCard = element.closest('.info-card');
+
+        // Sembunyikan Sources jika kosong
+        if (validSources.length === 0) {
+            infoCard?.classList.add('hidden');
+            return;
+        }
 
         validSources.forEach(source => {
             const url = typeof source === 'string'
                 ? source
-                : source?.url;
-
-            if (!url) return;
+                : source.url;
 
             const li = document.createElement('li');
             const link = document.createElement('a');
@@ -288,26 +220,38 @@
             element.appendChild(li);
         });
 
-        if (!element.children.length) {
-            const li = document.createElement('li');
-            li.textContent = 'Tidak ada sumber ditemukan.';
-            element.appendChild(li);
-        }
+        infoCard?.classList.remove('hidden');
     }
+
+    // ==========================================
+    // RELATED QUESTIONS
+    // ==========================================
 
     function renderRelated(element, questions) {
         element.innerHTML = '';
 
         const validQuestions = Array.isArray(questions)
-            ? questions
+            ? questions.filter(item => {
+                const question = typeof item === 'string'
+                    ? item.trim()
+                    : item?.question || item?.text;
+
+                return Boolean(question);
+            })
             : [];
+
+        const infoCard = element.closest('.info-card');
+
+        // Sembunyikan Related jika kosong
+        if (validQuestions.length === 0) {
+            infoCard?.classList.add('hidden');
+            return;
+        }
 
         validQuestions.forEach(item => {
             const question = typeof item === 'string'
                 ? item
-                : item?.question || item?.text;
-
-            if (!question) return;
+                : item.question || item.text;
 
             const li = document.createElement('li');
             li.textContent = question;
@@ -320,15 +264,80 @@
             element.appendChild(li);
         });
 
-        if (!element.children.length) {
-            const li = document.createElement('li');
-            li.textContent = 'Tidak ada pertanyaan terkait.';
-            element.appendChild(li);
-        }
+        infoCard?.classList.remove('hidden');
     }
 
     // ==========================================
-    // SEND MESSAGE
+    // MEMBUAT KARTU PERCAKAPAN
+    // ==========================================
+
+    function createCard(chat) {
+        const card = resultTemplate.cloneNode(true);
+
+        card.removeAttribute('id');
+        card.classList.remove('hidden');
+
+        const questionElement = $('#user-query-display', card);
+        const answerElement = $('#answer-text', card);
+        const sourcesElement = $('#sources-list', card);
+        const relatedElement = $('#similar-list', card);
+
+        questionElement.textContent = chat.question;
+        answerElement.textContent = chat.answer || '';
+
+        // Sources dan Related diperiksa secara terpisah
+        renderSources(sourcesElement, chat.sources || []);
+        renderRelated(
+            relatedElement,
+            chat.similarQuestions || []
+        );
+
+        // Loader khusus setiap kartu
+        if (chat.loading) {
+            const loader = document.createElement('div');
+            loader.className = 'chat-loading';
+
+            const pulse = document.createElement('div');
+            pulse.className = 'loader-pulse';
+
+            const text = document.createElement('p');
+            text.textContent = 'Generating response...';
+
+            loader.append(pulse, text);
+            card.insertBefore(loader, card.firstChild);
+        }
+
+        // Tombol salin jawaban
+        const copyButton = $('.action-icons', card)?.children[0];
+
+        if (copyButton) {
+            copyButton.style.cursor = 'pointer';
+            copyButton.title = 'Salin jawaban';
+
+            copyButton.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(
+                        answerElement.textContent
+                    );
+
+                    copyButton.textContent = 'check';
+
+                    setTimeout(() => {
+                        copyButton.textContent = 'content_copy';
+                    }, 1200);
+                } catch {
+                    alert('Tidak dapat menyalin jawaban.');
+                }
+            });
+        }
+
+        conversationList.appendChild(card);
+
+        return card;
+    }
+
+    // ==========================================
+    // KIRIM PERTANYAAN
     // ==========================================
 
     form.addEventListener('submit', event => {
@@ -399,9 +408,7 @@
 
             saveConversations();
 
-            // Isi kartu ini saja, bukan kartu percakapan lain
             card.remove();
-
             createCard(chat);
 
         } catch (error) {
@@ -420,7 +427,7 @@
     }
 
     // ==========================================
-    // RESTORE AND OPEN CONVERSATIONS
+    // BUKA PERCAKAPAN TERSIMPAN
     // ==========================================
 
     function showConversation(id) {
@@ -430,23 +437,25 @@
 
         if (!chat) return;
 
-        // Tampilkan hanya percakapan yang dipilih
         conversationList.innerHTML = '';
         createCard(chat);
 
         welcomeScreen.classList.add('hidden');
 
-        document.getElementById('main-app').scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
         });
     }
+
+    // ==========================================
+    // PULIHKAN CHAT SETELAH REFRESH
+    // ==========================================
 
     function restoreConversations() {
         conversationList.innerHTML = '';
 
         conversations.forEach(chat => {
-            // Jangan biarkan loading palsu tertinggal
             if (chat.loading) {
                 chat.loading = false;
 
@@ -467,7 +476,10 @@
         saveConversations();
     }
 
-    // Mulai aplikasi
+    // ==========================================
+    // INISIALISASI
+    // ==========================================
+
     renderHistory();
     restoreConversations();
 })();
