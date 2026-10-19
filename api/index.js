@@ -1,7 +1,7 @@
 // api/index.js
 const axios = require('axios');
 
-// Deteksi pertanyaan seputar pembuat / pencipta / developer AI
+// Deteksi jika pengguna bertanya langsung tentang pembuat / pencipta AI
 function isAskingCreator(text) {
     const q = text.toLowerCase().trim();
     const patterns = [
@@ -15,23 +15,87 @@ function isAskingCreator(text) {
     return patterns.some(regex => regex.test(q));
 }
 
+// Fungsi pembersih teks agar rapi di layar
+function formatCleanText(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Hapus bintang bold mentah
+        .replace(/###\s*/g, '')          // Hapus pagar heading mentah
+        .replace(/##\s*/g, '')
+        .trim();
+}
+
+// Fungsi pemanggil AI dengan 3 jalur cadangan otomatis
+async function generateAIResponse(question, sourceUrls) {
+    const systemPrompt = 'Kamu adalah SmartAI, asisten AI yang sangat pintar, ramah, dan luwes. Kamu dibuat dan dikembangkan oleh Mas Haomi_Xml. Jika ditanya siapa pembuat atau penciptamu, jawab dengan bangga bahwa kamu dibuat oleh Mas Haomi_Xml. Jawablah setiap pertanyaan (termasuk bantuan coding, tugas, atau obrolan santai) secara jelas, terstruktur dengan baris baru yang rapi, dan gunakan bahasa Indonesia yang natural.';
+    
+    const userPrompt = sourceUrls
+        ? `${question}\n\n(Konteks referensi web jika relevan: ${sourceUrls})`
+        : question;
+
+    const seed = Math.floor(Math.random() * 100000);
+
+    // JALUR 1: Endpoint OpenAI Compatible Pollinations
+    try {
+        const res1 = await axios.post('https://text.pollinations.ai/openai', {
+            model: 'openai',
+            seed: seed,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ]
+        }, { timeout: 10000 });
+
+        const content1 = res1.data?.choices?.[0]?.message?.content || (typeof res1.data === 'string' ? res1.data : '');
+        if (content1 && content1.trim()) {
+            return formatCleanText(content1);
+        }
+    } catch (e1) {
+        console.warn('Jalur AI 1 sibuk, beralih ke Jalur 2...');
+    }
+
+    // JALUR 2: Endpoint Direct GET Pollinations (Sangat Stabil & Bebas Limit)
+    try {
+        const url = `https://text.pollinations.ai/${encodeURIComponent(question)}?system=${encodeURIComponent(systemPrompt)}&seed=${seed}`;
+        const res2 = await axios.get(url, { timeout: 10000 });
+        if (res2.data && typeof res2.data === 'string' && res2.data.trim()) {
+            return formatCleanText(res2.data);
+        }
+    } catch (e2) {
+        console.warn('Jalur AI 2 sibuk, beralih ke Jalur 3...');
+    }
+
+    // JALUR 3: Model Alternatif (Mistral)
+    try {
+        const url3 = `https://text.pollinations.ai/${encodeURIComponent(question)}?model=mistral&system=${encodeURIComponent(systemPrompt)}&seed=${seed}`;
+        const res3 = await axios.get(url3, { timeout: 10000 });
+        if (res3.data && typeof res3.data === 'string' && res3.data.trim()) {
+            return formatCleanText(res3.data);
+        }
+    } catch (e3) {
+        console.error('Semua jalur AI gagal:', e3.message);
+    }
+
+    return 'Halo! Saya SmartAI buatan Mas Haomi_Xml. Saat ini jaringan sedang padat, silakan kirim ulang pertanyaan Anda.';
+}
+
 async function turboseekLogic(question) {
-    // 1. Jika pengguna bertanya siapa pembuat AI ini, langsung berikan jawaban resmi
+    // Jika bertanya tentang pembuat AI, langsung jawab instan
     if (isAskingCreator(question)) {
         return {
-            answer: 'Saya adalah SmartAI, asisten kecerdasan buatan yang dibuat dan dikembangkan oleh Mas Haomi_Xml. Ada hal yang bisa saya bantu hari ini?',
+            answer: 'Halo! Saya adalah SmartAI, asisten kecerdasan buatan yang dibuat dan dikembangkan oleh Mas Haomi_Xml.\n\nSaya siap membantu Anda dalam coding, mencari informasi, menganalisis bisnis, maupun menjawab berbagai pertanyaan lainnya. Ada yang ingin kita kerjakan hari ini?',
             sources: ['https://hao-ai-kappa.vercel.app'],
             similarQuestions: [
-                'Apa saja fitur unggulan SmartAI buatan Mas Haomi_Xml?',
-                'Bagaimana cara menggunakan SmartAI untuk membantu pekerjaan?',
-                'Siapa itu Mas Haomi_Xml?'
+                'Bisa bantu buatkan kode HTML dan CSS?',
+                'Apa saja yang bisa dilakukan SmartAI?',
+                'Berikan tips belajar pemrograman untuk pemula'
             ]
         };
     }
 
     const inst = axios.create({
         baseURL: 'https://www.turboseek.io/api',
-        timeout: 8000,
+        timeout: 4500,
         headers: {
             origin: 'https://www.turboseek.io',
             referer: 'https://www.turboseek.io/',
@@ -41,63 +105,31 @@ async function turboseekLogic(question) {
 
     let sources = [];
     let similarQuestions = [];
-    let cleanAnswer = '';
 
-    // 2. Get Sources dari TurboSeek
+    // Ambil Sources terlebih dahulu dengan batas waktu singkat
     try {
         const resSources = await inst.post('/getSources', { question });
         if (Array.isArray(resSources.data)) {
             sources = resSources.data;
         }
     } catch (e) {
-        console.error('Gagal mengambil sources:', e.message);
+        console.warn('Skip sources:', e.message);
     }
 
-    // 3. Get Similar Questions dari TurboSeek
-    try {
-        const resSimilar = await inst.post('/getSimilarQuestions', { question, sources });
-        if (Array.isArray(resSimilar.data)) {
-            similarQuestions = resSimilar.data;
-        }
-    } catch (e) {
-        console.error('Gagal mengambil similar questions:', e.message);
-    }
+    const sourceUrls = sources.map(s => s.url).filter(Boolean).slice(0, 3).join(', ');
 
-    // 4. Get Answer dari TurboSeek
-    try {
-        const { data: answer } = await inst.post('/getAnswer', { question, sources });
-        if (typeof answer === 'string' && answer.trim() !== '') {
-            cleanAnswer = answer.match(/(.*?)<\/p>/gs)?.map(match => {
-                return match.replace(/<\/?[^>]+(>|$)/g, '').trim();
-            }).join('\n\n') || answer.replace(/<\/?[^>]+(>|$)/g, '').trim();
-        }
-    } catch (e) {
-        console.error('Gagal mengambil answer dari TurboSeek:', e.message);
-    }
+    // Jalankan pembuatan jawaban AI & pertanyaan terkait secara BERSAMAAN (Paralel) agar cepat
+    const [aiAnswerResult, similarResult] = await Promise.allSettled([
+        generateAIResponse(question, sourceUrls),
+        inst.post('/getSimilarQuestions', { question, sources })
+    ]);
 
-    // 5. Gunakan AI dengan Identitas Mas Haomi_Xml
-    if (!cleanAnswer) {
-        try {
-            const sourceUrls = sources.map(s => s.url).slice(0, 3).join(', ');
-            const systemPrompt = 'Kamu adalah SmartAI, asisten AI cerdas dan elegan yang dibuat serta dikembangkan sepenuhnya oleh Mas Haomi_Xml. Jika pengguna menanyakan siapa pembuatmu, penciptamu, pengembangmu, atau asal-usulmu dalam bentuk apa pun, kamu WAJIB menjawab bahwa kamu dibuat oleh Mas Haomi_Xml. Jangan pernah menyebut OpenAI, GPT, atau Pippit sebagai pembuatmu. Gunakan bahasa yang rapi, sopan, dan mudah dibaca tanpa simbol tabel markdown.';
-            const userPrompt = sourceUrls 
-                ? `Pertanyaan: ${question}\n(Referensi terkait: ${sourceUrls})` 
-                : question;
+    const cleanAnswer = aiAnswerResult.status === 'fulfilled' 
+        ? aiAnswerResult.value 
+        : 'Maaf, terjadi kendala koneksi. Silakan coba lagi.';
 
-            const fallbackRes = await axios.post('https://text.pollinations.ai/', {
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ],
-                model: 'openai'
-            }, { timeout: 15000 });
-
-            cleanAnswer = typeof fallbackRes.data === 'string' 
-                ? fallbackRes.data.replace(/\*\*/g, '').trim() 
-                : JSON.stringify(fallbackRes.data);
-        } catch (fallbackErr) {
-            cleanAnswer = 'Maaf, server AI sedang sibuk saat ini. Silakan coba beberapa saat lagi.';
-        }
+    if (similarResult.status === 'fulfilled' && Array.isArray(similarResult.value?.data)) {
+        similarQuestions = similarResult.value.data;
     }
 
     return {
