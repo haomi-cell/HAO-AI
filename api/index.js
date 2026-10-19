@@ -2,8 +2,7 @@ const axios = require("axios");
 
 const BASE_URL = "https://api.jerexd.my.id";
 
-// API key untuk pengujian.
-// Setelah tes selesai, sebaiknya pindahkan ke Environment Variables Vercel.
+// API key utama JERE API
 const API_KEY =
   process.env.JEREXD_API_KEY || "jere_sTl9OLzPIyMn";
 
@@ -243,7 +242,7 @@ function resolveBestGeminiModel(requestedModel, availableModels = []) {
   return availableModels[0];
 }
 
-async function callJerexd(endpoint, params) {
+async function callJerexd(endpoint, params = {}) {
   const response = await http.get(endpoint, {
     params: {
       apikey: API_KEY,
@@ -310,7 +309,6 @@ async function handleChat(req, res) {
 
   const isReset = getInput(req, "reset") === "true";
 
-  // Setiap percakapan menggunakan session_id / chatId tersendiri.
   const rawSessionId =
     getInput(req, "chatId") ||
     getInput(req, "session_id") ||
@@ -320,9 +318,7 @@ async function handleChat(req, res) {
     ? `HAOMI_XML_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`
     : rawSessionId;
 
-  // 1. Endpoint khusus Microsoft Copilot (/api/ai/copilot?apikey=...&query=...)
-  // Karena Copilot tidak memiliki session_id di server API, gunakan context_prompt
-  // (dan fallback otomatis ke prompt murni bila diperlukan).
+  // 1. Endpoint Microsoft Copilot (/api/ai/copilot?apikey=...&query=...)
   if (isCopilot) {
     const primaryQuery = !isReset && contextPrompt ? contextPrompt : prompt;
     let data;
@@ -367,7 +363,7 @@ async function handleChat(req, res) {
     });
   }
 
-  // 2. Endpoint khusus Gemini AI (/api/ai/gemini?apikey=...&prompt=...&model=...&chatId=HAOMI_XML)
+  // 2. Endpoint Gemini AI (/api/ai/gemini?apikey=...&prompt=...&model=...&chatId=HAOMI_XML)
   if (isGeminiDirect) {
     const targetUrl = getInput(req, "url", "");
     const geminiParams = {
@@ -379,8 +375,6 @@ async function handleChat(req, res) {
 
     let data = await callJerexd("/api/ai/gemini", geminiParams);
 
-    // Jika model yang diminta mengembalikan daftar model (status: false & Array.isArray(data.models)),
-    // otomatis pilih model Gemini yang valid dari daftar tersebut dan kirim ulang.
     if (
       data?.status === false &&
       Array.isArray(data?.models) &&
@@ -550,6 +544,165 @@ async function handleWhatsAppReact(req, res) {
   });
 }
 
+// ================= 5 FITUR BARU =================
+
+// 1. Viu Premium (/api/movie/viuprem)
+async function handleViuPrem(req, res) {
+  const extraParams = {};
+  const query = getInput(req, "query", "");
+  if (query) extraParams.query = query;
+
+  const data = await callJerexd("/api/movie/viuprem", extraParams);
+
+  return sendJson(res, 200, {
+    success: data?.status !== false,
+    message:
+      data?.message ||
+      (data?.status === false
+        ? "Gagal mengambil data Viu Premium."
+        : "Data Viu Premium berhasil diambil."),
+    result: data,
+  });
+}
+
+// 2. Info Kota (/api/search/infokota)
+async function handleInfoKota(req, res) {
+  const kota = requireString(
+    getInput(req, "kota", getInput(req, "city", "Jombang")),
+    "Nama kota"
+  );
+
+  const data = await callJerexd("/api/search/infokota", {
+    kota,
+  });
+
+  return sendJson(res, 200, {
+    success: data?.status !== false,
+    message:
+      data?.message ||
+      (data?.status === false
+        ? `Pencarian info kota ${kota} gagal.`
+        : `Informasi kota ${kota} berhasil diambil.`),
+    result: data,
+  });
+}
+
+// 3. Tmp Files (/api/tools/tmpfiles)
+async function handleTmpFiles(req, res) {
+  const url = getInput(req, "url", "");
+  const text = getInput(req, "text", "");
+  const fileBase64 = getInput(req, "file_base64", "");
+  const fileName = getInput(req, "file_name", "upload.bin");
+  const fileMime = getInput(req, "file_mime", "application/octet-stream");
+
+  // Jika ada file_base64 yang dikirim dari frontend, coba kirim multipart POST ke /api/tools/tmpfiles
+  if (fileBase64) {
+    try {
+      const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, "");
+      const buffer = Buffer.from(cleanBase64, "base64");
+      const boundary = `----HaomiFormBoundary${Date.now().toString(16)}`;
+      const header = Buffer.from(
+        `--${boundary}\r\n` +
+          `Content-Disposition: form-data; name="file"; filename="${fileName.replace(/"/g, "")}"\r\n` +
+          `Content-Type: ${fileMime}\r\n\r\n`,
+        "utf-8"
+      );
+      const footer = Buffer.from(`\r\n--${boundary}--\r\n`, "utf-8");
+      const bodyBuffer = Buffer.concat([header, buffer, footer]);
+
+      const postRes = await http.post("/api/tools/tmpfiles", bodyBuffer, {
+        params: { apikey: API_KEY },
+        headers: {
+          "Content-Type": `multipart/form-data; boundary=${boundary}`,
+          "Content-Length": bodyBuffer.length,
+        },
+      });
+      const postData = postRes.data;
+      if (postData && postData.status !== false) {
+        return sendJson(res, 200, {
+          success: true,
+          message: postData.message || "File berhasil diunggah ke TmpFiles.",
+          result: postData,
+        });
+      }
+    } catch {
+      // Fallback ke GET di bawah bila endpoint menggunakan GET
+    }
+  }
+
+  const params = {};
+  if (url) params.url = url;
+  if (text) params.text = text;
+
+  const data = await callJerexd("/api/tools/tmpfiles", params);
+
+  return sendJson(res, 200, {
+    success: data?.status !== false,
+    message:
+      data?.message ||
+      (data?.status === false
+        ? "Permintaan TmpFiles gagal."
+        : "Permintaan TmpFiles selesai."),
+    result: data,
+  });
+}
+
+// 4. Web2APK (/api/tools/web2apk)
+async function handleWeb2Apk(req, res) {
+  const url = requireHttpUrl(
+    getInput(req, "url", "https://hao-ai-kappa.vercel.app/"),
+    "URL Website"
+  );
+  const name = requireString(
+    getInput(req, "name", "Ai Haomi"),
+    "Nama Aplikasi"
+  );
+
+  const data = await callJerexd("/api/tools/web2apk", {
+    url,
+    name,
+  });
+
+  return sendJson(res, 200, {
+    success: data?.status !== false,
+    message:
+      data?.message ||
+      (data?.status === false
+        ? "Pembuatan Web2APK gagal."
+        : "Aplikasi APK berhasil diproses."),
+    result: data,
+  });
+}
+
+// 5. Cek Banned WA (/api/whatsapp/checkban)
+async function handleWhatsAppCheckBan(req, res) {
+  const rawNumber = requireString(
+    getInput(req, "number", getInput(req, "nomor", "")),
+    "Nomor WhatsApp"
+  );
+  const number = rawNumber.replace(/[^0-9]/g, "");
+
+  if (!number || number.length < 7) {
+    const error = new Error("Masukkan nomor WhatsApp yang valid (contoh: 081249309278).");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const data = await callJerexd("/api/whatsapp/checkban", {
+    number,
+  });
+
+  return sendJson(res, 200, {
+    success: data?.status !== false,
+    message:
+      data?.message ||
+      (data?.status === false
+        ? "Pengecekan status nomor WA gagal."
+        : "Pengecekan status nomor WA selesai."),
+    result: data,
+  });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -614,6 +767,25 @@ module.exports = async function handler(req, res) {
       case "reactch":
         return await handleWhatsAppReact(req, res);
 
+      case "viuprem":
+      case "viu":
+        return await handleViuPrem(req, res);
+
+      case "infokota":
+      case "kota":
+        return await handleInfoKota(req, res);
+
+      case "tmpfiles":
+      case "tmpfile":
+        return await handleTmpFiles(req, res);
+
+      case "web2apk":
+        return await handleWeb2Apk(req, res);
+
+      case "checkban":
+      case "wa-checkban":
+        return await handleWhatsAppCheckBan(req, res);
+
       case "models":
         return sendJson(res, 200, {
           success: true,
@@ -634,6 +806,11 @@ module.exports = async function handler(req, res) {
             "am-verify",
             "urlscan",
             "whatsapp-react",
+            "viuprem",
+            "infokota",
+            "tmpfiles",
+            "web2apk",
+            "checkban",
           ],
         });
     }
