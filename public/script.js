@@ -2,11 +2,6 @@
 (() => {
     'use strict';
 
-    // ==========================================
-    // SMART-AI CHAT ENGINE
-    // Desain HTML dan CSS tetap dipertahankan
-    // ==========================================
-
     const $ = (selector, root = document) =>
         root.querySelector(selector);
 
@@ -28,10 +23,9 @@
     const STORAGE_CHAT = 'smartAIConversations';
     const STORAGE_HISTORY = 'turboHistory';
 
-    // Template asli tidak dihapus dari DOM.
+    // Simpan template asli untuk membuat kartu chat baru
     resultTemplate.classList.add('hidden');
 
-    // Wadah seluruh percakapan
     const conversationList = document.createElement('div');
     conversationList.id = 'conversation-list';
 
@@ -47,9 +41,9 @@
         resultTemplate
     );
 
-    // ==========================================
-    // STORAGE
-    // ==========================================
+    // =========================
+    // PENYIMPANAN DATA
+    // =========================
 
     function readStorage(key, fallback) {
         try {
@@ -76,7 +70,7 @@
                 JSON.stringify(conversations)
             );
         } catch (error) {
-            console.error('Gagal menyimpan percakapan:', error);
+            console.error('Gagal menyimpan chat:', error);
         }
     }
 
@@ -87,13 +81,13 @@
                 JSON.stringify(searchHistory)
             );
         } catch (error) {
-            console.error('Gagal menyimpan riwayat:', error);
+            console.error('Gagal menyimpan history:', error);
         }
     }
 
-    // ==========================================
+    // =========================
     // NAVIGASI
-    // ==========================================
+    // =========================
 
     enterAppBtn?.addEventListener('click', () => {
         landingPage.style.display = 'none';
@@ -114,9 +108,9 @@
         }
     });
 
-    // ==========================================
-    // RIWAYAT SIDEBAR
-    // ==========================================
+    // =========================
+    // HISTORY SIDEBAR
+    // =========================
 
     function addToHistory(question) {
         searchHistory = searchHistory.filter(
@@ -157,15 +151,13 @@
     }
 
     clearHistoryBtn?.addEventListener('click', () => {
-        if (!confirm('Hapus semua riwayat dan percakapan?')) {
-            return;
-        }
+        if (!confirm('Hapus semua riwayat percakapan?')) return;
 
-        searchHistory = [];
         conversations = [];
+        searchHistory = [];
 
-        localStorage.removeItem(STORAGE_HISTORY);
         localStorage.removeItem(STORAGE_CHAT);
+        localStorage.removeItem(STORAGE_HISTORY);
 
         conversationList.innerHTML = '';
         welcomeScreen.classList.remove('hidden');
@@ -173,9 +165,9 @@
         renderHistory();
     });
 
-    // ==========================================
+    // =========================
     // SOURCES
-    // ==========================================
+    // =========================
 
     function renderSources(element, sources) {
         element.innerHTML = '';
@@ -192,8 +184,7 @@
 
         const infoCard = element.closest('.info-card');
 
-        // Sembunyikan Sources jika kosong
-        if (validSources.length === 0) {
+        if (!validSources.length) {
             infoCard?.classList.add('hidden');
             return;
         }
@@ -223,9 +214,9 @@
         infoCard?.classList.remove('hidden');
     }
 
-    // ==========================================
+    // =========================
     // RELATED QUESTIONS
-    // ==========================================
+    // =========================
 
     function renderRelated(element, questions) {
         element.innerHTML = '';
@@ -242,8 +233,7 @@
 
         const infoCard = element.closest('.info-card');
 
-        // Sembunyikan Related jika kosong
-        if (validQuestions.length === 0) {
+        if (!validQuestions.length) {
             infoCard?.classList.add('hidden');
             return;
         }
@@ -267,9 +257,9 @@
         infoCard?.classList.remove('hidden');
     }
 
-    // ==========================================
-    // MEMBUAT KARTU PERCAKAPAN
-    // ==========================================
+    // =========================
+    // MEMBUAT KARTU CHAT
+    // =========================
 
     function createCard(chat) {
         const card = resultTemplate.cloneNode(true);
@@ -283,29 +273,27 @@
         const relatedElement = $('#similar-list', card);
 
         questionElement.textContent = chat.question;
-        answerElement.textContent = chat.answer || '';
 
-        // Sources dan Related diperiksa secara terpisah
+        // Loading berada DI DALAM bubble AI
+        if (chat.loading) {
+            answerElement.innerHTML = `
+                <span class="typing-indicator"
+                      aria-label="SmartAI sedang mengetik">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+            `;
+        } else {
+            answerElement.textContent = chat.answer || '';
+        }
+
+        // Kartu kosong disembunyikan otomatis
         renderSources(sourcesElement, chat.sources || []);
         renderRelated(
             relatedElement,
             chat.similarQuestions || []
         );
-
-        // Loader khusus setiap kartu
-        if (chat.loading) {
-            const loader = document.createElement('div');
-            loader.className = 'chat-loading';
-
-            const pulse = document.createElement('div');
-            pulse.className = 'loader-pulse';
-
-            const text = document.createElement('p');
-            text.textContent = 'Generating response...';
-
-            loader.append(pulse, text);
-            card.insertBefore(loader, card.firstChild);
-        }
 
         // Tombol salin jawaban
         const copyButton = $('.action-icons', card)?.children[0];
@@ -336,9 +324,9 @@
         return card;
     }
 
-    // ==========================================
-    // KIRIM PERTANYAAN
-    // ==========================================
+    // =========================
+    // MENGIRIM PERTANYAAN
+    // =========================
 
     form.addEventListener('submit', event => {
         event.preventDefault();
@@ -371,12 +359,15 @@
         conversations.push(chat);
         saveConversations();
 
+        // Buat SATU kartu, jangan buat ulang saat selesai
         const card = createCard(chat);
 
         card.scrollIntoView({
             behavior: 'smooth',
             block: 'start'
         });
+
+        const answerElement = $('#answer-text', card);
 
         try {
             const response = await fetch(
@@ -406,29 +397,41 @@
 
             chat.loading = false;
 
+            // Hilangkan tiga titik dan isi jawaban pada bubble yang sama
+            answerElement.textContent = chat.answer;
+
+            renderSources(
+                $('#sources-list', card),
+                chat.sources
+            );
+
+            renderRelated(
+                $('#similar-list', card),
+                chat.similarQuestions
+            );
+
             saveConversations();
 
-            card.remove();
-            createCard(chat);
-
         } catch (error) {
-            console.error('Smart-AI:', error);
+            console.error('Smart-AI error:', error);
 
             chat.loading = false;
             chat.answer =
-                'Maaf, terjadi kendala saat mengambil jawaban. ' +
-                'Silakan coba lagi.';
+                'Maaf, ada kendala saat mengambil jawaban. ' +
+                'Coba kirim pertanyaan sekali lagi, ya.';
+
+            answerElement.textContent = chat.answer;
+
+            renderSources($('#sources-list', card), []);
+            renderRelated($('#similar-list', card), []);
 
             saveConversations();
-
-            card.remove();
-            createCard(chat);
         }
     }
 
-    // ==========================================
-    // BUKA PERCAKAPAN TERSIMPAN
-    // ==========================================
+    // =========================
+    // BUKA CHAT DARI HISTORY
+    // =========================
 
     function showConversation(id) {
         const chat = conversations.find(
@@ -448,9 +451,9 @@
         });
     }
 
-    // ==========================================
+    // =========================
     // PULIHKAN CHAT SETELAH REFRESH
-    // ==========================================
+    // =========================
 
     function restoreConversations() {
         conversationList.innerHTML = '';
@@ -461,8 +464,8 @@
 
                 if (!chat.answer) {
                     chat.answer =
-                        'Permintaan sebelumnya terhenti. ' +
-                        'Silakan ajukan pertanyaan kembali.';
+                        'Pertanyaan sebelumnya belum selesai. ' +
+                        'Silakan tanyakan kembali, ya.';
                 }
             }
 
@@ -476,10 +479,8 @@
         saveConversations();
     }
 
-    // ==========================================
-    // INISIALISASI
-    // ==========================================
-
+    // Jalankan aplikasi
     renderHistory();
     restoreConversations();
+
 })();
