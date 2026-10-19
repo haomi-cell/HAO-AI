@@ -1,367 +1,398 @@
 
-"use strict";
-
 const axios = require("axios");
 
 const BASE_URL = "https://api.jerexd.my.id";
-const API_KEY = process.env.JEREXD_API_KEY;
-const TIMEOUT = 30000;
+
+// API key untuk pengujian.
+// Setelah tes selesai, sebaiknya pindahkan ke Environment Variables Vercel.
+const API_KEY =
+  process.env.JEREXD_API_KEY || "jere_sTl9OLzPIyMn";
+
+const ALLOWED_MODELS = [
+  "chatday/ai-chat",
+  "openai/gpt-5.6-terra",
+  "openai/gpt-5.5",
+  "openai/gpt-5.4",
+  "openai/gpt-5.3-chat",
+  "openai/gpt-5.1-instant",
+  "openai/gpt-5",
+  "openai/gpt-4o",
+  "openai/gpt-4o-mini",
+  "xai/grok-4.1-fast-non-reasoning",
+  "anthropic/claude-haiku-4.5",
+  "anthropic/claude-sonnet-5",
+  "anthropic/claude-sonnet-4.6",
+  "anthropic/claude-opus-4.5",
+  "anthropic/claude-opus-4.6",
+  "anthropic/claude-opus-4.7",
+  "anthropic/claude-opus-4.8",
+  "deepseek/deepseek-v4-pro",
+  "deepseek/deepseek-v4-flash",
+  "deepseek/deepseek-v3.2-thinking",
+  "google/gemini-3.1-pro-preview",
+  "google/gemini-3-pro-preview",
+  "google/gemini-3.1-flash-lite",
+  "alibaba/qwen3-max",
+  "meta/llama-4-maverick",
+  "moonshotai/kimi-k2.6",
+];
 
 const http = axios.create({
   baseURL: BASE_URL,
-  timeout: TIMEOUT,
-  maxRedirects: 3,
+  timeout: 60000,
   headers: {
     Accept: "application/json",
-    "User-Agent": "HAOMI-AI/1.0"
-  }
+  },
 });
 
-function sendJson(res, status, data) {
-  return res.status(status).json(data);
+function sendJson(res, statusCode, data) {
+  return res.status(statusCode).json(data);
 }
 
-function getBody(req) {
-  if (req.body && typeof req.body === "object") return req.body;
+function getInput(req, key, fallback = "") {
+  const body = req.body && typeof req.body === "object"
+    ? req.body
+    : {};
 
-  if (typeof req.body === "string") {
-    try {
-      return JSON.parse(req.body);
-    } catch {
-      return {};
-    }
-  }
+  const query = req.query && typeof req.query === "object"
+    ? req.query
+    : {};
 
-  return {};
+  const value = body[key] ?? query[key] ?? fallback;
+
+  return typeof value === "string" ? value.trim() : value;
 }
 
-function requiredString(value, name, maxLength = 5000) {
+function requireString(value, label) {
   if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${name} wajib diisi.`);
+    const error = new Error(`${label} wajib diisi.`);
+    error.statusCode = 400;
+    throw error;
   }
 
-  const result = value.trim();
-
-  if (result.length > maxLength) {
-    throw new Error(`${name} terlalu panjang.`);
-  }
-
-  return result;
+  return value.trim();
 }
 
-function validateEmail(value) {
-  const email = requiredString(value, "Email", 254);
+function requireEmail(value) {
+  const email = requireString(value, "Email");
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Format email tidak valid.");
+    const error = new Error("Format email tidak valid.");
+    error.statusCode = 400;
+    throw error;
   }
 
   return email;
 }
 
-function validateHttpUrl(value, name = "URL") {
-  const input = requiredString(value, name, 8000);
+function requireHttpUrl(value, label = "URL") {
+  const raw = requireString(value, label);
 
   let parsed;
 
   try {
-    parsed = new URL(input);
+    parsed = new URL(raw);
   } catch {
-    throw new Error(`${name} tidak valid.`);
+    const error = new Error(`${label} tidak valid.`);
+    error.statusCode = 400;
+    throw error;
   }
 
   if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error(`${name} harus menggunakan HTTP atau HTTPS.`);
-  }
-
-  if (parsed.username || parsed.password) {
-    throw new Error(`${name} tidak boleh berisi kredensial.`);
+    const error = new Error(`${label} harus menggunakan HTTP atau HTTPS.`);
+    error.statusCode = 400;
+    throw error;
   }
 
   return parsed.toString();
 }
 
-function getApiKey() {
-  if (!API_KEY) {
-    const error = new Error(
-      "API key belum diatur. Tambahkan JEREXD_API_KEY di Environment Variables Vercel."
-    );
-    error.statusCode = 500;
-    throw error;
+function getApiError(error) {
+  const data = error?.response?.data;
+
+  if (typeof data === "string" && data.trim()) {
+    return data.trim().slice(0, 1500);
   }
 
-  return API_KEY;
-}
-
-function upstreamError(error) {
-  const status = error.response?.status;
-  const data = error.response?.data;
-
-  // Jangan mengirim konfigurasi request, API key, atau URL sensitif ke klien.
-  let message = "Layanan JERE-API gagal memproses permintaan.";
-
-  if (data && typeof data.message === "string") {
-    message = data.message.slice(0, 400);
-  } else if (error.code === "ECONNABORTED") {
-    message = "Permintaan ke layanan AI melewati batas waktu.";
+  if (data && typeof data === "object") {
+    return (
+      data.message ||
+      data.error ||
+      data.result ||
+      JSON.stringify(data)
+    ).toString().slice(0, 1500);
   }
 
-  const result = new Error(message);
-  result.statusCode = status && status >= 400 && status < 600 ? status : 502;
-  return result;
+  if (error?.code === "ECONNABORTED") {
+    return "Permintaan ke layanan API terlalu lama. Silakan coba lagi.";
+  }
+
+  return error?.message || "Terjadi kesalahan pada layanan API.";
 }
 
-async function callJerexd(path, params) {
-  const response = await http.get(path, { params });
+async function callJerexd(endpoint, params) {
+  const response = await http.get(endpoint, {
+    params: {
+      apikey: API_KEY,
+      ...params,
+    },
+  });
+
   return response.data;
 }
 
-function assertUpstreamSuccess(data) {
-  if (data && typeof data === "object" && data.status === false) {
-    throw new Error(
-      typeof data.message === "string"
-        ? data.message.slice(0, 400)
-        : "Layanan menolak permintaan."
-    );
+async function handleChat(req, res) {
+  const prompt = requireString(
+    getInput(req, "prompt", getInput(req, "question")),
+    "Pesan"
+  );
+
+  const requestedModel = getInput(
+    req,
+    "model",
+    "openai/gpt-4o"
+  );
+
+  const model = requestedModel === "GPT-4o"
+    ? "openai/gpt-4o"
+    : requestedModel;
+
+  if (!ALLOWED_MODELS.includes(model)) {
+    return sendJson(res, 400, {
+      success: false,
+      message: "Model tidak tersedia.",
+      availableModels: ALLOWED_MODELS,
+    });
   }
 
-  return data;
-}
-
-async function chat(body) {
-  const question = requiredString(
-    body.question || body.prompt,
-    "Pertanyaan",
-    12000
-  );
-
-  const model = requiredString(
-    body.model || "openai/gpt-4o",
-    "Model",
-    120
-  );
-
-  // ID sesi dibuat oleh frontend dan digunakan kembali untuk obrolan yang sama.
-  const sessionId = requiredString(
-    body.session_id || `haomi-${Date.now()}`,
-    "Session ID",
-    200
-  );
+  // Setiap percakapan menggunakan session_id tersendiri.
+  // Frontend perlu menyimpan ID yang sama untuk chat yang sama.
+  const sessionId =
+    getInput(req, "session_id") ||
+    `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
   const data = await callJerexd("/api/ai/aichat", {
-    apikey: getApiKey(),
-    prompt: question,
+    prompt,
     model,
-    session_id: sessionId
+    session_id: sessionId,
+    ...(getInput(req, "reset") === "true"
+      ? { reset: "true" }
+      : {}),
   });
 
-  assertUpstreamSuccess(data);
-
-  const answer =
-    data?.result ??
-    data?.answer ??
-    data?.response ??
-    data?.message;
-
-  if (typeof answer !== "string" || !answer.trim()) {
-    throw new Error(
-      "Respons AI kosong. Periksa model dan format respons JERE-API."
-    );
+  if (data?.status === false) {
+    return sendJson(res, 502, {
+      success: false,
+      message: data.message || "JERE-API tidak berhasil menjawab.",
+      details: data,
+      session_id: sessionId,
+    });
   }
 
-  return {
+  return sendJson(res, 200, {
     success: true,
-    answer: answer.trim(),
-    model: data.model || model,
-    session_id: data.session_id || sessionId,
-    history_count: data.history_count ?? null
-  };
+    message: "Berhasil mendapatkan jawaban.",
+    session_id: data?.session_id || sessionId,
+    model: data?.model || model,
+    answer:
+      data?.result ??
+      data?.answer ??
+      data?.response ??
+      data?.message ??
+      data?.data ??
+      data,
+    history_count: data?.history_count,
+    raw: data,
+  });
 }
 
-async function alightMotionSend(body) {
-  const email = validateEmail(body.email);
+async function handleAlightMotionSend(req, res) {
+  const email = requireEmail(getInput(req, "email"));
 
   const data = await callJerexd("/api/am/send", {
-    apikey: getApiKey(),
-    email
-  });
-
-  assertUpstreamSuccess(data);
-
-  return {
-    success: true,
-    tool: "alight-motion",
-    message: data?.message || "Permintaan pengiriman verifikasi selesai.",
-    result: data
-  };
-}
-
-async function alightMotionVerify(body) {
-  const email = validateEmail(body.email);
-  const link = validateHttpUrl(body.link, "Tautan verifikasi");
-
-  // Tautan verifikasi bisa mengandung kode autentikasi sensitif.
-  // Jangan mencatat link ini ke log dan jangan mengembalikannya ke frontend.
-  const data = await callJerexd("/api/am/verif", {
-    apikey: getApiKey(),
     email,
-    link
   });
 
-  assertUpstreamSuccess(data);
-
-  return {
-    success: true,
-    tool: "alight-motion",
-    message: data?.message || "Permintaan verifikasi selesai.",
-    result: data
-  };
+  return sendJson(res, 200, {
+    success: data?.status !== false,
+    message:
+      data?.message ||
+      (data?.status === false
+        ? "Permintaan Alight Motion gagal."
+        : "Permintaan Alight Motion telah dikirim."),
+    result: data,
+  });
 }
 
-async function scanUrl(body) {
-  const url = validateHttpUrl(body.url, "URL yang akan dipindai");
+async function handleAlightMotionVerify(req, res) {
+  const email = requireEmail(getInput(req, "email"));
+  const link = requireHttpUrl(
+    getInput(req, "link"),
+    "Tautan verifikasi"
+  );
+
+  const data = await callJerexd("/api/am/verif", {
+    email,
+    link,
+  });
+
+  return sendJson(res, 200, {
+    success: data?.status !== false,
+    message:
+      data?.message ||
+      (data?.status === false
+        ? "Verifikasi Alight Motion gagal."
+        : "Permintaan verifikasi telah diproses."),
+    result: data,
+  });
+}
+
+async function handleUrlScan(req, res) {
+  const url = requireHttpUrl(getInput(req, "url"));
 
   const data = await callJerexd("/api/tools/urlscan", {
-    apikey: getApiKey(),
-    url
+    url,
   });
 
-  assertUpstreamSuccess(data);
-
-  return {
-    success: true,
-    tool: "url-scan",
-    message: data?.message || "Pemindaian URL selesai.",
-    result: data
-  };
+  return sendJson(res, 200, {
+    success: data?.status !== false,
+    message:
+      data?.message ||
+      (data?.status === false
+        ? "Pemindaian URL gagal."
+        : "Pemindaian URL selesai."),
+    result: data,
+  });
 }
 
-async function whatsappReact(body) {
-  const url = validateHttpUrl(body.url, "URL postingan WhatsApp");
-  const reaction = requiredString(body.reaction, "Emoji reaksi", 300);
+async function handleWhatsAppReact(req, res) {
+  const url = requireHttpUrl(
+    getInput(req, "url"),
+    "URL WhatsApp"
+  );
 
-  let parsed;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new Error("URL WhatsApp tidak valid.");
-  }
+  const reactionInput = getInput(
+    req,
+    "reaction",
+    "❤️"
+  );
 
-  if (
-    parsed.hostname !== "whatsapp.com" &&
-    parsed.hostname !== "www.whatsapp.com"
-  ) {
-    throw new Error("Gunakan tautan postingan kanal WhatsApp.");
-  }
+  const reactions = Array.isArray(reactionInput)
+    ? reactionInput.join(",")
+    : String(reactionInput)
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .join(",");
 
-  // Batasi daftar emoji agar parameter tidak digunakan untuk payload sembarang.
-  const allowedEmoji = new Set([
-    "👍", "❤️", "😂", "😮", "😢", "🙏", "🔥",
-    "🎉", "😍", "🥰", "😋", "💦", "🙄", "🤔",
-    "👏", "💯", "✨", "😊", "😎", "😅", "😡"
-  ]);
-
-  const reactions = reaction
-    .split(",")
-    .map(item => item.trim())
-    .filter(Boolean);
-
-  if (!reactions.length || reactions.length > 10) {
-    throw new Error("Masukkan 1 sampai 10 emoji reaksi.");
-  }
-
-  if (reactions.some(emoji => !allowedEmoji.has(emoji))) {
-    throw new Error("Terdapat emoji yang belum didukung.");
+  if (!reactions) {
+    const error = new Error("Reaction wajib diisi.");
+    error.statusCode = 400;
+    throw error;
   }
 
   const data = await callJerexd("/api/whatsapp/reactch", {
-    apikey: getApiKey(),
     url,
-    reaction: reactions.join(",")
+    reaction: reactions,
   });
 
-  assertUpstreamSuccess(data);
-
-  return {
-    success: true,
-    tool: "whatsapp-reaction",
-    message: data?.message || "Permintaan reaksi selesai.",
-    result: data
-  };
+  return sendJson(res, 200, {
+    success: data?.status !== false,
+    message:
+      data?.message ||
+      (data?.status === false
+        ? "Reaksi WhatsApp gagal."
+        : "Permintaan reaksi WhatsApp selesai."),
+    result: data,
+  });
 }
 
-module.exports = async (req, res) => {
+module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Cache-Control", "no-store");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
 
   if (req.method === "OPTIONS") {
     return res.status(204).end();
   }
 
-  if (req.method === "GET") {
-    return sendJson(res, 200, {
-      success: true,
-      app: "HAOMI",
-      message: "HAOMI API aktif.",
-      tools: ["chat", "am-send", "am-verify", "urlscan", "whatsapp-react"]
-    });
-  }
+  if (!["GET", "POST"].includes(req.method)) {
+    res.setHeader("Allow", "GET, POST, OPTIONS");
 
-  if (req.method !== "POST") {
     return sendJson(res, 405, {
       success: false,
-      error: "Gunakan metode POST."
+      message: "Metode HTTP tidak didukung.",
     });
   }
 
+  if (!API_KEY) {
+    return sendJson(res, 500, {
+      success: false,
+      message: "API key belum tersedia di backend.",
+    });
+  }
+
+  const action = String(
+    getInput(req, "action", "chat")
+  ).toLowerCase();
+
   try {
-    const body = getBody(req);
-    const action = requiredString(body.action || "chat", "Action", 40);
-
-    let result;
-
     switch (action) {
       case "chat":
-        result = await chat(body);
-        break;
+        return await handleChat(req, res);
 
       case "am-send":
-        result = await alightMotionSend(body);
-        break;
+        return await handleAlightMotionSend(req, res);
 
       case "am-verify":
-        result = await alightMotionVerify(body);
-        break;
+      case "am-verif":
+        return await handleAlightMotionVerify(req, res);
 
       case "urlscan":
-        result = await scanUrl(body);
-        break;
+        return await handleUrlScan(req, res);
 
       case "whatsapp-react":
-        result = await whatsappReact(body);
-        break;
+      case "reactch":
+        return await handleWhatsAppReact(req, res);
+
+      case "models":
+        return sendJson(res, 200, {
+          success: true,
+          models: ALLOWED_MODELS,
+        });
 
       default:
         return sendJson(res, 400, {
           success: false,
-          error: "Action tidak dikenal."
+          message: "Action tidak dikenal.",
+          availableActions: [
+            "chat",
+            "models",
+            "am-send",
+            "am-verify",
+            "urlscan",
+            "whatsapp-react",
+          ],
         });
     }
-
-    return sendJson(res, 200, result);
   } catch (error) {
-    const safeError = error.response ? upstreamError(error) : error;
-    const status = safeError.statusCode || 400;
+    const statusCode =
+      error.statusCode ||
+      error.response?.status ||
+      500;
 
-    if (status >= 500) {
-      console.error("HAOMI API error:", safeError.message);
-    }
-
-    return sendJson(res, status, {
+    return sendJson(res, statusCode, {
       success: false,
-      error: safeError.message || "Terjadi kesalahan pada server."
+      message: getApiError(error),
+      ...(error.response?.data
+        ? { details: error.response.data }
+        : {}),
     });
   }
 };
