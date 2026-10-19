@@ -2482,10 +2482,583 @@
         max-width: 190px;
       }
     }
+
+    /* =================================================================
+       CMATRIX DIGITAL RAIN & TRUE CYBER GLASSMORPHISM OVERLAY
+       ================================================================= */
+    .cmatrix-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      opacity: var(--cmatrix-opacity, 0.72);
+      transition: opacity 0.35s ease;
+    }
+
+    html[data-theme="light"] .cmatrix-canvas {
+      opacity: calc(var(--cmatrix-opacity, 0.72) * 0.42);
+    }
+
+    .cyber-grid-overlay {
+      z-index: 2;
+    }
+
+    :root,
+    html[data-theme="dark"] {
+      --glass-card-bg: rgba(7, 15, 12, 0.42);
+      --glass-card-hover: rgba(11, 24, 19, 0.54);
+      --glass-subcard-bg: rgba(12, 26, 20, 0.34);
+      --glass-subcard-hover: rgba(16, 185, 129, 0.16);
+      --glass-composer-bg: rgba(7, 15, 12, 0.48);
+      --glass-blur: 14px;
+      --glass-border: rgba(16, 185, 129, 0.3);
+      --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    }
+
+    html[data-theme="light"] {
+      --glass-card-bg: rgba(255, 255, 255, 0.62);
+      --glass-card-hover: rgba(255, 255, 255, 0.78);
+      --glass-subcard-bg: rgba(240, 249, 244, 0.56);
+      --glass-subcard-hover: rgba(16, 185, 129, 0.15);
+      --glass-composer-bg: rgba(255, 255, 255, 0.68);
+      --glass-blur: 14px;
+      --glass-border: rgba(5, 150, 105, 0.28);
+      --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    html[data-glass="crystal"] {
+      --glass-card-bg: rgba(6, 14, 11, 0.26);
+      --glass-subcard-bg: rgba(10, 22, 17, 0.22);
+      --glass-composer-bg: rgba(6, 14, 11, 0.32);
+      --glass-blur: 10px;
+    }
+
+    html[data-glass="deep"] {
+      --glass-card-bg: rgba(7, 15, 12, 0.62);
+      --glass-subcard-bg: rgba(12, 25, 20, 0.52);
+      --glass-composer-bg: rgba(7, 15, 12, 0.68);
+      --glass-blur: 22px;
+    }
+
+    /* Glassmorphism Cards (Hero, Bento, Stat Boxes, Tool Cards, Composer) */
+    .cyber-hero-card,
+    .bento-panel,
+    .endpoint-card,
+    .tool-hero,
+    .tool-card,
+    .result-card {
+      background: var(--glass-card-bg) !important;
+      backdrop-filter: blur(var(--glass-blur)) saturate(165%) !important;
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(165%) !important;
+      border: 1px solid var(--glass-border) !important;
+      box-shadow: 0 14px 36px -10px rgba(0, 0, 0, 0.5), var(--glass-highlight) !important;
+    }
+
+    .cyber-hero-bar {
+      background: transparent !important;
+    }
+
+    .stat-box,
+    .device-box,
+    .prompt-card {
+      background: var(--glass-subcard-bg) !important;
+      backdrop-filter: blur(10px) saturate(150%) !important;
+      -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
+      border: 1px solid rgba(16, 185, 129, 0.24) !important;
+      box-shadow: var(--glass-highlight) !important;
+    }
+
+    .stat-box:hover,
+    .prompt-card:hover {
+      background: var(--glass-subcard-hover) !important;
+      border-color: var(--neon-emerald-bright) !important;
+    }
+
+    .composer-dock {
+      background: transparent !important;
+    }
+
+    .composer {
+      background: var(--glass-composer-bg) !important;
+      backdrop-filter: blur(calc(var(--glass-blur) + 2px)) saturate(175%) !important;
+      -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 2px)) saturate(175%) !important;
+      border: 1px solid var(--glass-border) !important;
+      box-shadow: 0 14px 38px rgba(0, 0, 0, 0.55), var(--glass-highlight) !important;
+    }
+
+    .topbar {
+      background: var(--glass-card-bg) !important;
+      backdrop-filter: blur(16px) saturate(160%) !important;
+      -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+    }
+
+    .sidebar {
+      background: rgba(7, 14, 11, 0.84) !important;
+      backdrop-filter: blur(20px) saturate(160%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+      overflow-y: auto !important;
+    }
+
+    html[data-theme="light"] .sidebar {
+      background: rgba(255, 255, 255, 0.88) !important;
+    }
+
+    .message.assistant .message-bubble {
+      background: var(--glass-card-bg) !important;
+      backdrop-filter: blur(14px) saturate(155%) !important;
+      -webkit-backdrop-filter: blur(14px) saturate(155%) !important;
+      border: 1px solid var(--glass-border) !important;
+      box-shadow: var(--glass-highlight) !important;
+    }
+
+    /* =================================================================
+       INTERACTIVE AI CHOICE / OPTION CARD (GAMBAR 2 STYLE)
+       ================================================================= */
+    .ai-choice-card {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(6, 12, 10, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    html[data-theme="light"] .ai-choice-card {
+      background: rgba(248, 252, 250, 0.92);
+      border-color: rgba(5, 150, 105, 0.25);
+    }
+
+    .ai-choice-card-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.4;
+    }
+
+    .ai-choice-group {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .ai-choice-group:last-of-type {
+      border-bottom: none;
+      padding-bottom: 2px;
+    }
+
+    .ai-choice-group-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .ai-radio-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .ai-radio-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      width: 100%;
+      text-align: left;
+      padding: 9px 11px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid transparent;
+      color: var(--text-main);
+      font-size: 13.5px;
+      font-weight: 600;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ai-radio-option:hover {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+
+    .ai-radio-option.is-selected {
+      background: rgba(16, 185, 129, 0.14);
+      border-color: rgba(16, 185, 129, 0.42);
+    }
+
+    .ai-radio-circle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid rgba(148, 163, 184, 0.55);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      transition: all 0.18s ease;
+    }
+
+    .ai-radio-option.is-selected .ai-radio-circle {
+      border-color: #ffffff;
+      background: #ffffff;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+    }
+
+    html[data-theme="light"] .ai-radio-option.is-selected .ai-radio-circle {
+      border-color: var(--neon-emerald);
+      background: var(--neon-emerald);
+    }
+
+    .ai-radio-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #060908;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.16s ease;
+    }
+
+    html[data-theme="light"] .ai-radio-dot {
+      background: #ffffff;
+    }
+
+    .ai-radio-option.is-selected .ai-radio-dot {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .ai-choice-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .ai-choice-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .ai-choice-field label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .ai-choice-field input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: var(--text-main);
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+    html[data-theme="light"] .ai-choice-field input {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.16);
+    }
+
+    .ai-choice-field input:focus {
+      border-color: var(--neon-emerald-bright);
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+
+    .ai-choice-submit-btn {
+      width: 100%;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: #f8fafc !important;
+      color: #060908 !important;
+      font-weight: 700;
+      font-size: 13.5px;
+      text-align: center;
+      border: none;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    html[data-theme="light"] .ai-choice-submit-btn {
+      background: #059669 !important;
+      color: #ffffff !important;
+    }
+
+    .ai-choice-submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(16, 185, 129, 0.3);
+    }
+
+    .ai-choice-submit-btn.is-submitted {
+      background: rgba(16, 185, 129, 0.2) !important;
+      color: var(--neon-emerald-bright) !important;
+      border: 1px solid var(--border-accent);
+    }
+
+    /* =================================================================
+       CUSTOM EMOJI ADDER & UNIFIED GLASS SETTINGS MODAL
+       ================================================================= */
+    .emoji-add-btn {
+      border: 1px dashed var(--border-accent) !important;
+      color: var(--neon-emerald-bright) !important;
+      font-weight: 700;
+      min-width: 42px;
+    }
+
+    .custom-emoji-adder {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.32);
+      border: 1px solid var(--border-accent);
+    }
+
+    .custom-emoji-adder input {
+      flex: 1;
+      padding: 7px 10px;
+      font-size: 13px;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .glass-modal {
+      background: rgba(8, 15, 12, 0.82) !important;
+      backdrop-filter: blur(24px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+      border: 1px solid rgba(16, 185, 129, 0.35) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+    }
+
+    html[data-theme="light"] .glass-modal {
+      background: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    .settings-header-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      background: var(--neon-emerald-soft);
+      border: 1px solid var(--border-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .settings-group-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border-subtle);
+      border-radius: 15px;
+      padding: 14px;
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .settings-group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      color: var(--neon-emerald-bright);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .settings-row-col {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 10px !important;
+    }
+
+    .custom-glass-picker-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 13px;
+      border-radius: 11px;
+      background: rgba(16, 185, 129, 0.12) !important;
+      border: 1px solid var(--border-accent) !important;
+      color: var(--text-main) !important;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .picker-arrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--neon-emerald-bright);
+      margin-left: 4px;
+    }
+
+    .glass-choice-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      width: 100%;
+    }
+
+    .glass-choice-card {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.28) !important;
+      border: 1px solid var(--border-subtle) !important;
+      text-align: left;
+    }
+
+    html[data-theme="light"] .glass-choice-card {
+      background: rgba(15, 23, 42, 0.04) !important;
+    }
+
+    .glass-choice-card strong {
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .glass-choice-card small {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.3;
+    }
+
+    .glass-choice-card.active {
+      background: var(--neon-emerald-soft) !important;
+      border-color: var(--neon-emerald-bright) !important;
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.18);
+    }
+
+    .glass-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 11px;
+      background: var(--bg-input) !important;
+      border: 1px solid var(--border-subtle) !important;
+      color: var(--text-main) !important;
+      font-size: 13px;
+      resize: vertical;
+    }
+
+    .glass-textarea:focus {
+      border-color: var(--neon-emerald-bright) !important;
+    }
+
+    .preset-prompt-chip {
+      font-size: 11.5px !important;
+      padding: 5px 10px !important;
+      height: auto !important;
+      width: auto !important;
+    }
+
+    .city-chip {
+      font-size: 12px !important;
+      padding: 6px 11px !important;
+      width: auto !important;
+      height: auto !important;
+    }
+
+    .settings-slider-wrap {
+      min-width: 130px;
+      display: flex;
+      align-items: center;
+    }
+
+    .cyber-range {
+      width: 100%;
+      accent-color: #10b981;
+      cursor: pointer;
+    }
+
+    .glass-file-input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 11px;
+      background: var(--bg-input) !important;
+      border: 1px dashed var(--border-accent) !important;
+      font-size: 12.5px;
+    }
+
+    .sys-monitor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 520px) {
+      .sys-monitor-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .sys-stat-card {
+      padding: 12px;
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sys-stat-card small {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+    }
+
+    .sys-stat-card strong {
+      font-size: 14px;
+      font-family: var(--font-mono);
+    }
+
+    .sys-stat-card span {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
+
+    .apk-download-banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      background: var(--neon-emerald) !important;
+      color: #04130d !important;
+      font-weight: 700;
+      font-size: 12.5px;
+      text-decoration: none;
+    }
+
   </style>
 </head>
 <body>
   <div class="ambient-bg" aria-hidden="true">
+    <canvas id="cmatrixCanvas" class="cmatrix-canvas"></canvas>
     <div class="ambient-glow glow-1"></div>
     <div class="ambient-glow glow-2"></div>
     <div class="cyber-grid-overlay"></div>
@@ -2546,6 +3119,58 @@
             </span>
             <span>Ruang Obrolan AI</span>
             <span class="nav-meta" id="navModelIndicator">GPT-4o</span>
+          </button>
+          <button type="button" class="nav-item" data-view="viuprem">
+            <span class="nav-icon-box">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="3"/>
+                <polygon points="10 9 15 12 10 15 10 9"/>
+              </svg>
+            </span>
+            <span>Viu Premium</span>
+            <span class="nav-tag-pill">VIP</span>
+          </button>
+          <button type="button" class="nav-item" data-view="infokota">
+            <span class="nav-icon-box">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 21s-7-5.686-7-11a7 7 0 1 1 14 0c0 5.314-7 11-7 11z"/>
+                <circle cx="12" cy="10" r="2.5"/>
+              </svg>
+            </span>
+            <span>Info Kota</span>
+            <span class="nav-tag-pill">Wilayah</span>
+          </button>
+          <button type="button" class="nav-item" data-view="tmpfiles">
+            <span class="nav-icon-box">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </span>
+            <span>Tmp Files</span>
+            <span class="nav-tag-pill">Cloud</span>
+          </button>
+          <button type="button" class="nav-item" data-view="web2apk">
+            <span class="nav-icon-box">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                <line x1="12" y1="18" x2="12.01" y2="18"/>
+                <path d="m9 10 3 3 3-3"/>
+              </svg>
+            </span>
+            <span>Web2APK</span>
+            <span class="nav-tag-pill">APK</span>
+          </button>
+          <button type="button" class="nav-item" data-view="checkban">
+            <span class="nav-icon-box">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+            </span>
+            <span>Cek Banned WA</span>
+            <span class="nav-tag-pill">Nomor</span>
           </button>
           <button type="button" class="nav-item" data-view="alight">
             <span class="nav-icon-box">
@@ -2742,13 +3367,14 @@
                     <small class="stat-sub" id="pingStatusSub">Stabil · Ketuk tes ping</small>
                   </button>
 
-                  <button type="button" class="stat-box interactive-stat" id="boxSessionInfo" title="Ketuk untuk mulai obrolan baru">
+                  <button type="button" class="stat-box interactive-stat" id="boxSessionInfo" title="Ketuk untuk melihat monitor info sistem lengkap">
                     <div class="stat-top-row">
-                      <span class="stat-label">SESI CHAT</span>
-                      <span class="stat-action-tag">Baru +</span>
+                      <span class="stat-label">INFO SISTEM</span>
+                      <span class="stat-action-tag">Monitor ↗</span>
                     </div>
-                    <strong class="stat-value"><span id="statTotalReq">0</span> <span class="stat-unit">Pesan</span></strong>
-                    <small class="stat-sub" id="dashSessionSub">Ketuk mulai sesi baru</small>
+                    <strong class="stat-value neon-emerald-text" id="dashSysMain">ONLINE · 60 FPS</strong>
+                    <small class="stat-sub" id="dashSessionSub">Mesin &amp; RAM Normal · Cek detail</small>
+                    <span id="statTotalReq" hidden>0</span>
                   </button>
                 </div>
                 <span id="statEndpoints" hidden>30</span>
@@ -3123,6 +3749,11 @@
                 <button type="button" class="emoji-chip" data-emoji="💦">💦</button>
                 <button type="button" class="emoji-chip" data-emoji="🎉">🎉</button>
                 <button type="button" class="emoji-chip" data-emoji="⚡">⚡</button>
+                <button type="button" class="emoji-chip emoji-add-btn" id="addCustomEmojiBtn" title="Tambah emoji sendiri">+</button>
+              </div>
+              <div class="custom-emoji-adder" id="customEmojiAdder" hidden>
+                <input type="text" id="customEmojiInput" placeholder="Ketik/tempel emoji baru (contoh: 🗿,🚀,💯)" autocomplete="off">
+                <button type="button" class="inline-helper-btn" id="saveCustomEmojiBtn">Tambah</button>
               </div>
             </div>
 
@@ -3146,6 +3777,314 @@
             </div>
             <div id="whatsappSummary" class="structured-summary" hidden></div>
             <pre id="whatsappResult" class="tool-result">// Status pengiriman reaksi bakal tampil di sini...</pre>
+          </section>
+        </div>
+      </section>
+
+      <!-- VIEW 5: VIU PREMIUM -->
+      <section class="view tool-view" id="viupremView" hidden>
+        <div class="tool-topbar">
+          <button type="button" class="back-to-chat" data-view="chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Kembali ke Ruang Chat</span>
+          </button>
+        </div>
+
+        <div class="tool-hero spotlight-card">
+          <div class="tool-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="3"/>
+              <polygon points="10 9 15 12 10 15 10 9"/>
+            </svg>
+          </div>
+          <div>
+            <div class="eyebrow">HIBURAN &amp; STREAMING · VIU</div>
+            <h1>Akses Viu Premium</h1>
+            <p>Ambil akun atau data akses Viu Premium siap pakai langsung dari server utama.</p>
+          </div>
+        </div>
+
+        <div class="workbench-grid">
+          <form id="viupremForm" class="tool-card spotlight-card">
+            <div class="card-section-title">AMBIL DATA VIU PREMIUM</div>
+            <div class="field-group">
+              <label for="viupremQuery">Catatan / Filter (Opsional)</label>
+              <input id="viupremQuery" type="text" placeholder="Kosongkan saja untuk langsung ambil akun terbaru">
+              <p class="field-hint">Langsung tekan tombol di bawah buat narik data Viu Premium terbaru.</p>
+            </div>
+
+            <button class="primary-tool-button" id="viupremSubmit" type="submit">
+              <span>Ambil Viu Premium Sekarang</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <section class="result-card spotlight-card">
+            <div class="result-heading">
+              <div class="result-title-group">
+                <h2>DATA VIU PREMIUM</h2>
+                <span class="status-tag" id="viupremStatusBadge">SIAP</span>
+                <span class="time-tag" id="viupremTimeBadge" hidden>0 ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="result-action-btn" data-copy-result="viupremResult">Salin</button>
+                <button type="button" class="result-action-btn" data-clear-result="viupremResult">Bersihkan</button>
+              </div>
+            </div>
+            <div id="viupremSummary" class="structured-summary" hidden></div>
+            <pre id="viupremResult" class="tool-result">// Hasil akun atau info Viu Premium bakal tampil di sini...</pre>
+          </section>
+        </div>
+      </section>
+
+      <!-- VIEW 6: INFO KOTA -->
+      <section class="view tool-view" id="infokotaView" hidden>
+        <div class="tool-topbar">
+          <button type="button" class="back-to-chat" data-view="chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Kembali ke Ruang Chat</span>
+          </button>
+        </div>
+
+        <div class="tool-hero spotlight-card">
+          <div class="tool-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 21s-7-5.686-7-11a7 7 0 1 1 14 0c0 5.314-7 11-7 11z"/>
+              <circle cx="12" cy="10" r="2.5"/>
+            </svg>
+          </div>
+          <div>
+            <div class="eyebrow">DATA WILAYAH · INDONESIA</div>
+            <h1>Cek Info Lengkap Kota</h1>
+            <p>Lihat profil daerah, letak geografis, dan ringkasan info wilayah dari berbagai kota di Indonesia.</p>
+          </div>
+        </div>
+
+        <div class="workbench-grid">
+          <form id="infokotaForm" class="tool-card spotlight-card">
+            <div class="card-section-title">CARI NAMA KOTA</div>
+
+            <div class="field-group">
+              <label for="infokotaInput">Nama Kota / Kabupaten</label>
+              <input id="infokotaInput" type="text" value="Jombang" placeholder="Contoh: Jombang, Surabaya, Malang" required>
+              <p class="field-hint">Ketik nama kota atau pilih cepat dari daftar di bawah:</p>
+              <div class="emoji-picker-bar" id="kotaQuickBar">
+                <button type="button" class="emoji-chip city-chip active" data-kota="Jombang">Jombang</button>
+                <button type="button" class="emoji-chip city-chip" data-kota="Surabaya">Surabaya</button>
+                <button type="button" class="emoji-chip city-chip" data-kota="Malang">Malang</button>
+                <button type="button" class="emoji-chip city-chip" data-kota="Jakarta">Jakarta</button>
+                <button type="button" class="emoji-chip city-chip" data-kota="Bandung">Bandung</button>
+                <button type="button" class="emoji-chip city-chip" data-kota="Yogyakarta">Yogyakarta</button>
+                <button type="button" class="emoji-chip city-chip" data-kota="Semarang">Semarang</button>
+              </div>
+            </div>
+
+            <button class="primary-tool-button" id="infokotaSubmit" type="submit">
+              <span>Lihat Info Kota</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <section class="result-card spotlight-card">
+            <div class="result-heading">
+              <div class="result-title-group">
+                <h2>PROFIL WILAYAH</h2>
+                <span class="status-tag" id="infokotaStatusBadge">SIAP</span>
+                <span class="time-tag" id="infokotaTimeBadge" hidden>0 ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="result-action-btn" data-copy-result="infokotaResult">Salin</button>
+                <button type="button" class="result-action-btn" data-clear-result="infokotaResult">Bersihkan</button>
+              </div>
+            </div>
+            <div id="infokotaSummary" class="structured-summary" hidden></div>
+            <pre id="infokotaResult" class="tool-result">// Detail informasi kota bakal muncul di sini...</pre>
+          </section>
+        </div>
+      </section>
+
+      <!-- VIEW 7: TMP FILES -->
+      <section class="view tool-view" id="tmpfilesView" hidden>
+        <div class="tool-topbar">
+          <button type="button" class="back-to-chat" data-view="chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Kembali ke Ruang Chat</span>
+          </button>
+        </div>
+
+        <div class="tool-hero spotlight-card">
+          <div class="tool-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div>
+            <div class="eyebrow">ALAT CLOUD · TMPFILES</div>
+            <h1>Tmp Files &amp; Link Sementara</h1>
+            <p>Unggah file dari perangkat kamu atau proses lewat layanan TmpFiles untuk mendapatkan link bagikan cepat.</p>
+          </div>
+        </div>
+
+        <div class="workbench-grid">
+          <form id="tmpfilesForm" class="tool-card spotlight-card">
+            <div class="card-section-title">UNGGAH ATAU PROSES TMPFILES</div>
+
+            <div class="field-group">
+              <label for="tmpfilesFile">Pilih File dari Perangkat (Opsional)</label>
+              <input id="tmpfilesFile" type="file" class="glass-file-input">
+              <p class="field-hint">Pilih gambar, dokumen, atau file kecil (maks 4 MB) kalau mau langsung diunggah.</p>
+            </div>
+
+            <div class="field-group">
+              <label for="tmpfilesUrl">Atau Masukkan Link / Teks Target (Opsional)</label>
+              <input id="tmpfilesUrl" type="text" placeholder="https://... (kosongkan bila langsung panggil endpoint)">
+            </div>
+
+            <button class="primary-tool-button" id="tmpfilesSubmit" type="submit">
+              <span>Proses TmpFiles Sekarang</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <section class="result-card spotlight-card">
+            <div class="result-heading">
+              <div class="result-title-group">
+                <h2>HASIL TMPFILES</h2>
+                <span class="status-tag" id="tmpfilesStatusBadge">SIAP</span>
+                <span class="time-tag" id="tmpfilesTimeBadge" hidden>0 ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="result-action-btn" data-copy-result="tmpfilesResult">Salin</button>
+                <button type="button" class="result-action-btn" data-clear-result="tmpfilesResult">Bersihkan</button>
+              </div>
+            </div>
+            <div id="tmpfilesSummary" class="structured-summary" hidden></div>
+            <pre id="tmpfilesResult" class="tool-result">// Hasil respon dan link TmpFiles bakal tampil di sini...</pre>
+          </section>
+        </div>
+      </section>
+
+      <!-- VIEW 8: WEB2APK -->
+      <section class="view tool-view" id="web2apkView" hidden>
+        <div class="tool-topbar">
+          <button type="button" class="back-to-chat" data-view="chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Kembali ke Ruang Chat</span>
+          </button>
+        </div>
+
+        <div class="tool-hero spotlight-card">
+          <div class="tool-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2"/>
+              <line x1="12" y1="18" x2="12.01" y2="18"/>
+              <path d="m9 10 3 3 3-3"/>
+            </svg>
+          </div>
+          <div>
+            <div class="eyebrow">BUILDER ANDROID · WEB2APK</div>
+            <h1>Ubah Website Jadi Aplikasi APK</h1>
+            <p>Bungkus alamat website apa pun menjadi file instalasi Android (.apk) yang siap dipasang di HP.</p>
+          </div>
+        </div>
+
+        <div class="workbench-grid">
+          <form id="web2apkForm" class="tool-card spotlight-card">
+            <div class="card-section-title"> PENGATURAN APLIKASI APK</div>
+
+            <div class="field-group">
+              <div class="label-row">
+                <label for="web2apkUrl">Alamat Website (URL)</label>
+                <button type="button" class="inline-helper-btn" id="useCurrentWebBtn">Pakai Web Ini</button>
+              </div>
+              <input id="web2apkUrl" type="url" value="https://hao-ai-kappa.vercel.app/" placeholder="https://hao-ai-kappa.vercel.app/" required>
+            </div>
+
+            <div class="field-group">
+              <label for="web2apkName">Nama Aplikasi</label>
+              <input id="web2apkName" type="text" value="Ai Haomi" placeholder="Contoh: Ai Haomi" required>
+              <p class="field-hint">Nama ini akan tampil di bawah ikon aplikasi saat dipasang di Android.</p>
+            </div>
+
+            <button class="primary-tool-button" id="web2apkSubmit" type="submit">
+              <span>Bangun File APK Sekarang</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <section class="result-card spotlight-card">
+            <div class="result-heading">
+              <div class="result-title-group">
+                <h2>HASIL BUILD APK</h2>
+                <span class="status-tag" id="web2apkStatusBadge">SIAP</span>
+                <span class="time-tag" id="web2apkTimeBadge" hidden>0 ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="result-action-btn" data-copy-result="web2apkResult">Salin</button>
+                <button type="button" class="result-action-btn" data-clear-result="web2apkResult">Bersihkan</button>
+              </div>
+            </div>
+            <div id="web2apkSummary" class="structured-summary" hidden></div>
+            <pre id="web2apkResult" class="tool-result">// Link unduhan file APK dan info build bakal tampil di sini...</pre>
+          </section>
+        </div>
+      </section>
+
+      <!-- VIEW 9: CEK BANNED WA -->
+      <section class="view tool-view" id="checkbanView" hidden>
+        <div class="tool-topbar">
+          <button type="button" class="back-to-chat" data-view="chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Kembali ke Ruang Chat</span>
+          </button>
+        </div>
+
+        <div class="tool-hero spotlight-card">
+          <div class="tool-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+          </div>
+          <div>
+            <div class="eyebrow">DIAGNOSTIK AKUN · WHATSAPP</div>
+            <h1>Cek Status Banned Nomor WA</h1>
+            <p>Periksa apakah nomor WhatsApp masih aman aktif atau sedang terkena blokir/banned dari pihak WhatsApp.</p>
+          </div>
+        </div>
+
+        <div class="workbench-grid">
+          <form id="checkbanForm" class="tool-card spotlight-card">
+            <div class="card-section-title">MASUKKAN NOMOR TELEPON</div>
+
+            <div class="field-group">
+              <label for="checkbanNumber">Nomor WhatsApp</label>
+              <input id="checkbanNumber" type="tel" value="" placeholder="Contoh: 081249309278 atau 6281249309278" required>
+              <p class="field-hint">Bisa ditulis memakai awalan 08... maupun kode negara 628...</p>
+            </div>
+
+            <button class="primary-tool-button" id="checkbanSubmit" type="submit">
+              <span>Cek Status Nomor Sekarang</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <section class="result-card spotlight-card">
+            <div class="result-heading">
+              <div class="result-title-group">
+                <h2>STATUS NOMOR WA</h2>
+                <span class="status-tag" id="checkbanStatusBadge">SIAP</span>
+                <span class="time-tag" id="checkbanTimeBadge" hidden>0 ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="result-action-btn" data-copy-result="checkbanResult">Salin</button>
+                <button type="button" class="result-action-btn" data-clear-result="checkbanResult">Bersihkan</button>
+              </div>
+            </div>
+            <div id="checkbanSummary" class="structured-summary" hidden></div>
+            <pre id="checkbanResult" class="tool-result">// Status keamanan nomor WhatsApp bakal tampil di sini...</pre>
           </section>
         </div>
       </section>
@@ -3218,15 +4157,15 @@
     </div>
   </section>
 
-  <!-- MODAL 2: PENGATURAN -->
+  <!-- MODAL 2: PENGATURAN KONSOL & KONTROL MANUAL AI -->
   <section class="dialog-backdrop" id="settingsModal" hidden>
-    <div class="modal-card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal-card settings-dialog glass-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
       <div class="modal-header">
         <div class="settings-title-lockup">
-          <img src="data:image/jpeg;base64,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" alt="HAOMI Robot" class="settings-robot-avatar">
+          <div class="settings-header-badge">⚡</div>
           <div>
-            <span class="eyebrow">SETELAN KONSOL</span>
-            <h2 id="settingsTitle">Pengaturan HAOMI</h2>
+            <span class="eyebrow">PUSAT KONTROL HAOMI</span>
+            <h2 id="settingsTitle">Setelan AI, Visual &amp; Sistem</h2>
           </div>
         </div>
         <button type="button" class="icon-button" id="closeSettings" aria-label="Tutup pengaturan">
@@ -3235,145 +4174,304 @@
       </div>
 
       <div class="settings-body">
-        <div class="settings-row">
-          <div class="settings-copy">
-            <strong>Gaya Muncul Tulisan AI</strong>
-            <p>Pilih seberapa cepat huruf muncul waktu AI membalas pesanmu.</p>
+        <!-- BAGIAN 1: KONTROL OTAK & GAYA AI MANUAL -->
+        <div class="settings-group-card">
+          <div class="settings-group-header">
+            <span class="pulse-dot"></span>
+            <span>OTAK AI &amp; KONTROL JAWABAN MANUAL</span>
           </div>
-          <div class="segmented-control" role="group" aria-label="Kecepatan ketikan AI">
-            <button type="button" class="segment-btn active" data-stream-choice="cyber">Halus</button>
-            <button type="button" class="segment-btn" data-stream-choice="turbo">Ngebut</button>
-            <button type="button" class="segment-btn" data-stream-choice="instant">Langsung</button>
+
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>Model AI Utama</strong>
+              <p>Otak AI yang langsung aktif waktu kamu mulai obrolan baru.</p>
+            </div>
+            <button type="button" class="custom-glass-picker-btn" id="openModelPickerFromSettings">
+              <span class="pulse-dot"></span>
+              <span id="settingsModelLabel">GPT-4o (OpenAI)</span>
+              <span class="picker-arrow">Ganti ↗</span>
+            </button>
+            <input type="hidden" id="defaultModelSelect" value="openai/gpt-4o">
+          </div>
+
+          <div class="settings-row settings-row-col">
+            <div class="settings-copy">
+              <strong>Gaya Ngobrol AI</strong>
+              <p>Pilih pembawaan bahasa AI biar pas sama selera ngobrolmu (tanpa menu bawaan HP yang kaku).</p>
+            </div>
+            <div class="glass-choice-grid" id="styleChoiceGrid" role="radiogroup" aria-label="Gaya bahasa AI">
+              <button type="button" class="glass-choice-card active" data-style-choice="standard">
+                <strong>Standar</strong>
+                <small>Luwes, jelas &amp; mengalir natural</small>
+              </button>
+              <button type="button" class="glass-choice-card" data-style-choice="casual">
+                <strong>Santai</strong>
+                <small>Akrab kayak temen nongkrong</small>
+              </button>
+              <button type="button" class="glass-choice-card" data-style-choice="concise">
+                <strong>Ringkas</strong>
+                <small>To-the-point, padat &amp; cepat</small>
+              </button>
+              <button type="button" class="glass-choice-card" data-style-choice="technical">
+                <strong>Teknis</strong>
+                <small>Fokus kode &amp; bedah logika</small>
+              </button>
+            </div>
+            <input type="hidden" id="responseStyleSelect" value="standard">
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>Panjang Jawaban AI</strong>
+              <p>Atur seberapa panjang penjelasan yang dikeluarkan AI.</p>
+            </div>
+            <div class="segmented-control" role="group" aria-label="Panjang balasan AI">
+              <button type="button" class="segment-btn active" data-length-choice="auto">Otomatis</button>
+              <button type="button" class="segment-btn" data-length-choice="short">Singkat</button>
+              <button type="button" class="segment-btn" data-length-choice="detailed">Lengkap</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-copy">
+              <label for="interactiveChoicesToggle"><strong>Kartu Pilihan Interaktif di Chat</strong></label>
+              <p>Kalau AI ngasih opsi (misal bahasa pemrograman atau langkah), tampilkan tombol pilihan yang bisa langsung dipencet.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="interactiveChoicesToggle" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-row settings-row-col">
+            <div class="settings-copy">
+              <div class="label-row">
+                <label for="customAiInstructionInput"><strong>Instruksi / Karakter AI Manual</strong></label>
+                <button type="button" class="inline-helper-btn" id="clearCustomAiPromptBtn">Kosongkan</button>
+              </div>
+              <p>Tulis aturan khusus buatanmu sendiri (misal: panggilan, gaya bahasa daerah, atau format jawaban yang kamu mau).</p>
+            </div>
+            <textarea id="customAiInstructionInput" class="glass-textarea" rows="2" placeholder="Contoh: Panggil aku Bos, jawab pakai bahasa santai sehari-hari, jangan kaku kayak robot..."></textarea>
+            <div class="emoji-picker-bar" id="customPromptPresets">
+              <button type="button" class="emoji-chip preset-prompt-chip" data-preset="Gunakan bahasa sehari-hari yang santai, natural, nggak kaku kayak robot, dan langsung ke solusi.">Bahasa Natural (Anti-Kaku)</button>
+              <button type="button" class="emoji-chip preset-prompt-chip" data-preset="Selalu sertakan contoh kode lengkap yang rapi, siap jalan, dan jelaskan bagian pentingnya secara singkat.">Fokus Ngoding Praktis</button>
+              <button type="button" class="emoji-chip preset-prompt-chip" data-preset="Jika ada beberapa opsi pengerjaan, tanyakan dulu pilihannya ke aku supaya hasilnya pas.">Tanya Opsi Dulu</button>
+            </div>
           </div>
         </div>
 
-        <div class="settings-row">
-          <div class="settings-copy">
-            <strong>Tema Layar</strong>
-            <p>Sesuaikan warna tampilan antara mode Gelap atau Terang.</p>
+        <!-- BAGIAN 2: EFEK VISUAL CMATRIX, GLASS & KECEPATAN KETIK -->
+        <div class="settings-group-card">
+          <div class="settings-group-header">
+            <span class="pulse-dot"></span>
+            <span>EFEK CMATRIX, KACA TRANSPARAN &amp; ANIMASI TEKS</span>
           </div>
-          <div class="segmented-control" role="group" aria-label="Tema tampilan">
-            <button type="button" class="segment-btn active" data-theme-choice="dark">Gelap</button>
-            <button type="button" class="segment-btn" data-theme-choice="light">Terang</button>
-            <button type="button" class="segment-btn" data-theme-choice="system">Otomatis</button>
+
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>Gaya Muncul Jawaban AI</strong>
+              <p>Atur cara teks jawaban muncul waktu AI membalas pesanmu.</p>
+            </div>
+            <div class="segmented-control" role="group" aria-label="Kecepatan ketikan AI">
+              <button type="button" class="segment-btn active" data-stream-choice="cyber">Halus</button>
+              <button type="button" class="segment-btn" data-stream-choice="turbo">Ngebut</button>
+              <button type="button" class="segment-btn" data-stream-choice="instant">Langsung</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-copy">
+              <label for="streamDelayRange"><strong>Kecepatan Ketik Manual (<span id="streamDelayVal">18</span> ms)</strong></label>
+              <p>Geser buat mengatur sendiri jeda milidetik kemunculan huruf AI.</p>
+            </div>
+            <div class="settings-slider-wrap">
+              <input type="range" id="streamDelayRange" min="5" max="45" step="1" value="18" class="cyber-range">
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-copy">
+              <label for="cmatrixToggle"><strong>Efek Background Hujan Kode (CMatrix)</strong></label>
+              <p>Tampilkan animasi hujan kode hijau ala terminal CMatrix di belakang dasbor dan kartu kaca.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="cmatrixToggle" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>Ketajaman Overlay CMatrix</strong>
+              <p>Atur seberapa jelas hujan kode terlihat menembus kartu transparan.</p>
+            </div>
+            <div class="segmented-control" role="group" aria-label="Ketajaman CMatrix">
+              <button type="button" class="segment-btn" data-matrix-choice="soft">Halus</button>
+              <button type="button" class="segment-btn active" data-matrix-choice="vivid">Jelas</button>
+              <button type="button" class="segment-btn" data-matrix-choice="ultra">Terang</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>Efek Kaca Blur (Glassmorphism)</strong>
+              <p>Atur tingkat kebeningan dan efek blur kartu di layar utama.</p>
+            </div>
+            <div class="segmented-control" role="group" aria-label="Tingkat efek kaca">
+              <button type="button" class="segment-btn" data-glass-choice="crystal">Bening</button>
+              <button type="button" class="segment-btn active" data-glass-choice="standard">Pas</button>
+              <button type="button" class="segment-btn" data-glass-choice="deep">Tebal</button>
+            </div>
           </div>
         </div>
 
-        <div class="settings-row">
-          <div class="settings-copy">
-            <strong>Ukuran Tampilan &amp; Teks</strong>
-            <p>Atur kerapatan ruang dan besar huruf di layar kamu.</p>
+        <!-- BAGIAN 3: TAMPILAN LAYAR & KENYAMANAN -->
+        <div class="settings-group-card">
+          <div class="settings-group-header">
+            <span class="pulse-dot"></span>
+            <span>TAMPILAN LAYAR &amp; PINTASAN</span>
           </div>
-          <div class="segmented-control" role="group" aria-label="Kerapatan tampilan">
-            <button type="button" class="segment-btn" data-density-choice="compact">Rapat</button>
-            <button type="button" class="segment-btn active" data-density-choice="standard">Pas</button>
-            <button type="button" class="segment-btn" data-density-choice="comfortable">Lega</button>
-          </div>
-        </div>
 
-        <div class="settings-row">
-          <div class="settings-copy">
-            <label for="defaultModelSelect"><strong>Model AI Utama</strong></label>
-            <p>Model yang langsung dipakai setiap kali kamu mulai obrolan baru.</p>
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>Tema Warna Layar</strong>
+              <p>Pilih nuansa layar mode Gelap, Terang, atau ikuti perangkat.</p>
+            </div>
+            <div class="segmented-control" role="group" aria-label="Tema tampilan">
+              <button type="button" class="segment-btn active" data-theme-choice="dark">Gelap</button>
+              <button type="button" class="segment-btn" data-theme-choice="light">Terang</button>
+              <button type="button" class="segment-btn" data-theme-choice="system">Otomatis</button>
+            </div>
           </div>
-          <select id="defaultModelSelect" class="settings-select">
-            <option value="openai/gpt-4o">GPT-4o (OpenAI)</option>
-            <option value="openai/gpt-4o-mini">GPT-4o mini (OpenAI)</option>
-            <option value="openai/gpt-5.6-terra">GPT-5.6 Terra (OpenAI)</option>
-            <option value="openai/gpt-5.5">GPT-5.5 (OpenAI)</option>
-            <option value="openai/gpt-5.4">GPT-5.4 (OpenAI)</option>
-            <option value="openai/gpt-5.3-chat">GPT-5.3 Chat (OpenAI)</option>
-            <option value="openai/gpt-5.1-instant">GPT-5.1 Instant (OpenAI)</option>
-            <option value="openai/gpt-5">GPT-5 (OpenAI)</option>
-            <option value="anthropic/claude-sonnet-5">Claude Sonnet 5 (Anthropic)</option>
-            <option value="anthropic/claude-sonnet-4.6">Claude Sonnet 4.6 (Anthropic)</option>
-            <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5 (Anthropic)</option>
-            <option value="anthropic/claude-opus-4.8">Claude Opus 4.8 (Anthropic)</option>
-            <option value="anthropic/claude-opus-4.7">Claude Opus 4.7 (Anthropic)</option>
-            <option value="anthropic/claude-opus-4.6">Claude Opus 4.6 (Anthropic)</option>
-            <option value="anthropic/claude-opus-4.5">Claude Opus 4.5 (Anthropic)</option>
-            <option value="gemini-2.0-pro">Gemini 2.0 Pro (Google)</option>
-            <option value="gemini-pro">Gemini Pro (Google)</option>
-            <option value="gemini-flash">Gemini Flash (Google)</option>
-            <option value="google/gemini-3.1-pro-preview">Gemini 3.1 Pro (Google)</option>
-            <option value="google/gemini-3-pro-preview">Gemini 3 Pro (Google)</option>
-            <option value="google/gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Google)</option>
-            <option value="deepseek/deepseek-v4-pro">DeepSeek V4 Pro (DeepSeek)</option>
-            <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash (DeepSeek)</option>
-            <option value="deepseek/deepseek-v3.2-thinking">DeepSeek V3.2 Thinking</option>
-            <option value="xai/grok-4.1-fast-non-reasoning">Grok 4.1 Fast (xAI)</option>
-            <option value="alibaba/qwen3-max">Qwen3 Max (Alibaba)</option>
-            <option value="meta/llama-4-maverick">Llama 4 Maverick (Meta)</option>
-            <option value="moonshotai/kimi-k2.6">Kimi K2.6 (Moonshot AI)</option>
-            <option value="microsoft/copilot">Microsoft Copilot (Microsoft)</option>
-            <option value="chatday/ai-chat">Chatday AI</option>
-          </select>
-        </div>
 
-        <div class="settings-row">
-          <div class="settings-copy">
-            <label for="responseStyleSelect"><strong>Gaya Bahasa AI</strong></label>
-            <p>Pilih pembawaan AI waktu ngobrol sama kamu.</p>
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>Kerapatan Ruang &amp; Teks</strong>
+              <p>Sesuaikan ukuran huruf dan jarak antar kartu di layar kamu.</p>
+            </div>
+            <div class="segmented-control" role="group" aria-label="Kerapatan tampilan">
+              <button type="button" class="segment-btn" data-density-choice="compact">Rapat</button>
+              <button type="button" class="segment-btn active" data-density-choice="standard">Pas</button>
+              <button type="button" class="segment-btn" data-density-choice="comfortable">Lega</button>
+            </div>
           </div>
-          <select id="responseStyleSelect" class="settings-select">
-            <option value="standard">Standar (Enak &amp; Jelas)</option>
-            <option value="concise">Ringkas (Langsung Inti)</option>
-            <option value="technical">Teknis (Detail &amp; Lengkap)</option>
-            <option value="casual">Santai (Akrab &amp; Luwes)</option>
-          </select>
-        </div>
 
-        <div class="settings-row">
-          <div class="settings-copy">
-            <label for="enterToSendToggle"><strong>Tekan Enter Buat Kirim</strong></label>
-            <p>Kalau aktif, tekan Enter langsung kirim pesan (Shift+Enter buat baris baru).</p>
+          <div class="settings-row">
+            <div class="settings-copy">
+              <label for="enterToSendToggle"><strong>Tekan Enter Langsung Kirim</strong></label>
+              <p>Tekan Enter buat kirim pesan cepat (Shift+Enter buat ganti baris).</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="enterToSendToggle" checked>
+              <span class="switch-slider"></span>
+            </label>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="enterToSendToggle" checked>
-            <span class="switch-slider"></span>
-          </label>
-        </div>
 
-        <div class="settings-row">
-          <div class="settings-copy">
-            <label for="saveHistoryToggle"><strong>Simpan Riwayat di Browser</strong></label>
-            <p>Simpan obrolan kamu di perangkat ini supaya nggak hilang waktu halaman ditutup.</p>
+          <div class="settings-row">
+            <div class="settings-copy">
+              <label for="saveHistoryToggle"><strong>Simpan Riwayat di Browser</strong></label>
+              <p>Simpan obrolan di perangkat ini biar nggak hilang saat tab ditutup.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="saveHistoryToggle" checked>
+              <span class="switch-slider"></span>
+            </label>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="saveHistoryToggle" checked>
-            <span class="switch-slider"></span>
-          </label>
-        </div>
 
-        <div class="settings-row">
-          <div class="settings-copy">
-            <label for="soundFxToggle"><strong>Suara Sentuhan Tombol</strong></label>
-            <p>Bunyi klik halus waktu kamu menekan tombol atau perintah cepat.</p>
+          <div class="settings-row">
+            <div class="settings-copy">
+              <label for="soundFxToggle"><strong>Bunyi Sentuhan Tombol</strong></label>
+              <p>Efek suara klik halus waktu kamu menekan tombol menu.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="soundFxToggle">
+              <span class="switch-slider"></span>
+            </label>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="soundFxToggle">
-            <span class="switch-slider"></span>
-          </label>
-        </div>
 
-        <div class="settings-row">
-          <div class="settings-copy">
-            <label for="defaultWaEmojiInput"><strong>Emoji Bawaan Reaksi WA</strong></label>
-            <p>Susunan emoji awal waktu kamu membuka fitur Reaksi Saluran WA.</p>
-          </div>
-          <div class="settings-inline-input">
-            <input type="text" id="defaultWaEmojiInput" value="🙄,💦,🥰,😋" placeholder="❤️,🔥,👍">
+          <div class="settings-row">
+            <div class="settings-copy">
+              <label for="defaultWaEmojiInput"><strong>Emoji Bawaan Reaksi WA</strong></label>
+              <p>Susunan emoji awal untuk fitur Reaksi Saluran WhatsApp.</p>
+            </div>
+            <div class="settings-inline-input">
+              <input type="text" id="defaultWaEmojiInput" value="🙄,💦,🥰,😋" placeholder="❤️,🔥,👍">
+            </div>
           </div>
         </div>
 
         <div class="settings-actions-box">
           <div class="settings-actions-copy">
             <strong>Cadangkan atau Bersihkan Data</strong>
-            <p>Simpan semua riwayat obrolan ke file (.json) atau hapus bersih dari browser.</p>
+            <p>Unduh semua riwayat obrolan &amp; setelan (.json) atau bersihkan dari browser.</p>
           </div>
           <div class="settings-actions-buttons">
             <button type="button" class="secondary-settings-btn" id="exportAllDataBtn">Simpan Cadangan (.json)</button>
             <button type="button" class="danger-button" id="clearAllHistory">Hapus Semua Riwayat</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODAL 3: MONITOR INFO SISTEM LENGKAP -->
+  <section class="dialog-backdrop" id="systemInfoModal" hidden>
+    <div class="modal-card settings-dialog glass-modal" role="dialog" aria-modal="true" aria-labelledby="sysModalTitle">
+      <div class="modal-header">
+        <div class="settings-title-lockup">
+          <div class="settings-header-badge">⚡</div>
+          <div>
+            <span class="eyebrow">REALTIME TELEMETRY</span>
+            <h2 id="sysModalTitle">Info Sistem &amp; Status Mesin</h2>
+          </div>
+        </div>
+        <button type="button" class="icon-button" id="closeSystemInfoModal" aria-label="Tutup info sistem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="settings-body">
+        <div class="sys-monitor-grid">
+          <div class="sys-stat-card">
+            <small>STATUS ENGINE</small>
+            <strong class="neon-emerald-text" id="sysModalStatus">ONLINE · STABIL</strong>
+            <span id="sysModalUptime">Waktu aktif: 00:00:00</span>
+          </div>
+          <div class="sys-stat-card">
+            <small>RESPON JARINGAN</small>
+            <strong class="neon-blue-text" id="sysModalPing">12 ms</strong>
+            <span id="sysModalNetType">Koneksi siap</span>
+          </div>
+          <div class="sys-stat-card">
+            <small>PROSESOR &amp; MEMORI</small>
+            <strong id="sysModalCpuRam">Mendeteksi...</strong>
+            <span id="sysModalHeap">Penggunaan memori normal</span>
+          </div>
+          <div class="sys-stat-card">
+            <small>LAYAR &amp; GRAFIS</small>
+            <strong class="neon-emerald-text" id="sysModalFps">60 FPS · Halus</strong>
+            <span id="sysModalScreen">Resolusi optimal</span>
+          </div>
+          <div class="sys-stat-card">
+            <small>MODEL AI AKTIF</small>
+            <strong id="sysModalModel">GPT-4o</strong>
+            <span id="sysModalTotalModels">30 Model &amp; 8 Fitur Tools</span>
+          </div>
+          <div class="sys-stat-card">
+            <small>TRAFIK SESI INI</small>
+            <strong id="sysModalRequests">0 Permintaan</strong>
+            <span id="sysModalSuccess">Rasio berhasil: 100%</span>
+          </div>
+        </div>
+
+        <div class="settings-actions-box">
+          <div class="settings-actions-copy">
+            <strong>Tindakan Cepat Sistem</strong>
+            <p>Tes ulang kecepatan jaringan atau mulai sesi ruang obrolan baru.</p>
+          </div>
+          <div class="settings-actions-buttons">
+            <button type="button" class="secondary-settings-btn" id="sysModalPingBtn">Tes Ping Sekarang ⚡</button>
+            <button type="button" class="secondary-settings-btn" id="sysModalNewChatBtn">Mulai Obrolan Baru +</button>
           </div>
         </div>
       </div>
@@ -3447,22 +4545,47 @@
   const responseStyleOrder = ["standard", "casual", "concise", "technical"];
 
   const responseStylePrompts = {
-    standard: "",
-    concise: "[Instruksi Gaya: Jawab secara singkat, padat, dan langsung ke inti permasalahan tanpa basa-basi.]\n\n",
-    technical: "[Instruksi Gaya: Jawab secara teknis, sistematis, terstruktur dengan poin atau kode yang presisi.]\n\n",
-    casual: "[Instruksi Gaya: Jawab dengan bahasa yang santai, natural, dan mudah dicerna.]\n\n"
+    standard: "[Gaya bicara: Gunakan bahasa Indonesia yang luwes, natural seperti teman ngobrol pintar, tidak kaku seperti terjemahan robot.]",
+    concise: "[Gaya bicara: Langsung ke inti, singkat, padat, dan praktis tanpa basa-basi.]",
+    technical: "[Gaya bicara: Fokus teknis, logika rapi, kode siap pakai, dan penjelasan to-the-point.]",
+    casual: "[Gaya bicara: Santai, akrab, ngalir enak dibaca, dan mudah dicerna.]"
   };
+
+  const responseLengthPrompts = {
+    auto: "",
+    short: "[Panjang jawaban: Buat singkat & padat, cukup poin paling penting saja.]",
+    detailed: "[Panjang jawaban: kupas secara lengkap, terstruktur, dan detail dari awal sampai akhir.]"
+  };
+
+  const INTERACTIVE_CHOICE_INSTRUCTION =
+    "[Aturan Opsi Interaktif: Jika pengguna meminta dibuatkan sesuatu (seperti kode bot, aplikasi, draf, atau rencana) yang memiliki beberapa pilihan (misal bahasa pemrograman, jenis fitur/tombol, atau nama tombol), ATAU jika kamu ingin menawarkan opsi lanjutan, wajib sertakan blok interaktif di bagian paling akhir jawabanmu dengan format persis berikut:\n" +
+    "[PILIHAN]\n" +
+    "Judul: Biar sesuai kebutuhanmu, mau dibuat pakai apa?\n" +
+    "1. Nama Kategori Pilihan | radio | Pilihan Pertama | Pilihan Kedua\n" +
+    "2. Nama Kategori Kedua | radio | Opsi A — keterangan singkat | Opsi B — keterangan singkat\n" +
+    "3. Nama Input Teks (opsional) | input | Label Pertama: Nilai Awal | Label Kedua: Nilai Awal\n" +
+    "Tombol: Buatkan Sekarang\n" +
+    "[/PILIHAN]\n" +
+    "Gunakan blok [PILIHAN] tersebut setiap kali ada opsi yang bisa dipilih pengguna.]";
 
   const defaultSettings = {
     theme: "dark",
     density: "standard",
     streamSpeed: "cyber",
+    streamDelayMs: 18,
     defaultModel: "openai/gpt-4o",
     responseStyle: "standard",
+    responseLength: "auto",
+    interactiveChoices: true,
+    customAiInstruction: "",
+    cmatrixEnabled: true,
+    cmatrixIntensity: "vivid",
+    glassLevel: "standard",
     enterToSend: true,
     saveHistory: true,
     soundFx: false,
-    defaultWaEmoji: "🙄,💦,🥰,😋"
+    defaultWaEmoji: "🙄,💦,🥰,😋",
+    customWaEmojis: []
   };
 
   // Pastikan kapsul Dynamic Island (khusus notifikasi on/off) & pengaturan suara tersedia
@@ -3520,7 +4643,7 @@
         .composer-dock {
           margin: 0 auto !important;
           padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-          background: var(--bg-base) !important;
+          background: transparent !important;
           border-top: none !important;
           border-bottom: none !important;
           box-shadow: none !important;
@@ -3941,8 +5064,53 @@
       btn.classList.toggle("active", (settings.streamSpeed || "cyber") === btn.dataset.streamChoice);
     });
 
-    if (els.defaultModel) els.defaultModel.value = getDefaultModel();
+    $$("[data-style-choice]").forEach(btn => {
+      btn.classList.toggle("active", (settings.responseStyle || "standard") === btn.dataset.styleChoice);
+    });
+
+    $$("[data-length-choice]").forEach(btn => {
+      btn.classList.toggle("active", (settings.responseLength || "auto") === btn.dataset.lengthChoice);
+    });
+
+    $$("[data-matrix-choice]").forEach(btn => {
+      btn.classList.toggle("active", (settings.cmatrixIntensity || "vivid") === btn.dataset.matrixChoice);
+    });
+
+    $$("[data-glass-choice]").forEach(btn => {
+      btn.classList.toggle("active", (settings.glassLevel || "standard") === btn.dataset.glassChoice);
+    });
+
+    document.documentElement.setAttribute("data-glass", settings.glassLevel || "standard");
+
+    const matrixOpacityMap = { soft: "0.42", vivid: "0.76", ultra: "0.95" };
+    const matrixAlpha = settings.cmatrixEnabled === false
+      ? "0"
+      : (matrixOpacityMap[settings.cmatrixIntensity || "vivid"] || "0.76");
+    document.documentElement.style.setProperty("--cmatrix-opacity", matrixAlpha);
+
+    const defMod = getDefaultModel();
+    if (els.defaultModel) els.defaultModel.value = defMod;
+    const settingsModelLabelEl = $("#settingsModelLabel");
+    if (settingsModelLabelEl) {
+      settingsModelLabelEl.textContent = `${modelName(defMod)} (${modelProvider(defMod)})`;
+    }
+
     if (els.responseStyle) els.responseStyle.value = settings.responseStyle || "standard";
+    const interactiveToggle = $("#interactiveChoicesToggle");
+    if (interactiveToggle) interactiveToggle.checked = settings.interactiveChoices !== false;
+    const customAiInput = $("#customAiInstructionInput");
+    if (customAiInput && document.activeElement !== customAiInput) {
+      customAiInput.value = settings.customAiInstruction || "";
+    }
+    const streamRange = $("#streamDelayRange");
+    const streamDelayVal = $("#streamDelayVal");
+    const delayMs = Number(settings.streamDelayMs) || 18;
+    if (streamRange) streamRange.value = String(delayMs);
+    if (streamDelayVal) streamDelayVal.textContent = String(delayMs);
+
+    const cmatrixToggle = $("#cmatrixToggle");
+    if (cmatrixToggle) cmatrixToggle.checked = settings.cmatrixEnabled !== false;
+
     if (els.enterToSend) els.enterToSend.checked = Boolean(settings.enterToSend);
     if (els.saveHistory) els.saveHistory.checked = Boolean(settings.saveHistory);
     if (els.soundFx) els.soundFx.checked = Boolean(soundEnabled);
@@ -4307,8 +5475,216 @@
     if (animateStream && !message.error && speedMode !== "instant") {
       streamAssistantText(article, bubble, actions, message.content, speedMode);
     } else {
-      bubble.innerHTML = markdown(message.content);
+      renderBubbleWithInteractiveChoices(bubble, message.content);
     }
+  }
+
+  function parseInteractiveChoiceSpec(rawText) {
+    const source = String(rawText ?? "");
+    const tagMatch = source.match(/\[PILIHAN\]([\s\S]*?)\[\/PILIHAN\]/i);
+    if (tagMatch) {
+      const cleanMarkdown = source.replace(tagMatch[0], "").trim();
+      const body = tagMatch[1].trim();
+      let title = "Biar sesuai kebutuhanmu, pilih opsi di bawah:";
+      let submitLabel = "Lanjutkan sesuai pilihan";
+      const groups = [];
+
+      body.split("\n").forEach(rawLine => {
+        const line = rawLine.trim();
+        if (!line) return;
+        if (/^judul\s*:/i.test(line)) {
+          title = line.replace(/^judul\s*:/i, "").trim() || title;
+          return;
+        }
+        if (/^tombol\s*:/i.test(line)) {
+          submitLabel = line.replace(/^tombol\s*:/i, "").trim() || submitLabel;
+          return;
+        }
+        if (line.includes("|")) {
+          const parts = line.split("|").map(item => item.trim()).filter(Boolean);
+          if (parts.length >= 3) {
+            const groupLabel = parts[0];
+            const groupType = parts[1].toLowerCase() === "input" ? "input" : "radio";
+            const items = parts.slice(2);
+            groups.push({ label: groupLabel, type: groupType, items });
+          }
+        }
+      });
+
+      if (groups.length) {
+        return { cleanMarkdown, spec: { title, submitLabel, groups } };
+      }
+    }
+
+    // Automatic fallback detector when AI writes numbered sections with bullet options
+    if (settings.interactiveChoices !== false) {
+      const lines = source.split("\n");
+      const autoGroups = [];
+      let currentGroup = null;
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        const numMatch = line.match(/^(\d+)[.)]\s+\*{0,2}([^*:]+?)\*{0,2}:?$/);
+        const bulletMatch = line.match(/^[-*•]\s+(.+)$/);
+
+        if (numMatch && numMatch[2].length < 75) {
+          if (currentGroup && currentGroup.items.length >= 2) {
+            autoGroups.push(currentGroup);
+          }
+          currentGroup = {
+            label: `${numMatch[1]}. ${numMatch[2].trim()}`,
+            type: "radio",
+            items: []
+          };
+        } else if (bulletMatch && currentGroup && currentGroup.items.length < 6) {
+          const optText = bulletMatch[1].replace(/\*\*/g, "").trim();
+          if (optText && optText.length <= 95) {
+            currentGroup.items.push(optText);
+          }
+        }
+      }
+      if (currentGroup && currentGroup.items.length >= 2) {
+        autoGroups.push(currentGroup);
+      }
+
+      if (autoGroups.length >= 1) {
+        return {
+          cleanMarkdown: source,
+          spec: {
+            title: "Pilih langsung opsi di bawah:",
+            submitLabel: "Kirim Pilihan",
+            groups: autoGroups.slice(0, 4)
+          }
+        };
+      }
+    }
+
+    return { cleanMarkdown: source, spec: null };
+  }
+
+  function renderBubbleWithInteractiveChoices(bubble, fullText) {
+    const { cleanMarkdown, spec } = parseInteractiveChoiceSpec(fullText);
+    bubble.innerHTML = markdown(cleanMarkdown || fullText);
+
+    if (!spec || settings.interactiveChoices === false) return;
+
+    const card = document.createElement("div");
+    card.className = "ai-choice-card";
+
+    if (spec.title) {
+      const titleEl = document.createElement("div");
+      titleEl.className = "ai-choice-card-title";
+      titleEl.textContent = spec.title;
+      card.appendChild(titleEl);
+    }
+
+    const selections = {};
+
+    spec.groups.forEach((group, gIdx) => {
+      const groupWrap = document.createElement("div");
+      groupWrap.className = "ai-choice-group";
+
+      const gTitle = document.createElement("div");
+      gTitle.className = "ai-choice-group-title";
+      gTitle.textContent = group.label;
+      groupWrap.appendChild(gTitle);
+
+      if (group.type === "input") {
+        const inputsWrap = document.createElement("div");
+        inputsWrap.className = "ai-choice-inputs";
+        selections[gIdx] = { type: "input", label: group.label, values: {} };
+
+        group.items.forEach((itemStr, iIdx) => {
+          const splitIdx = itemStr.indexOf(":");
+          const fieldLabel = splitIdx > 0 ? itemStr.slice(0, splitIdx).trim() : `Isian ${iIdx + 1}`;
+          const defaultVal = splitIdx > 0 ? itemStr.slice(splitIdx + 1).trim() : itemStr.trim();
+
+          const fieldWrap = document.createElement("div");
+          fieldWrap.className = "ai-choice-field";
+
+          const lbl = document.createElement("label");
+          lbl.textContent = fieldLabel;
+
+          const inp = document.createElement("input");
+          inp.type = "text";
+          inp.value = defaultVal;
+          inp.placeholder = fieldLabel;
+          selections[gIdx].values[fieldLabel] = defaultVal;
+
+          inp.addEventListener("input", () => {
+            selections[gIdx].values[fieldLabel] = inp.value.trim();
+          });
+
+          fieldWrap.append(lbl, inp);
+          inputsWrap.appendChild(fieldWrap);
+        });
+
+        groupWrap.appendChild(inputsWrap);
+      } else {
+        const radioList = document.createElement("div");
+        radioList.className = "ai-radio-list";
+        selections[gIdx] = { type: "radio", label: group.label, value: group.items[0] || "" };
+
+        group.items.forEach((optLabel, oIdx) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = `ai-radio-option${oIdx === 0 ? " is-selected" : ""}`;
+
+          const circle = document.createElement("span");
+          circle.className = "ai-radio-circle";
+          const dot = document.createElement("span");
+          dot.className = "ai-radio-dot";
+          circle.appendChild(dot);
+
+          const textSpan = document.createElement("span");
+          textSpan.textContent = optLabel;
+
+          btn.append(circle, textSpan);
+          btn.addEventListener("click", () => {
+            $$(".ai-radio-option", radioList).forEach(b => b.classList.remove("is-selected"));
+            btn.classList.add("is-selected");
+            selections[gIdx].value = optLabel;
+          });
+
+          radioList.appendChild(btn);
+        });
+
+        groupWrap.appendChild(radioList);
+      }
+
+      card.appendChild(groupWrap);
+    });
+
+    const submitBtn = document.createElement("button");
+    submitBtn.type = "button";
+    submitBtn.className = "ai-choice-submit-btn";
+    submitBtn.textContent = spec.submitLabel || "Kirim Pilihan";
+
+    submitBtn.addEventListener("click", () => {
+      if (busy) {
+        toast("Tunggu balasan sebelumnya selesai dulu ya.");
+        return;
+      }
+      const summaryLines = [];
+      Object.values(selections).forEach(sel => {
+        if (sel.type === "radio") {
+          summaryLines.push(`${sel.label}: ${sel.value}`);
+        } else if (sel.type === "input") {
+          const kv = Object.entries(sel.values)
+            .map(([k, v]) => `${k} = "${v}"`)
+            .join(", ");
+          summaryLines.push(`${sel.label}: ${kv}`);
+        }
+      });
+
+      submitBtn.classList.add("is-submitted");
+      submitBtn.textContent = "✓ Pilihan Dikirim";
+      const composedReply = `Berikut pilihan saya:\n${summaryLines.join("\n")}\n\nSilakan langsung buatkan sesuai pilihan di atas.`;
+      sendMessage(composedReply);
+    });
+
+    card.appendChild(submitBtn);
+    bubble.appendChild(card);
   }
 
   function streamAssistantText(article, bubble, actions, fullText, speedMode) {
@@ -4321,7 +5697,9 @@
     skipBtn.textContent = "⚡ Tampilkan Langsung";
     actions.prepend(skipBtn);
 
-    const length = fullText.length;
+    const { cleanMarkdown } = parseInteractiveChoiceSpec(fullText);
+    const displayTarget = cleanMarkdown || fullText;
+    const length = displayTarget.length;
     let cursor = 0;
     let finished = false;
 
@@ -4335,7 +5713,7 @@
       activeStreamCancel = null;
       article.classList.remove("is-streaming");
       skipBtn.remove();
-      bubble.innerHTML = markdown(fullText);
+      renderBubbleWithInteractiveChoices(bubble, fullText);
       scrollBottom();
     };
 
@@ -4344,17 +5722,20 @@
 
     function step() {
       if (finished) return;
-      const sliceNext = fullText.slice(cursor, cursor + baseStep * 2);
+      const sliceNext = displayTarget.slice(cursor, cursor + baseStep * 2);
       const spaceIdx = sliceNext.indexOf(" ");
       const advance = spaceIdx > 0 ? spaceIdx + 1 : baseStep;
       cursor = Math.min(length, cursor + advance);
 
-      const partial = fullText.slice(0, cursor);
+      const partial = displayTarget.slice(0, cursor);
       bubble.innerHTML = markdown(partial) + `<span class="cyber-cursor">▋</span>`;
       scrollBottom();
 
+      const customDelay = Number(settings.streamDelayMs) || (speedMode === "turbo" ? 10 : 18);
+      const stepDelay = speedMode === "turbo" ? Math.max(5, Math.round(customDelay * 0.6)) : customDelay;
+
       if (cursor < length) {
-        window.setTimeout(() => requestAnimationFrame(step), speedMode === "turbo" ? 12 : 22);
+        window.setTimeout(() => requestAnimationFrame(step), stepDelay);
       } else {
         finishInstant();
       }
@@ -4713,6 +6094,23 @@
       endpoint = "/api/whatsapp/reactch";
       params.set("url", payload.url || "");
       params.set("reaction", payload.reaction || "❤️");
+    } else if (action === "viuprem" || action === "viu") {
+      endpoint = "/api/movie/viuprem";
+      if (payload.query) params.set("query", payload.query);
+    } else if (action === "infokota" || action === "kota") {
+      endpoint = "/api/search/infokota";
+      params.set("kota", payload.kota || "Jombang");
+    } else if (action === "tmpfiles" || action === "tmpfile") {
+      endpoint = "/api/tools/tmpfiles";
+      if (payload.url) params.set("url", payload.url);
+      if (payload.text) params.set("text", payload.text);
+    } else if (action === "web2apk") {
+      endpoint = "/api/tools/web2apk";
+      params.set("url", payload.url || "https://hao-ai-kappa.vercel.app/");
+      params.set("name", payload.name || "Ai Haomi");
+    } else if (action === "checkban" || action === "wa-checkban") {
+      endpoint = "/api/whatsapp/checkban";
+      params.set("number", String(payload.number || "").replace(/[^0-9]/g, ""));
     }
 
     const res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
@@ -4880,8 +6278,19 @@
     renderMessages(false);
 
     const loading = createLoading(sequence, model);
-    const stylePrefix = responseStylePrompts[settings.responseStyle] || "";
-    const effectivePrompt = stylePrefix ? `${stylePrefix}${prompt}` : prompt;
+    const styleParts = [];
+    const baseStyle = responseStylePrompts[settings.responseStyle] || responseStylePrompts.standard;
+    if (baseStyle) styleParts.push(baseStyle);
+    const lenRule = responseLengthPrompts[settings.responseLength || "auto"] || "";
+    if (lenRule) styleParts.push(lenRule);
+    if (settings.customAiInstruction && settings.customAiInstruction.trim()) {
+      styleParts.push(`[Instruksi khusus pengguna: ${settings.customAiInstruction.trim()}]`);
+    }
+    if (settings.interactiveChoices !== false) {
+      styleParts.push(INTERACTIVE_CHOICE_INSTRUCTION);
+    }
+    const stylePrefix = styleParts.length ? `${styleParts.join("\n")}\n\n` : "";
+    const effectivePrompt = stylePrefix ? `${stylePrefix}Pesan pengguna: ${prompt}` : prompt;
 
     let succeeded = false;
     try {
@@ -4997,6 +6406,11 @@
 
   const viewIds = {
     chat: "chatView",
+    viuprem: "viupremView",
+    infokota: "infokotaView",
+    tmpfiles: "tmpfilesView",
+    web2apk: "web2apkView",
+    checkban: "checkbanView",
     alight: "alightView",
     urlscan: "urlscanView",
     whatsapp: "whatsappView"
@@ -5004,6 +6418,11 @@
 
   const viewTitles = {
     chat: "Chat AI",
+    viuprem: "Viu Premium",
+    infokota: "Info Kota",
+    tmpfiles: "Tmp Files",
+    web2apk: "Web2APK",
+    checkban: "Cek Banned WA",
     alight: "Alight Motion",
     urlscan: "Cek Keamanan Link",
     whatsapp: "Reaksi Saluran WA"
@@ -5182,6 +6601,7 @@
 
     const conversation = ensureConversation();
     conversation.model = model;
+    saveSettings({ defaultModel: model });
     saveState();
 
     syncModelIndicators(model);
@@ -5256,7 +6676,18 @@
       k.textContent = key;
       const v = document.createElement("span");
       v.className = "summary-val";
-      v.textContent = String(val);
+      const strVal = String(val);
+      if (/^https?:\/\//i.test(strVal)) {
+        const a = document.createElement("a");
+        a.href = strVal;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.className = "apk-download-banner";
+        a.textContent = /apk|download/i.test(key) ? "⬇ Unduh File / APK Sekarang" : "↗ Buka Tautan Hasil";
+        v.appendChild(a);
+      } else {
+        v.textContent = strVal;
+      }
       row.append(k, v);
       summaryEl.appendChild(row);
     });
@@ -5532,8 +6963,7 @@
     els.boxAiStyle?.addEventListener("click", cycleResponseStyle);
     els.boxPingTest?.addEventListener("click", () => measureNetworkPing(true));
     els.boxSessionInfo?.addEventListener("click", () => {
-      newChat();
-      els.input?.focus();
+      openSystemInfoModal();
     });
 
     // Tombol pintasan di bagian atas
@@ -5882,9 +7312,267 @@
       });
     });
 
-    // Reaksi WhatsApp
-    $$(".emoji-chip[data-emoji]").forEach(chip => {
-      chip.addEventListener("click", () => toggleWaEmoji(chip.dataset.emoji));
+    // Reaksi WhatsApp & Custom Emoji (+)
+    renderCustomWaEmojis();
+    $("#waEmojiQuickBar")?.addEventListener("click", event => {
+      const chip = event.target.closest(".emoji-chip[data-emoji]");
+      if (chip) {
+        toggleWaEmoji(chip.dataset.emoji);
+      }
+    });
+
+    $("#addCustomEmojiBtn")?.addEventListener("click", () => {
+      const adder = $("#customEmojiAdder");
+      if (!adder) return;
+      adder.hidden = !adder.hidden;
+      if (!adder.hidden) {
+        $("#customEmojiInput")?.focus();
+      }
+    });
+
+    const handleAddCustomEmoji = () => {
+      const inp = $("#customEmojiInput");
+      if (!inp) return;
+      const raw = inp.value.trim();
+      if (!raw) {
+        toast("Ketik atau tempel minimal satu emoji dulu ya.", true);
+        return;
+      }
+      const newEmojis = raw
+        .split(/[\s,]+/)
+        .map(e => e.trim())
+        .filter(Boolean);
+      const existing = Array.isArray(settings.customWaEmojis) ? [...settings.customWaEmojis] : [];
+      newEmojis.forEach(em => {
+        if (!existing.includes(em)) existing.push(em);
+      });
+      saveSettings({ customWaEmojis: existing });
+      renderCustomWaEmojis();
+      newEmojis.forEach(em => toggleWaEmoji(em));
+      inp.value = "";
+      const adder = $("#customEmojiAdder");
+      if (adder) adder.hidden = true;
+      toast("Emoji baru berhasil ditambahkan!");
+    };
+
+    $("#saveCustomEmojiBtn")?.addEventListener("click", handleAddCustomEmoji);
+    $("#customEmojiInput")?.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleAddCustomEmoji();
+      }
+    });
+
+    // 5 Fitur Baru: Viu Premium, Info Kota, TmpFiles, Web2APK, Cek Banned WA
+    $("#viupremForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      runTool({
+        form: event.currentTarget,
+        button: $("#viupremSubmit"),
+        resultElement: $("#viupremResult"),
+        statusBadge: $("#viupremStatusBadge"),
+        timeBadge: $("#viupremTimeBadge"),
+        summaryEl: $("#viupremSummary"),
+        action: "viuprem",
+        payload: { query: ($("#viupremQuery")?.value || "").trim() },
+        loadingText: "Mengambil..."
+      });
+    });
+
+    $$(".city-chip[data-kota]").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const kotaInput = $("#infokotaInput");
+        if (kotaInput) kotaInput.value = chip.dataset.kota || "Jombang";
+        $$(".city-chip[data-kota]").forEach(c => c.classList.toggle("active", c === chip));
+      });
+    });
+
+    $("#infokotaForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      runTool({
+        form: event.currentTarget,
+        button: $("#infokotaSubmit"),
+        resultElement: $("#infokotaResult"),
+        statusBadge: $("#infokotaStatusBadge"),
+        timeBadge: $("#infokotaTimeBadge"),
+        summaryEl: $("#infokotaSummary"),
+        action: "infokota",
+        payload: { kota: ($("#infokotaInput")?.value || "Jombang").trim() },
+        loadingText: "Mencari..."
+      });
+    });
+
+    $("#tmpfilesForm")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const fileInput = $("#tmpfilesFile");
+      const urlVal = ($("#tmpfilesUrl")?.value || "").trim();
+      const file = fileInput?.files?.[0] || null;
+      const payload = { url: urlVal };
+
+      if (file) {
+        if (file.size > 4.5 * 1024 * 1024) {
+          toast("Ukuran file maksimal 4.5 MB ya.", true);
+          return;
+        }
+        try {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(new Error("Gagal membaca file"));
+            reader.readAsDataURL(file);
+          });
+          payload.file_base64 = base64;
+          payload.file_name = file.name;
+          payload.file_mime = file.type || "application/octet-stream";
+        } catch {
+          toast("File gagal dibaca.", true);
+          return;
+        }
+      }
+
+      runTool({
+        form,
+        button: $("#tmpfilesSubmit"),
+        resultElement: $("#tmpfilesResult"),
+        statusBadge: $("#tmpfilesStatusBadge"),
+        timeBadge: $("#tmpfilesTimeBadge"),
+        summaryEl: $("#tmpfilesSummary"),
+        action: "tmpfiles",
+        payload,
+        loadingText: "Memproses..."
+      });
+    });
+
+    $("#useCurrentWebBtn")?.addEventListener("click", () => {
+      const urlInput = $("#web2apkUrl");
+      if (urlInput) {
+        urlInput.value = window.location.origin.startsWith("http")
+          ? `${window.location.origin}/`
+          : "https://hao-ai-kappa.vercel.app/";
+        toast("Alamat web saat ini dimasukkan");
+      }
+    });
+
+    $("#web2apkForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      runTool({
+        form: event.currentTarget,
+        button: $("#web2apkSubmit"),
+        resultElement: $("#web2apkResult"),
+        statusBadge: $("#web2apkStatusBadge"),
+        timeBadge: $("#web2apkTimeBadge"),
+        summaryEl: $("#web2apkSummary"),
+        action: "web2apk",
+        payload: {
+          url: ($("#web2apkUrl")?.value || "").trim(),
+          name: ($("#web2apkName")?.value || "Ai Haomi").trim()
+        },
+        loadingText: "Membangun APK..."
+      });
+    });
+
+    $("#checkbanForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      runTool({
+        form: event.currentTarget,
+        button: $("#checkbanSubmit"),
+        resultElement: $("#checkbanResult"),
+        statusBadge: $("#checkbanStatusBadge"),
+        timeBadge: $("#checkbanTimeBadge"),
+        summaryEl: $("#checkbanSummary"),
+        action: "checkban",
+        payload: { number: ($("#checkbanNumber")?.value || "").trim() },
+        loadingText: "Memeriksa..."
+      });
+    });
+
+    // Settings Modal New Controls (No native <select>)
+    $("#openModelPickerFromSettings")?.addEventListener("click", () => {
+      closeSettings();
+      openModelDialog();
+    });
+
+    $$("[data-style-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const nextStyle = btn.dataset.styleChoice || "standard";
+        saveSettings({ responseStyle: nextStyle });
+        toast(`Gaya bicara AI: ${responseStyleLabels[nextStyle] || "Standar"}`);
+      });
+    });
+
+    $$("[data-length-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        saveSettings({ responseLength: btn.dataset.lengthChoice || "auto" });
+        toast("Panjang jawaban AI diperbarui");
+      });
+    });
+
+    $("#interactiveChoicesToggle")?.addEventListener("change", event => {
+      saveSettings({ interactiveChoices: event.currentTarget.checked });
+      toast(event.currentTarget.checked ? "Kartu pilihan interaktif diaktifkan" : "Kartu pilihan interaktif dimatikan");
+    });
+
+    $("#customAiInstructionInput")?.addEventListener("input", event => {
+      saveSettings({ customAiInstruction: event.currentTarget.value });
+    });
+
+    $("#clearCustomAiPromptBtn")?.addEventListener("click", () => {
+      const inp = $("#customAiInstructionInput");
+      if (inp) inp.value = "";
+      saveSettings({ customAiInstruction: "" });
+      toast("Instruksi manual dikosongkan");
+    });
+
+    $$(".preset-prompt-chip[data-preset]").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const preset = chip.dataset.preset || "";
+        const inp = $("#customAiInstructionInput");
+        if (inp) inp.value = preset;
+        saveSettings({ customAiInstruction: preset });
+        toast("Preset instruksi AI diterapkan");
+      });
+    });
+
+    $("#streamDelayRange")?.addEventListener("input", event => {
+      const val = Number(event.currentTarget.value) || 18;
+      const label = $("#streamDelayVal");
+      if (label) label.textContent = String(val);
+      saveSettings({ streamDelayMs: val });
+    });
+
+    $("#cmatrixToggle")?.addEventListener("change", event => {
+      saveSettings({ cmatrixEnabled: event.currentTarget.checked });
+      toast(event.currentTarget.checked ? "Efek CMatrix diaktifkan" : "Efek CMatrix dimatikan");
+    });
+
+    $$("[data-matrix-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        saveSettings({ cmatrixIntensity: btn.dataset.matrixChoice || "vivid", cmatrixEnabled: true });
+        toast("Ketajaman CMatrix diperbarui");
+      });
+    });
+
+    $$("[data-glass-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        saveSettings({ glassLevel: btn.dataset.glassChoice || "standard" });
+        toast("Efek kaca transparan diperbarui");
+      });
+    });
+
+    // System Monitor Modal Events
+    $("#closeSystemInfoModal")?.addEventListener("click", closeSystemInfoModal);
+    $("#systemInfoModal")?.addEventListener("click", event => {
+      if (event.target === $("#systemInfoModal")) closeSystemInfoModal();
+    });
+    $("#sysModalPingBtn")?.addEventListener("click", () => {
+      measureNetworkPing(true);
+      updateSystemInfoModalStats();
+    });
+    $("#sysModalNewChatBtn")?.addEventListener("click", () => {
+      closeSystemInfoModal();
+      newChat();
+      els.input?.focus();
     });
 
     $("#whatsappReaction")?.addEventListener("input", syncWaEmojiChips);
@@ -5977,10 +7665,192 @@
     });
   }
 
+
+  const consoleBootTime = Date.now();
+  let currentFpsValue = 60;
+
+  function renderCustomWaEmojis() {
+    const bar = $("#waEmojiQuickBar");
+    const addBtn = $("#addCustomEmojiBtn");
+    if (!bar || !addBtn) return;
+
+    $$(".emoji-chip.is-custom-emoji", bar).forEach(el => el.remove());
+
+    const customList = Array.isArray(settings.customWaEmojis) ? settings.customWaEmojis : [];
+    customList.forEach(emoji => {
+      if (!emoji) return;
+      const exists = $$(`.emoji-chip[data-emoji]`, bar).some(b => b.dataset.emoji === emoji);
+      if (exists) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "emoji-chip is-custom-emoji";
+      btn.dataset.emoji = emoji;
+      btn.textContent = emoji;
+      bar.insertBefore(btn, addBtn);
+    });
+    syncWaEmojiChips();
+  }
+
+  function formatUptime(ms) {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const hrs = String(Math.floor(totalSec / 3600)).padStart(2, "0");
+    const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
+    const secs = String(totalSec % 60).padStart(2, "0");
+    return `${hrs}:${mins}:${secs}`;
+  }
+
+  function updateSystemInfoModalStats() {
+    const cores = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} Core CPU` : "Multi-Core CPU";
+    const devMem = navigator.deviceMemory ? `${navigator.deviceMemory} GB RAM` : "RAM Optimal";
+    const dashMain = $("#dashSysMain");
+    const dashSub = $("#dashSessionSub");
+    if (dashMain) {
+      dashMain.textContent = `ONLINE · ${currentFpsValue} FPS`;
+    }
+    if (dashSub) {
+      dashSub.textContent = `${cores} · ${devMem}`;
+    }
+
+    const modal = $("#systemInfoModal");
+    if (!modal || modal.hidden) return;
+
+    const upEl = $("#sysModalUptime");
+    if (upEl) upEl.textContent = `Waktu aktif: ${formatUptime(Date.now() - consoleBootTime)}`;
+
+    const pingEl = $("#sysModalPing");
+    const avgPing = telemetry.totalRequests > 0
+      ? Math.round(telemetry.totalLatencyMs / telemetry.totalRequests)
+      : (lastMeasuredPing || 12);
+    if (pingEl) pingEl.textContent = `${avgPing} ms`;
+
+    const netEl = $("#sysModalNetType");
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (netEl) {
+      netEl.textContent = conn?.effectiveType
+        ? `Jaringan ${String(conn.effectiveType).toUpperCase()} (${conn.downlink || "Stabil"} Mbps)`
+        : "Jaringan Stabil · Siap";
+    }
+
+    const cpuRamEl = $("#sysModalCpuRam");
+    if (cpuRamEl) cpuRamEl.textContent = `${cores} · ${devMem}`;
+
+    const heapEl = $("#sysModalHeap");
+    if (heapEl) {
+      if (performance?.memory?.usedJSHeapSize) {
+        const usedMb = (performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1);
+        heapEl.textContent = `Memori web aktif: ${usedMb} MB`;
+      } else {
+        heapEl.textContent = `OS: ${$("#metricOS")?.textContent || "Aktif"} · ${$("#metricBrowser")?.textContent || "Browser"}`;
+      }
+    }
+
+    const fpsEl = $("#sysModalFps");
+    if (fpsEl) fpsEl.textContent = `${currentFpsValue} FPS · Layar ${window.innerWidth}×${window.innerHeight}`;
+
+    const scrEl = $("#sysModalScreen");
+    if (scrEl) scrEl.textContent = `Rasio piksel ${window.devicePixelRatio || 1}x · Baterai ${$("#metricBattery")?.textContent || "Siap"}`;
+
+    const modEl = $("#sysModalModel");
+    const activeMod = activeConversation()?.model || getDefaultModel();
+    if (modEl) modEl.textContent = `${modelName(activeMod)} (${modelProvider(activeMod)})`;
+
+    const reqEl = $("#sysModalRequests");
+    if (reqEl) reqEl.textContent = `${telemetry.totalRequests} Permintaan API`;
+
+    const sucEl = $("#sysModalSuccess");
+    const rate = telemetry.totalRequests > 0
+      ? Math.round((telemetry.successCount / telemetry.totalRequests) * 100)
+      : 100;
+    if (sucEl) sucEl.textContent = `Rasio sukses: ${rate}%`;
+  }
+
+  function openSystemInfoModal() {
+    const modal = $("#systemInfoModal");
+    if (!modal) return;
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    updateSystemInfoModalStats();
+  }
+
+  function closeSystemInfoModal() {
+    const modal = $("#systemInfoModal");
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  function initCMatrixRain() {
+    const canvas = $("#cmatrixCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const chars = "01HAOMIXMLｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ<>/*+=-0123456789";
+    const fontSize = 15;
+    let columns = 0;
+    let drops = [];
+
+    const resizeMatrix = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      columns = Math.ceil(canvas.width / fontSize);
+      drops = Array.from({ length: columns }, () => Math.floor(Math.random() * -40));
+    };
+
+    resizeMatrix();
+    window.addEventListener("resize", resizeMatrix);
+
+    let lastMatrixTick = 0;
+    function drawMatrix(now) {
+      requestAnimationFrame(drawMatrix);
+      if (settings.cmatrixEnabled === false) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+      if (now - lastMatrixTick < 42) return;
+      lastMatrixTick = now;
+
+      const isLight = document.documentElement.getAttribute("data-theme") === "light";
+      ctx.fillStyle = isLight ? "rgba(242, 247, 244, 0.14)" : "rgba(6, 9, 8, 0.12)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = `600 ${fontSize}px "JetBrains Mono", monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+
+        if (y > 0) {
+          // Head character bright mint
+          ctx.fillStyle = isLight ? "#047857" : "#6ee7b7";
+          ctx.fillText(char, x, y);
+
+          // Trail character emerald
+          if (drops[i] > 1) {
+            const prevChar = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillStyle = isLight ? "rgba(5, 150, 105, 0.65)" : "rgba(16, 185, 129, 0.85)";
+            ctx.fillText(prevChar, x, (drops[i] - 1) * fontSize);
+          }
+        }
+
+        if (y > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+
+    requestAnimationFrame(drawMatrix);
+  }
+
   function initialize() {
     applySettingsToUI();
     initDeviceMetrics();
+    initCMatrixRain();
     initSpotlightEffect();
+    updateSystemInfoModalStats();
+    window.setInterval(updateSystemInfoModalStats, 1500);
     renderTelemetryStats();
     measureNetworkPing(false);
 
