@@ -1,1172 +1,1218 @@
 
-"use strict";
+(() => {
+  "use strict";
 
-const API_URL = "/api";
-const STORAGE_KEY = "haomiConversationsV1";
-const ACTIVE_KEY = "haomiActiveConversationV1";
-const MODEL_KEY = "haomiSelectedModelV1";
-const DEFAULT_MODEL = "openai/gpt-4o";
-const MAX_MESSAGE_LENGTH = 12000;
+  const API_URL = "/api";
+  const STORAGE_KEY = "haomi_workspace_v1";
+  const SETTINGS_KEY = "haomi_settings_v1";
 
-const MODELS = [
-  ["chatday/ai-chat", "Chatday AI Chat", "Lainnya"],
-  ["openai/gpt-5.6-terra", "GPT-5.6 Terra", "OpenAI"],
-  ["openai/gpt-5.5", "GPT-5.5", "OpenAI"],
-  ["openai/gpt-5.4", "GPT-5.4", "OpenAI"],
-  ["openai/gpt-5.3-chat", "GPT-5.3 Chat", "OpenAI"],
-  ["openai/gpt-5.1-instant", "GPT-5.1 Instant", "OpenAI"],
-  ["openai/gpt-5", "GPT-5", "OpenAI"],
-  ["openai/gpt-4o", "GPT-4o", "OpenAI"],
-  ["openai/gpt-4o-mini", "GPT-4o Mini", "OpenAI"],
-  ["xai/grok-4.1-fast-non-reasoning", "Grok 4.1 Fast", "xAI"],
-  ["anthropic/claude-haiku-4.5", "Claude Haiku 4.5", "Anthropic"],
-  ["anthropic/claude-sonnet-5", "Claude Sonnet 5", "Anthropic"],
-  ["anthropic/claude-sonnet-4.6", "Claude Sonnet 4.6", "Anthropic"],
-  ["anthropic/claude-opus-4.5", "Claude Opus 4.5", "Anthropic"],
-  ["anthropic/claude-opus-4.6", "Claude Opus 4.6", "Anthropic"],
-  ["anthropic/claude-opus-4.7", "Claude Opus 4.7", "Anthropic"],
-  ["anthropic/claude-opus-4.8", "Claude Opus 4.8", "Anthropic"],
-  ["deepseek/deepseek-v4-pro", "DeepSeek V4 Pro", "DeepSeek"],
-  ["deepseek/deepseek-v4-flash", "DeepSeek V4 Flash", "DeepSeek"],
-  ["deepseek/deepseek-v3.2-thinking", "DeepSeek V3.2 Thinking", "DeepSeek"],
-  ["google/gemini-3.1-pro-preview", "Gemini 3.1 Pro", "Google"],
-  ["google/gemini-3-pro-preview", "Gemini 3 Pro", "Google"],
-  ["google/gemini-3.1-flash-lite", "Gemini 3.1 Flash Lite", "Google"],
-  ["alibaba/qwen3-max", "Qwen3 Max", "Alibaba"],
-  ["meta/llama-4-maverick", "Llama 4 Maverick", "Meta"],
-  ["moonshotai/kimi-k2.6", "Kimi K2.6", "Moonshot"]
-].map(([id, name, group]) => ({ id, name, group }));
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) =>
+    Array.from(root.querySelectorAll(selector));
 
-const TOOL_CONFIG = {
-  "alight-motion": {
-    title: "Alight Motion",
-    icon: "▶",
-    description: "Kirim permintaan verifikasi atau proses tautan verifikasi akun milikmu.",
-    notice: "Gunakan email dan tautan verifikasi milikmu sendiri. Jangan bagikan tautan autentikasi kepada orang lain."
-  },
-  "urlscan": {
-    title: "Scan URL",
-    icon: "⌕",
-    description: "Periksa tautan dan lihat hasil yang dikembalikan layanan pemindaian.",
-    notice: "Hasil pemindaian bukan jaminan bahwa sebuah situs aman. Hindari membuka tautan mencurigakan."
-  },
-  "whatsapp-react": {
-    title: "Reaksi WhatsApp",
-    icon: "◉",
-    description: "Kirim reaksi emoji pada postingan kanal WhatsApp yang dapat diakses.",
-    notice: "Gunakan hanya tautan postingan yang dapat kamu akses dan jangan mengirim reaksi berulang secara berlebihan."
-  }
-};
-
-let conversations = loadConversations();
-let activeId = safeGet(ACTIVE_KEY, "");
-let selectedModel = safeGet(MODEL_KEY, DEFAULT_MODEL);
-let sending = false;
-let activeTool = "";
-let requestSequence = 0;
-let toastTimer = null;
-
-/* STORAGE */
-
-function safeGet(key, fallback) {
-  try {
-    return localStorage.getItem(key) ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function safeSet(key, value) {
-  try {
-    localStorage.setItem(key, value);
-    return true;
-  } catch (error) {
-    console.error("HAOMI storage error:", error);
-    return false;
-  }
-}
-
-function loadConversations() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter(item =>
-      item && typeof item.id === "string" && Array.isArray(item.messages)
-    ).map(item => ({
-      id: item.id,
-      title: String(item.title || "Obrolan baru"),
-      model: String(item.model || DEFAULT_MODEL),
-      messages: item.messages.filter(message =>
-        message &&
-        ["user", "assistant"].includes(message.role) &&
-        typeof message.content === "string"
-      ),
-      createdAt: Number(item.createdAt) || Date.now(),
-      updatedAt: Number(item.updatedAt) || Date.now()
-    }));
-  } catch {
-    return [];
-  }
-}
-
-function saveState() {
-  const ok = safeSet(STORAGE_KEY, JSON.stringify(conversations));
-  safeSet(ACTIVE_KEY, activeId);
-  safeSet(MODEL_KEY, selectedModel);
-
-  if (!ok) showToast("Riwayat tidak tersimpan. Periksa ruang penyimpanan browser.");
-}
-
-function makeId() {
-  return "haomi-" + (
-    typeof crypto !== "undefined" && crypto.randomUUID
-      ? crypto.randomUUID()
-      : Date.now().toString(36) + Math.random().toString(36).slice(2)
-  );
-}
-
-function newConversation() {
-  return {
-    id: makeId(),
-    title: "Obrolan baru",
-    model: selectedModel,
-    messages: [],
-    createdAt: Date.now(),
-    updatedAt: Date.now()
+  const elements = {
+    sidebar: $("#sidebar"),
+    sidebarOverlay: $("#sidebarOverlay"),
+    openSidebar: $("#openSidebar"),
+    closeSidebar: $("#closeSidebar"),
+    newChatButton: $("#newChatButton"),
+    conversationList: $("#conversationList"),
+    historyCount: $("#historyCount"),
+    historySearch: $("#historySearch"),
+    chatView: $("#chatView"),
+    messages: $("#messages"),
+    welcomeScreen: $("#welcomeScreen"),
+    chatScroll: $("#chatScroll"),
+    chatForm: $("#chatForm"),
+    chatInput: $("#chatInput"),
+    sendButton: $("#sendButton"),
+    modelSelect: $("#modelSelect"),
+    composerToolsButton: $("#composerToolsButton"),
+    breadcrumbTitle: $("#breadcrumbTitle"),
+    settingsModal: $("#settingsModal"),
+    openSettings: $("#openSettings"),
+    openSettingsTop: $("#openSettingsTop"),
+    closeSettings: $("#closeSettings"),
+    defaultModelSelect: $("#defaultModelSelect"),
+    clearAllHistory: $("#clearAllHistory"),
+    alightForm: $("#alightForm"),
+    alightAction: $("#alightAction"),
+    alightEmail: $("#alightEmail"),
+    alightLink: $("#alightLink"),
+    verificationLinkGroup: $("#verificationLinkGroup"),
+    alightResult: $("#alightResult"),
+    alightSubmit: $("#alightSubmit"),
+    urlscanForm: $("#urlscanForm"),
+    scanUrl: $("#scanUrl"),
+    urlscanResult: $("#urlscanResult"),
+    urlscanSubmit: $("#urlscanSubmit"),
+    whatsappForm: $("#whatsappForm"),
+    whatsappUrl: $("#whatsappUrl"),
+    whatsappReaction: $("#whatsappReaction"),
+    whatsappResult: $("#whatsappResult"),
+    whatsappSubmit: $("#whatsappSubmit"),
+    toastContainer: $("#toastContainer")
   };
-}
 
-function activeConversation() {
-  return conversations.find(item => item.id === activeId) || null;
-}
+  const pageMap = {
+    chat: {
+      element: elements.chatView,
+      title: "Chat AI"
+    },
+    alight: {
+      element: $("#alightView"),
+      title: "Alight Motion"
+    },
+    urlscan: {
+      element: $("#urlscanView"),
+      title: "Scan URL"
+    },
+    whatsapp: {
+      element: $("#whatsappView"),
+      title: "Reaksi WhatsApp"
+    }
+  };
 
-function ensureConversation() {
-  let current = activeConversation();
-
-  if (!current) {
-    current = newConversation();
-    conversations.unshift(current);
-    activeId = current.id;
-    saveState();
-  }
-
-  return current;
-}
-
-function modelName(id) {
-  return MODELS.find(model => model.id === id)?.name || id;
-}
-
-/* HELPERS */
-
-function $(selector, root = document) {
-  return root.querySelector(selector);
-}
-
-function button(text, className, title = "") {
-  const element = document.createElement("button");
-  element.type = "button";
-  element.className = className;
-  element.textContent = text;
-  if (title) element.title = title;
-  return element;
-}
-
-function showToast(message) {
-  const region = $("#toast-region");
-  if (!region) return;
-
-  region.replaceChildren();
-
-  const item = document.createElement("div");
-  item.className = "toast-message";
-  item.textContent = message;
-  region.appendChild(item);
-
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => item.remove(), 3500);
-}
-
-async function copyText(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-
-  const input = document.createElement("textarea");
-  input.value = text;
-  input.style.position = "fixed";
-  input.style.opacity = "0";
-  document.body.appendChild(input);
-  input.select();
-
-  const success = document.execCommand("copy");
-  input.remove();
-
-  if (!success) throw new Error("Clipboard tidak tersedia.");
-}
-
-function moveComposer(welcome) {
-  const shell = $(".composer-shell");
-  const anchor = $("#welcome-composer-anchor");
-  const area = $("#composer-area");
-
-  if (!shell || !anchor || !area) return;
-
-  if (welcome) {
-    if (shell.parentElement !== anchor) anchor.appendChild(shell);
-  } else if (shell.parentElement !== area) {
-    area.insertBefore(shell, area.querySelector(".composer-disclaimer"));
-  }
-}
-
-function closeSidebar() {
-  $("#sidebar")?.classList.remove("open");
-  $("#sidebar-backdrop")?.classList.remove("visible");
-}
-
-/* VIEW NAVIGATION */
-
-function showChatView() {
-  activeTool = "";
-
-  $("#tool-view").hidden = true;
-  $("#chat-view").classList.toggle(
-    "active",
-    ensureConversation().messages.length > 0
-  );
-  $("#welcome-screen").classList.toggle(
-    "hidden",
-    ensureConversation().messages.length > 0
+  const validModels = new Set(
+    elements.modelSelect
+      ? Array.from(elements.modelSelect.options).map(option => option.value)
+      : []
   );
 
-  document.querySelectorAll(".nav-item").forEach(item => {
-    item.classList.toggle("active", item.dataset.view === "chat");
-  });
-
-  $("#breadcrumb-current").textContent = "Chat";
-  $("#history-section").hidden = false;
-
-  updateView();
-  closeSidebar();
-}
-
-function openTool(tool) {
-  if (!TOOL_CONFIG[tool]) return;
-
-  activeTool = tool;
-  const config = TOOL_CONFIG[tool];
-
-  $("#welcome-screen").classList.add("hidden");
-  $("#chat-view").classList.remove("active");
-  $("#tool-view").hidden = false;
-  $("#breadcrumb-current").textContent = config.title;
-  $("#history-section").hidden = true;
-
-  $("#tool-page-icon").textContent = config.icon;
-  $("#tool-page-title").textContent = config.title;
-  $("#tool-page-description").textContent = config.description;
-  $("#tool-page-eyebrow").textContent = "HAOMI TOOLS";
-  $("#tool-notice").textContent = config.notice;
-
-  $("#tool-result").hidden = true;
-  $("#tool-result-message").textContent = "";
-  $("#tool-result-data").textContent = "";
-
-  document.querySelectorAll(".nav-item").forEach(item => {
-    item.classList.toggle("active", item.dataset.tool === tool);
-  });
-
-  $("#tools-popover").hidden = true;
-  $("#model-menu").hidden = true;
-
-  renderToolForm(tool);
-  closeSidebar();
-}
-
-/* CHAT VIEW */
-
-function updateView() {
-  const current = ensureConversation();
-  const hasMessages = current.messages.length > 0;
-
-  if (!activeTool) {
-    $("#welcome-screen").classList.toggle("hidden", hasMessages);
-    $("#chat-view").classList.toggle("active", hasMessages);
-    $("#breadcrumb-current").textContent = hasMessages
-      ? current.title
-      : "Chat";
-
-    moveComposer(!hasMessages);
-  }
-
-  renderMessages();
-  renderHistory();
-  updateModelButton();
-}
-
-function renderMessages() {
-  const container = $("#chat-messages");
-  if (!container) return;
-
-  container.replaceChildren();
-
-  ensureConversation().messages.forEach(message => {
-    container.appendChild(renderMessage(message));
-  });
-
-  if (sending && !activeTool) {
-    container.appendChild(renderTyping());
-  }
-
-  requestAnimationFrame(() => {
-    const scroll = $("#chat-scroll");
-    if (scroll) scroll.scrollTop = scroll.scrollHeight;
-  });
-}
-
-function renderMessage(message) {
-  const user = message.role === "user";
-  const row = document.createElement("article");
-  row.className = "message-row " + (user ? "user" : "assistant");
-
-  if (message.error) row.classList.add("error");
-
-  if (!user) {
-    const avatar = document.createElement("div");
-    avatar.className = "message-avatar";
-    avatar.textContent = "h";
-    row.appendChild(avatar);
-  }
-
-  const wrap = document.createElement("div");
-  wrap.className = "message-content-wrap";
-
-  if (!user) {
-    const meta = document.createElement("div");
-    meta.className = "message-meta";
-
-    const name = document.createElement("strong");
-    name.textContent = "HAOMI";
-
-    const model = document.createElement("span");
-    model.className = "message-model-tag";
-    model.textContent = modelName(message.model || DEFAULT_MODEL);
-
-    meta.append(name, model);
-    wrap.appendChild(meta);
-  }
-
-  const bubble = document.createElement("div");
-  bubble.className = "message-bubble";
-  bubble.textContent = message.content;
-  wrap.appendChild(bubble);
-
-  if (!user) {
-    const actions = document.createElement("div");
-    actions.className = "message-actions";
-
-    const copy = button("▢ Salin", "message-action", "Salin jawaban");
-    copy.addEventListener("click", async () => {
-      try {
-        await copyText(message.content);
-        showToast("Jawaban disalin.");
-      } catch {
-        showToast("Tidak dapat menyalin teks.");
-      }
-    });
-
-    actions.appendChild(copy);
-    wrap.appendChild(actions);
-  }
-
-  row.appendChild(wrap);
-  return row;
-}
-
-function renderTyping() {
-  const row = document.createElement("article");
-  row.className = "message-row assistant";
-
-  const avatar = document.createElement("div");
-  avatar.className = "message-avatar";
-  avatar.textContent = "h";
-
-  const wrap = document.createElement("div");
-  wrap.className = "message-content-wrap";
-
-  const meta = document.createElement("div");
-  meta.className = "message-meta";
-  meta.textContent = "HAOMI sedang berpikir";
-
-  const dots = document.createElement("div");
-  dots.className = "typing-bubble";
-
-  for (let i = 0; i < 3; i++) {
-    dots.appendChild(document.createElement("span"));
-  }
-
-  wrap.append(meta, dots);
-  row.append(avatar, wrap);
-  return row;
-}
-
-/* HISTORY */
-
-function renderHistory() {
-  const list = $("#conversation-list");
-  if (!list) return;
-
-  const query = ($("#history-search")?.value || "").trim().toLowerCase();
-  const items = [...conversations]
-    .sort((a, b) => b.updatedAt - a.updatedAt)
-    .filter(item => !query ||
-      item.title.toLowerCase().includes(query) ||
-      item.messages.some(message => message.content.toLowerCase().includes(query))
-    );
-
-  $("#history-count").textContent = String(conversations.length);
-  list.replaceChildren();
-
-  if (!items.length) {
-    const empty = document.createElement("div");
-    empty.className = "history-empty";
-    empty.textContent = query ? "Tidak ada hasil." : "Belum ada percakapan.";
-    list.appendChild(empty);
-    return;
-  }
-
-  items.forEach(conversation => {
-    const row = document.createElement("div");
-    row.className = "history-row";
-
-    const open = button(
-      conversation.title,
-      "history-open" + (conversation.id === activeId ? " active" : "")
-    );
-
-    open.addEventListener("click", () => {
-      if (sending) {
-        showToast("Tunggu jawaban selesai sebelum pindah obrolan.");
-        return;
-      }
-
-      activeId = conversation.id;
-      selectedModel = conversation.model || DEFAULT_MODEL;
-      showChatView();
-      saveState();
-    });
-
-    const remove = button("×", "history-delete", "Hapus obrolan");
-    remove.addEventListener("click", () => {
-      if (sending && conversation.id === activeId) {
-        showToast("Tunggu jawaban selesai sebelum menghapus.");
-        return;
-      }
-
-      if (!confirm(`Hapus obrolan "${conversation.title}"?`)) return;
-
-      conversations = conversations.filter(item => item.id !== conversation.id);
-
-      if (activeId === conversation.id) {
-        activeId = "";
-        ensureConversation();
-      }
-
-      saveState();
-      updateView();
-      showToast("Obrolan dihapus.");
-    });
-
-    row.append(open, remove);
-    list.appendChild(row);
-  });
-}
-
-function createNewChat() {
-  if (sending) {
-    showToast("Tunggu jawaban selesai terlebih dahulu.");
-    return;
-  }
-
-  const conversation = newConversation();
-  conversations.unshift(conversation);
-  activeId = conversation.id;
-  selectedModel = conversation.model;
-
-  saveState();
-  showChatView();
-  $("#chat-input").focus();
-}
-
-/* CHAT REQUEST */
-
-function setSending(value) {
-  sending = value;
-
-  $("#chat-input").disabled = value;
-  $("#send-button").disabled = value;
-  $("#send-button").classList.toggle("loading", value);
-  $("#send-button").setAttribute("aria-busy", String(value));
-  $("#composer-state").textContent = value ? "Memproses..." : "Siap membantu";
-}
-
-async function sendMessage(raw) {
-  const question = String(raw || "").trim();
-
-  if (!question || sending) return;
-
-  if (question.length > MAX_MESSAGE_LENGTH) {
-    showToast("Pesan terlalu panjang.");
-    return;
-  }
-
-  activeTool = "";
-  $("#tool-view").hidden = true;
-
-  const current = ensureConversation();
-  const conversationId = current.id;
-  const model = selectedModel;
-  const requestId = ++requestSequence;
-
-  current.messages.push({
-    role: "user",
-    content: question,
-    model,
-    createdAt: Date.now()
-  });
-
-  if (current.title === "Obrolan baru") {
-    current.title = question.length > 48
-      ? question.slice(0, 48).trimEnd() + "…"
-      : question;
-  }
-
-  current.model = model;
-  current.updatedAt = Date.now();
-
-  $("#chat-input").value = "";
-  $("#chat-input").style.height = "auto";
-
-  saveState();
-  setSending(true);
-  updateView();
-
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({
-        action: "chat",
-        question,
-        model,
-        session_id: conversationId
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.success === false) {
-      throw new Error(data.error || data.message || `HTTP ${response.status}`);
+  let activeView = "chat";
+  let isSending = false;
+  let requestSequence = 0;
+  let toastSequence = 0;
+
+  function makeId() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return window.crypto.randomUUID();
     }
 
-    const answer = data.answer || data.result || data.response;
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
 
-    if (typeof answer !== "string" || !answer.trim()) {
-      throw new Error("Respons AI kosong.");
+  function createConversation() {
+    return {
+      id: makeId(),
+      title: "Obrolan baru",
+      model: getDefaultModel(),
+      sessionId: `haomi-${makeId()}`,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+  }
+
+  function readStorage() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+
+      if (
+        stored &&
+        Array.isArray(stored.conversations) &&
+        typeof stored.activeId === "string"
+      ) {
+        return stored;
+      }
+    } catch (error) {
+      console.warn("Riwayat HAOMI tidak dapat dibaca:", error);
     }
 
-    if (requestId !== requestSequence) return;
+    return null;
+  }
 
-    const target = conversations.find(item => item.id === conversationId);
-    if (!target) return;
+  function getDefaultModel() {
+    try {
+      const settings = JSON.parse(
+        localStorage.getItem(SETTINGS_KEY) || "{}"
+      );
 
-    target.messages.push({
-      role: "assistant",
-      content: answer.trim(),
-      model: data.model || model,
-      createdAt: Date.now()
-    });
+      if (settings.defaultModel && validModels.has(settings.defaultModel)) {
+        return settings.defaultModel;
+      }
+    } catch (_) {
+      // Gunakan model bawaan.
+    }
 
-    target.updatedAt = Date.now();
-    saveState();
-  } catch (error) {
-    console.error("HAOMI chat error:", error.message);
+    return "openai/gpt-4o";
+  }
 
-    const target = conversations.find(item => item.id === conversationId);
+  const storedState = readStorage();
 
-    if (target && requestId === requestSequence) {
-      target.messages.push({
-        role: "assistant",
-        content: "Maaf, HAOMI belum berhasil mendapatkan jawaban.\n\n" + error.message,
-        model,
-        error: true,
-        createdAt: Date.now()
-      });
+  let state = storedState || {
+    conversations: [],
+    activeId: ""
+  };
 
-      target.updatedAt = Date.now();
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      showToast(
+        "Riwayat tidak dapat disimpan. Penyimpanan browser mungkin penuh.",
+        true
+      );
+    }
+  }
+
+  function saveSettings(settings) {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (_) {
+      showToast("Pengaturan tidak dapat disimpan.", true);
+    }
+  }
+
+  function getActiveConversation() {
+    return state.conversations.find(
+      conversation => conversation.id === state.activeId
+    ) || null;
+  }
+
+  function ensureConversation() {
+    let conversation = getActiveConversation();
+
+    if (!conversation) {
+      conversation = createConversation();
+      state.conversations.unshift(conversation);
+      state.activeId = conversation.id;
       saveState();
     }
-  } finally {
-    if (requestId === requestSequence) {
-      setSending(false);
-      updateView();
-    }
+
+    return conversation;
   }
-}
 
-function bindComposer() {
-  const form = $("#chat-form");
-  const input = $("#chat-input");
+  function formatModel(model) {
+    const names = {
+      "openai/gpt-4o": "GPT-4o",
+      "openai/gpt-4o-mini": "GPT-4o mini",
+      "openai/gpt-5.6-terra": "GPT-5.6 Terra",
+      "openai/gpt-5.5": "GPT-5.5",
+      "openai/gpt-5.4": "GPT-5.4",
+      "openai/gpt-5.3-chat": "GPT-5.3 Chat",
+      "openai/gpt-5.1-instant": "GPT-5.1 Instant",
+      "openai/gpt-5": "GPT-5",
+      "chatday/ai-chat": "Chatday AI",
+      "xai/grok-4.1-fast-non-reasoning": "Grok 4.1 Fast",
+      "anthropic/claude-haiku-4.5": "Claude Haiku 4.5",
+      "anthropic/claude-sonnet-5": "Claude Sonnet 5",
+      "anthropic/claude-sonnet-4.6": "Claude Sonnet 4.6",
+      "anthropic/claude-opus-4.5": "Claude Opus 4.5",
+      "anthropic/claude-opus-4.6": "Claude Opus 4.6",
+      "anthropic/claude-opus-4.7": "Claude Opus 4.7",
+      "anthropic/claude-opus-4.8": "Claude Opus 4.8",
+      "deepseek/deepseek-v4-pro": "DeepSeek V4 Pro",
+      "deepseek/deepseek-v4-flash": "DeepSeek V4 Flash",
+      "deepseek/deepseek-v3.2-thinking": "DeepSeek V3.2 Thinking",
+      "google/gemini-3.1-pro-preview": "Gemini 3.1 Pro",
+      "google/gemini-3-pro-preview": "Gemini 3 Pro",
+      "google/gemini-3.1-flash-lite": "Gemini 3.1 Flash Lite",
+      "alibaba/qwen3-max": "Qwen3 Max",
+      "meta/llama-4-maverick": "Llama 4 Maverick",
+      "moonshotai/kimi-k2.6": "Kimi K2.6"
+    };
 
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-    if (!sending) sendMessage(input.value);
-  });
+    return names[model] || model || "AI";
+  }
 
-  input.addEventListener("keydown", event => {
-    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
-      event.preventDefault();
-      if (!sending) form.requestSubmit();
-    }
-  });
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[character]);
+  }
 
-  input.addEventListener("input", () => {
-    input.style.height = "auto";
-    input.style.height = Math.min(input.scrollHeight, 170) + "px";
-  });
-}
+  function renderInlineMarkdown(text) {
+    let result = escapeHtml(text);
 
-/* MODEL SELECTOR */
-
-function initializeModels() {
-  const menu = $("#model-menu");
-  const buttonElement = $("#model-button");
-  const search = $("#model-search-input");
-  const options = $("#model-options");
-
-  function renderOptions(filter = "") {
-    options.replaceChildren();
-
-    const query = filter.trim().toLowerCase();
-    const matches = MODELS.filter(item =>
-      `${item.name} ${item.id} ${item.group}`.toLowerCase().includes(query)
+    result = result.replace(
+      /`([^`\n]+)`/g,
+      "<code>$1</code>"
     );
 
-    if (!matches.length) {
-      const empty = document.createElement("div");
-      empty.className = "history-empty";
-      empty.textContent = "Model tidak ditemukan.";
-      options.appendChild(empty);
-      return;
-    }
+    result = result.replace(
+      /\*\*(.+?)\*\*/g,
+      "<strong>$1</strong>"
+    );
 
-    let lastGroup = "";
+    result = result.replace(
+      /(^|[^*])\*([^*\n]+)\*/g,
+      "$1<em>$2</em>"
+    );
 
-    matches.forEach(model => {
-      if (model.group !== lastGroup) {
-        lastGroup = model.group;
-        const heading = document.createElement("div");
-        heading.className = "model-group-title";
-        heading.textContent = model.group;
-        options.appendChild(heading);
-      }
+    result = result.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      (_, label, url) => {
+        try {
+          const parsed = new URL(url);
 
-      const item = button("", "model-option" + (model.id === selectedModel ? " selected" : ""));
-      item.setAttribute("role", "option");
-      item.setAttribute("aria-selected", String(model.id === selectedModel));
+          if (!["https:", "http:"].includes(parsed.protocol)) {
+            return label;
+          }
 
-      const copy = document.createElement("span");
-      copy.className = "model-option-copy";
-
-      const name = document.createElement("strong");
-      name.textContent = model.name;
-
-      const id = document.createElement("small");
-      id.textContent = model.id;
-
-      const check = document.createElement("span");
-      check.className = "model-option-check";
-      check.textContent = model.id === selectedModel ? "✓" : "";
-
-      copy.append(name, id);
-      item.append(copy, check);
-
-      item.addEventListener("click", () => {
-        if (sending) {
-          showToast("Tunggu jawaban selesai sebelum mengganti model.");
-          return;
+          return `<a href="${escapeHtml(parsed.href)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        } catch (_) {
+          return label;
         }
-
-        selectedModel = model.id;
-        ensureConversation().model = selectedModel;
-        saveState();
-        updateModelButton();
-        renderOptions(search.value);
-        menu.hidden = true;
-        buttonElement.setAttribute("aria-expanded", "false");
-        showToast("Model dipilih: " + model.name);
-      });
-
-      options.appendChild(item);
-    });
-  }
-
-  buttonElement.addEventListener("click", () => {
-    menu.hidden = !menu.hidden;
-    buttonElement.setAttribute("aria-expanded", String(!menu.hidden));
-    $("#tools-popover").hidden = true;
-
-    if (!menu.hidden) {
-      search.value = "";
-      renderOptions();
-      search.focus();
-    }
-  });
-
-  search.addEventListener("input", () => renderOptions(search.value));
-
-  document.addEventListener("click", event => {
-    if (!$("#model-picker").contains(event.target)) {
-      menu.hidden = true;
-      buttonElement.setAttribute("aria-expanded", "false");
-    }
-  });
-
-  renderOptions();
-  updateModelButton();
-}
-
-function updateModelButton() {
-  $("#model-button-label").textContent = modelName(selectedModel);
-  $("#default-model-setting").value = selectedModel;
-}
-
-/* TOOLS: FORM CREATION */
-
-function field(label, name, placeholder, options = {}) {
-  const group = document.createElement("div");
-  group.className = "field-group";
-
-  const title = document.createElement("label");
-  title.htmlFor = "tool-field-" + name;
-  title.textContent = label;
-
-  const control = options.multiline
-    ? document.createElement("textarea")
-    : document.createElement("input");
-
-  control.id = "tool-field-" + name;
-  control.name = name;
-  control.className = "field-control";
-  control.placeholder = placeholder;
-  control.required = options.required !== false;
-
-  if (!options.multiline) {
-    control.type = options.type || "text";
-    if (options.autocomplete) control.autocomplete = options.autocomplete;
-    if (options.maxLength) control.maxLength = options.maxLength;
-  }
-
-  group.append(title, control);
-
-  if (options.help) {
-    const help = document.createElement("small");
-    help.className = "field-help";
-    help.textContent = options.help;
-    group.appendChild(help);
-  }
-
-  return group;
-}
-
-function renderToolForm(tool) {
-  const container = $("#tool-fields");
-  container.replaceChildren();
-
-  if (tool === "alight-motion") {
-    const actionField = document.createElement("div");
-    actionField.className = "field-group";
-
-    const label = document.createElement("label");
-    label.htmlFor = "am-action";
-    label.textContent = "Tindakan";
-
-    const select = document.createElement("select");
-    select.id = "am-action";
-    select.name = "amAction";
-    select.className = "field-control";
-
-    [
-      ["am-send", "Kirim permintaan verifikasi"],
-      ["am-verify", "Verifikasi dengan tautan"]
-    ].forEach(([value, text]) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = text;
-      select.appendChild(option);
-    });
-
-    actionField.append(label, select);
-    container.appendChild(actionField);
-    container.appendChild(field("Email akun", "email", "nama@email.com", {
-      type: "email",
-      autocomplete: "email",
-      maxLength: 254,
-      help: "Gunakan email untuk akun yang kamu miliki atau berwenang mengelolanya."
-    }));
-
-    const linkGroup = field(
-      "Tautan verifikasi",
-      "link",
-      "Tempel tautan verifikasi yang kamu terima",
-      {
-        multiline: true,
-        required: false,
-        help: "Hanya diperlukan untuk tindakan verifikasi. Tautan ini dapat berisi kode autentikasi sensitif."
       }
     );
-
-    linkGroup.id = "am-link-group";
-    container.appendChild(linkGroup);
-
-    select.addEventListener("change", () => {
-      const verify = select.value === "am-verify";
-      $("#tool-field-link").required = verify;
-      $("#am-link-group").hidden = !verify;
-      $("#tool-field-link").value = "";
-    });
-
-    $("#am-link-group").hidden = true;
-    $("#tool-field-link").required = false;
-  }
-
-  if (tool === "urlscan") {
-    container.appendChild(field(
-      "URL yang akan dipindai",
-      "url",
-      "https://contoh.com",
-      {
-        type: "url",
-        maxLength: 8000,
-        help: "Masukkan alamat situs lengkap yang diawali http:// atau https://."
-      }
-    ));
-  }
-
-  if (tool === "whatsapp-react") {
-    container.appendChild(field(
-      "Tautan postingan kanal",
-      "url",
-      "https://whatsapp.com/channel/...",
-      {
-        type: "url",
-        maxLength: 2000,
-        help: "Gunakan tautan postingan kanal WhatsApp yang valid."
-      }
-    ));
-
-    const group = document.createElement("div");
-    group.className = "field-group";
-
-    const label = document.createElement("label");
-    label.htmlFor = "wa-reactions";
-    label.textContent = "Emoji reaksi";
-
-    const select = document.createElement("select");
-    select.id = "wa-reactions";
-    select.className = "field-control";
-    select.name = "reaction";
-
-    [
-      ["👍", "👍 Jempol"],
-      ["❤️", "❤️ Hati"],
-      ["😂", "😂 Tertawa"],
-      ["😮", "😮 Terkejut"],
-      ["🙏", "🙏 Terima kasih"],
-      ["🔥", "🔥 Keren"],
-      ["😍", "😍 Suka"],
-      ["🥰", "🥰 Sayang"],
-      ["😋", "😋 Nikmat"],
-      ["💦", "💦 Tetesan"]
-    ].forEach(([value, text]) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = text;
-      select.appendChild(option);
-    });
-
-    group.append(label, select);
-    container.appendChild(group);
-  }
-
-  $("#tool-submit").textContent = "Jalankan alat →";
-  $("#tool-result").hidden = true;
-}
-
-/* TOOL REQUESTS */
-
-function redactSensitive(value, key = "") {
-  const sensitiveKey = /(^|_)(apikey|api_key|token|secret|password|authorization|oobcode|code|link|url|email)(_|$)/i;
-
-  if (sensitiveKey.test(key)) return "[disembunyikan]";
-
-  if (Array.isArray(value)) {
-    return value.map(item => redactSensitive(item));
-  }
-
-  if (value && typeof value === "object") {
-    const result = {};
-
-    Object.entries(value).forEach(([childKey, childValue]) => {
-      result[childKey] = redactSensitive(childValue, childKey);
-    });
 
     return result;
   }
 
-  if (typeof value === "string") {
-    // Redaksi URL verifikasi yang mungkin muncul di pesan respons.
-    return value
-      .replace(/https?:\/\/\S+/gi, "[tautan disembunyikan]")
-      .replace(/\b[A-Za-z0-9_-]{30,}\b/g, "[kode disembunyikan]");
+  function renderMarkdown(content) {
+    const source = String(content ?? "").replace(/\r\n/g, "\n");
+    const blocks = source.split(/```/);
+    const output = [];
+
+    for (let index = 0; index < blocks.length; index++) {
+      const block = blocks[index];
+
+      if (index % 2 === 1) {
+        const newline = block.indexOf("\n");
+        const code = newline >= 0
+          ? block.slice(newline + 1)
+          : block;
+
+        output.push(
+          `<pre><code>${escapeHtml(code.trimEnd())}</code></pre>`
+        );
+        continue;
+      }
+
+      const lines = block.split("\n");
+      let paragraph = [];
+      let listType = "";
+      let listItems = [];
+
+      function flushParagraph() {
+        if (!paragraph.length) return;
+
+        output.push(
+          `<p>${paragraph.map(renderInlineMarkdown).join("<br>")}</p>`
+        );
+
+        paragraph = [];
+      }
+
+      function flushList() {
+        if (!listItems.length) return;
+
+        const tag = listType === "ol" ? "ol" : "ul";
+
+        output.push(
+          `<${tag}>${listItems.map(item =>
+            `<li>${renderInlineMarkdown(item)}</li>`
+          ).join("")}</${tag}>`
+        );
+
+        listItems = [];
+        listType = "";
+      }
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
+        const unordered = trimmed.match(/^[-*]\s+(.+)$/);
+        const ordered = trimmed.match(/^\d+[.)]\s+(.+)$/);
+
+        if (!trimmed) {
+          flushParagraph();
+          flushList();
+          continue;
+        }
+
+        if (heading) {
+          flushParagraph();
+          flushList();
+
+          const level = Math.min(heading[1].length + 1, 4);
+
+          output.push(
+            `<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`
+          );
+          continue;
+        }
+
+        if (unordered || ordered) {
+          flushParagraph();
+
+          const nextType = unordered ? "ul" : "ol";
+
+          if (listType && listType !== nextType) {
+            flushList();
+          }
+
+          listType = nextType;
+          listItems.push((unordered || ordered)[1]);
+          continue;
+        }
+
+        if (trimmed.startsWith(">")) {
+          flushParagraph();
+          flushList();
+
+          output.push(
+            `<blockquote>${renderInlineMarkdown(trimmed.slice(1).trim())}</blockquote>`
+          );
+          continue;
+        }
+
+        flushList();
+        paragraph.push(trimmed);
+      }
+
+      flushParagraph();
+      flushList();
+    }
+
+    return output.join("");
   }
 
-  return value;
-}
+  function scrollToBottom() {
+    requestAnimationFrame(() => {
+      if (elements.chatScroll) {
+        elements.chatScroll.scrollTop =
+          elements.chatScroll.scrollHeight;
+      }
+    });
+  }
 
-async function submitTool(event) {
-  event.preventDefault();
+  function updateWelcome() {
+    const conversation = getActiveConversation();
+    const hasMessages = Boolean(
+      conversation && conversation.messages.length
+    );
 
-  if (!activeTool) return;
+    elements.welcomeScreen.hidden = hasMessages;
+  }
 
-  const form = $("#tool-form");
-  const submit = $("#tool-submit");
-  const data = new FormData(form);
-  const action = activeTool;
+  function addMessageElement(message, index) {
+    const wrapper = document.createElement("article");
+    wrapper.className = `message ${message.role}`;
 
-  const payload = {};
+    if (message.error) {
+      wrapper.classList.add("message-error");
+    }
 
-  if (action === "alight-motion") {
-    payload.action = data.get("amAction");
-    payload.email = String(data.get("email") || "").trim();
+    if (message.role === "user") {
+      const bubble = document.createElement("div");
+      bubble.className = "message-bubble";
+      bubble.textContent = message.content;
+      wrapper.appendChild(bubble);
+      elements.messages.appendChild(wrapper);
+      return;
+    }
 
-    if (payload.action === "am-verify") {
-      payload.link = String(data.get("link") || "").trim();
+    const heading = document.createElement("div");
+    heading.className = "assistant-heading";
+
+    const avatar = document.createElement("span");
+    avatar.className = "assistant-avatar";
+    avatar.textContent = "h.";
+
+    const name = document.createElement("span");
+    name.className = "assistant-name";
+    name.textContent = "HAOMI";
+
+    const badge = document.createElement("span");
+    badge.className = "model-badge";
+    badge.textContent = formatModel(message.model);
+
+    heading.append(avatar, name, badge);
+
+    const bubble = document.createElement("div");
+    bubble.className = "message-bubble";
+    bubble.innerHTML = renderMarkdown(message.content);
+
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+
+    const copyButton = document.createElement("button");
+    copyButton.className = "message-action";
+    copyButton.type = "button";
+    copyButton.textContent = "Salin";
+    copyButton.addEventListener("click", () => {
+      copyText(message.content);
+    });
+
+    actions.appendChild(copyButton);
+
+    if (!message.error) {
+      const retryButton = document.createElement("button");
+      retryButton.className = "message-action";
+      retryButton.type = "button";
+      retryButton.textContent = "Coba lagi";
+      retryButton.addEventListener("click", () => retryMessage(index));
+      actions.appendChild(retryButton);
+    }
+
+    wrapper.append(heading, bubble, actions);
+    elements.messages.appendChild(wrapper);
+  }
+
+  function renderMessages() {
+    const conversation = getActiveConversation();
+
+    elements.messages.replaceChildren();
+
+    if (!conversation) {
+      updateWelcome();
+      return;
+    }
+
+    conversation.messages.forEach((message, index) => {
+      addMessageElement(message, index);
+    });
+
+    updateWelcome();
+    scrollToBottom();
+  }
+
+  function renderHistory() {
+    const query = (elements.historySearch?.value || "")
+      .trim()
+      .toLowerCase();
+
+    const conversations = [...state.conversations]
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+
+    elements.conversationList.replaceChildren();
+    elements.historyCount.textContent = String(conversations.length);
+
+    const filtered = conversations.filter(conversation =>
+      conversation.title.toLowerCase().includes(query)
+    );
+
+    if (!filtered.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty-history";
+      empty.textContent = query
+        ? "Tidak ada percakapan yang cocok."
+        : "Percakapanmu akan muncul di sini.";
+
+      elements.conversationList.appendChild(empty);
+      return;
+    }
+
+    for (const conversation of filtered) {
+      const row = document.createElement("div");
+      row.className = "history-item";
+
+      const openButton = document.createElement("button");
+      openButton.type = "button";
+      openButton.className = "history-open";
+
+      if (conversation.id === state.activeId) {
+        openButton.classList.add("selected");
+      }
+
+      openButton.textContent = conversation.title;
+      openButton.title = conversation.title;
+      openButton.addEventListener("click", () => {
+        if (isSending) {
+          showToast("Tunggu jawaban selesai sebelum berpindah obrolan.");
+          return;
+        }
+
+        state.activeId = conversation.id;
+        saveState();
+        renderHistory();
+        renderMessages();
+        showView("chat");
+        closeSidebar();
+      });
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "history-delete";
+      deleteButton.textContent = "×";
+      deleteButton.title = "Hapus percakapan";
+      deleteButton.setAttribute("aria-label", "Hapus percakapan");
+
+      deleteButton.addEventListener("click", () => {
+        if (isSending && conversation.id === state.activeId) {
+          showToast("Tunggu jawaban selesai sebelum menghapus obrolan.");
+          return;
+        }
+
+        const confirmed = window.confirm(
+          `Hapus percakapan "${conversation.title}" dari riwayat lokal?`
+        );
+
+        if (!confirmed) return;
+
+        state.conversations = state.conversations.filter(
+          item => item.id !== conversation.id
+        );
+
+        if (state.activeId === conversation.id) {
+          const replacement = createConversation();
+          state.conversations.unshift(replacement);
+          state.activeId = replacement.id;
+        }
+
+        saveState();
+        renderHistory();
+        renderMessages();
+      });
+
+      row.append(openButton, deleteButton);
+      elements.conversationList.appendChild(row);
     }
   }
 
-  if (action === "urlscan") {
-    payload.action = "urlscan";
-    payload.url = String(data.get("url") || "").trim();
+  function setBusy(busy) {
+    isSending = busy;
+    elements.sendButton.disabled = busy;
+    elements.sendButton.classList.toggle("is-loading", busy);
+    elements.chatInput.disabled = busy;
+    elements.modelSelect.disabled = busy;
+
+    if (busy) {
+      elements.sendButton.setAttribute("aria-label", "Sedang memproses");
+    } else {
+      elements.sendButton.setAttribute("aria-label", "Kirim pesan");
+    }
   }
 
-  if (action === "whatsapp-react") {
-    payload.action = "whatsapp-react";
-    payload.url = String(data.get("url") || "").trim();
-    payload.reaction = String(data.get("reaction") || "").trim();
+  function showToast(message, isError = false) {
+    const toast = document.createElement("div");
+    toast.className = `toast${isError ? " error" : ""}`;
+    toast.textContent = message;
+
+    elements.toastContainer.appendChild(toast);
+
+    const id = ++toastSequence;
+
+    window.setTimeout(() => {
+      if (id <= toastSequence) {
+        toast.remove();
+      }
+    }, 3500);
   }
 
-  if (!form.reportValidity()) return;
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(String(text));
+      } else {
+        const temporary = document.createElement("textarea");
+        temporary.value = String(text);
+        temporary.style.position = "fixed";
+        temporary.style.opacity = "0";
 
-  if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
-    showToast("Format email tidak valid.");
-    return;
+        document.body.appendChild(temporary);
+        temporary.select();
+
+        const success = document.execCommand("copy");
+        temporary.remove();
+
+        if (!success) throw new Error("Salin gagal");
+      }
+
+      showToast("Berhasil disalin.");
+    } catch (_) {
+      showToast("Tidak dapat menyalin otomatis.", true);
+    }
   }
 
-  submit.disabled = true;
-  submit.textContent = "Memproses...";
-  $("#tool-result").hidden = true;
-
-  try {
+  async function requestApi(action, data = {}) {
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json"
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        action,
+        ...data
+      })
     });
 
-    const result = await response.json();
-
-    if (!response.ok || result.success === false) {
-      throw new Error(result.error || result.message || `HTTP ${response.status}`);
-    }
-
-    $("#tool-result").hidden = false;
-    $("#tool-result-message").textContent =
-      result.message || "Permintaan diterima oleh layanan.";
-
-    const safeResult = redactSensitive(result.result ?? result);
-    $("#tool-result-data").textContent = JSON.stringify(safeResult, null, 2);
-
-    showToast("Permintaan selesai.");
-  } catch (error) {
-    $("#tool-result").hidden = false;
-    $("#tool-result-message").textContent = "Permintaan gagal: " + error.message;
-    $("#tool-result-data").textContent = "";
-    showToast("Alat gagal dijalankan. Periksa hasilnya.");
-  } finally {
-    submit.disabled = false;
-    submit.textContent = "Jalankan alat →";
-  }
-}
-
-/* TOOLS MENU */
-
-function initializeTools() {
-  $("#tools-toggle").addEventListener("click", () => {
-    const popover = $("#tools-popover");
-    popover.hidden = !popover.hidden;
-    $("#model-menu").hidden = true;
-    $("#model-button").setAttribute("aria-expanded", "false");
-  });
-
-  document.querySelectorAll("[data-tool]").forEach(element => {
-    element.addEventListener("click", () => openTool(element.dataset.tool));
-  });
-
-  $("#back-to-chat").addEventListener("click", showChatView);
-  $("#tool-form").addEventListener("submit", submitTool);
-
-  document.addEventListener("click", event => {
-    const popover = $("#tools-popover");
-
-    if (
-      !popover.contains(event.target) &&
-      !$("#tools-toggle").contains(event.target)
-    ) {
-      popover.hidden = true;
-    }
-  });
-
-  $("#copy-tool-result").addEventListener("click", async () => {
-    const text = [
-      $("#tool-result-message").textContent,
-      $("#tool-result-data").textContent
-    ].filter(Boolean).join("\n\n");
+    let result;
 
     try {
-      await copyText(text);
-      showToast("Hasil disalin.");
-    } catch {
-      showToast("Tidak dapat menyalin hasil.");
-    }
-  });
-}
-
-/* NAVIGATION & SETTINGS */
-
-function initializeNavigation() {
-  $("#new-chat").addEventListener("click", createNewChat);
-  $("#sidebar-open").addEventListener("click", () => {
-    $("#sidebar").classList.add("open");
-    $("#sidebar-backdrop").classList.add("visible");
-  });
-
-  $("#sidebar-close").addEventListener("click", closeSidebar);
-  $("#sidebar-backdrop").addEventListener("click", closeSidebar);
-  $("#history-search").addEventListener("input", renderHistory);
-
-  document.querySelectorAll("[data-prompt]").forEach(element => {
-    element.addEventListener("click", () => sendMessage(element.dataset.prompt));
-  });
-
-  document.addEventListener("keydown", event => {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-      event.preventDefault();
-      createNewChat();
+      result = await response.json();
+    } catch (_) {
+      throw new Error(
+        `Server mengembalikan respons yang tidak valid (HTTP ${response.status}).`
+      );
     }
 
-    if (event.key === "Escape") {
-      $("#tools-popover").hidden = true;
-      $("#model-menu").hidden = true;
-      closeSidebar();
+    if (!response.ok || result.success === false) {
+      throw new Error(
+        result.message ||
+        `Permintaan gagal (HTTP ${response.status}).`
+      );
     }
-  });
-}
 
-function initializeSettings() {
-  const dialog = $("#settings-dialog");
+    return result;
+  }
 
-  [$("#open-settings"), $("#topbar-settings")].forEach(element => {
-    element.addEventListener("click", () => {
-      populateDefaultModelOptions();
-      dialog.showModal();
-      closeSidebar();
+  function updateConversationTitle(conversation) {
+    const firstUserMessage = conversation.messages.find(
+      message => message.role === "user"
+    );
+
+    if (!firstUserMessage) return;
+
+    const title = firstUserMessage.content
+      .replace(/\s+/g, " ")
+      .trim();
+
+    conversation.title = title.length > 42
+      ? `${title.slice(0, 39)}…`
+      : title || "Obrolan baru";
+  }
+
+  async function sendMessage(text) {
+    const prompt = String(text || "").trim();
+
+    if (!prompt || isSending) return;
+
+    const conversation = ensureConversation();
+    const sequence = ++requestSequence;
+
+    conversation.model = elements.modelSelect.value;
+    conversation.messages.push({
+      role: "user",
+      content: prompt,
+      createdAt: Date.now()
     });
-  });
 
-  $("#settings-close").addEventListener("click", () => dialog.close());
+    updateConversationTitle(conversation);
+    conversation.updatedAt = Date.now();
 
-  dialog.addEventListener("click", event => {
-    if (event.target === dialog) dialog.close();
-  });
+    // Kosongkan input langsung agar pesan tidak terlihat terkirim dua kali.
+    elements.chatInput.value = "";
+    autoResizeInput();
+    setBusy(true);
 
-  $("#default-model-setting").addEventListener("change", event => {
-    if (sending) {
-      event.target.value = selectedModel;
-      showToast("Tunggu jawaban selesai.");
+    saveState();
+    renderHistory();
+    renderMessages();
+
+    const loading = document.createElement("article");
+    loading.className = "message assistant";
+    loading.id = `loading-${sequence}`;
+
+    const heading = document.createElement("div");
+    heading.className = "assistant-heading";
+
+    const avatar = document.createElement("span");
+    avatar.className = "assistant-avatar";
+    avatar.textContent = "h.";
+
+    const name = document.createElement("span");
+    name.className = "assistant-name";
+    name.textContent = "HAOMI";
+
+    const badge = document.createElement("span");
+    badge.className = "model-badge";
+    badge.textContent = formatModel(conversation.model);
+
+    heading.append(avatar, name, badge);
+
+    const bubble = document.createElement("div");
+    bubble.className = "message-bubble";
+
+    const typing = document.createElement("div");
+    typing.className = "typing-row";
+    typing.setAttribute("aria-label", "HAOMI sedang berpikir");
+
+    for (let index = 0; index < 3; index++) {
+      const dot = document.createElement("span");
+      dot.className = "typing-dot";
+      typing.appendChild(dot);
+    }
+
+    bubble.appendChild(typing);
+    loading.append(heading, bubble);
+    elements.messages.appendChild(loading);
+
+    updateWelcome();
+    scrollToBottom();
+
+    try {
+      const result = await requestApi("chat", {
+        prompt,
+        model: conversation.model,
+        session_id: conversation.sessionId
+      });
+
+      const answer = result.answer;
+
+      const answerText =
+        typeof answer === "string"
+          ? answer
+          : answer == null
+            ? ""
+            : JSON.stringify(answer, null, 2);
+
+      if (!answerText.trim()) {
+        throw new Error("API tidak mengembalikan teks jawaban.");
+      }
+
+      conversation.sessionId =
+        result.session_id || conversation.sessionId;
+
+      conversation.messages.push({
+        role: "assistant",
+        content: answerText,
+        model: result.model || conversation.model,
+        createdAt: Date.now()
+      });
+
+      conversation.updatedAt = Date.now();
+    } catch (error) {
+      conversation.messages.push({
+        role: "assistant",
+        content: `Maaf, HAOMI belum berhasil mendapatkan jawaban.\n\n${error.message || "Terjadi kesalahan jaringan."}`,
+        model: conversation.model,
+        error: true,
+        createdAt: Date.now()
+      });
+
+      conversation.updatedAt = Date.now();
+    } finally {
+      // Hapus indikator loading sebelum merender ulang pesan.
+      loading.remove();
+
+      saveState();
+      renderHistory();
+      renderMessages();
+
+      if (sequence === requestSequence) {
+        setBusy(false);
+        elements.chatInput.focus();
+      }
+    }
+  }
+
+  async function retryMessage(index) {
+    if (isSending) return;
+
+    const conversation = getActiveConversation();
+    if (!conversation) return;
+
+    const message = conversation.messages[index];
+
+    if (!message || message.role !== "assistant" || !message.error) {
       return;
     }
 
-    selectedModel = event.target.value;
-    ensureConversation().model = selectedModel;
-    saveState();
-    updateModelButton();
-    showToast("Model default diperbarui.");
-  });
+    const userMessage = conversation.messages
+      .slice(0, index)
+      .reverse()
+      .find(item => item.role === "user");
 
-  $("#clear-history").addEventListener("click", () => {
-    if (sending) {
-      showToast("Tunggu jawaban selesai sebelum menghapus riwayat.");
+    if (!userMessage) {
+      showToast("Pesan sebelumnya tidak ditemukan.", true);
       return;
     }
 
-    if (!confirm("Hapus semua riwayat chat di browser ini?")) return;
-
-    conversations = [];
-    activeId = "";
-    ensureConversation();
+    // Hapus jawaban error dan ulangi prompt terakhir.
+    conversation.messages.splice(index, 1);
     saveState();
-    updateView();
-    dialog.close();
-    showToast("Riwayat lokal dihapus.");
-  });
-}
+    renderMessages();
 
-function populateDefaultModelOptions() {
-  const select = $("#default-model-setting");
-  select.replaceChildren();
+    await sendMessage(userMessage.content);
+  }
 
-  MODELS.forEach(model => {
-    const option = document.createElement("option");
-    option.value = model.id;
-    option.textContent = `${model.name} — ${model.group}`;
-    select.appendChild(option);
-  });
+  function autoResizeInput() {
+    elements.chatInput.style.height = "auto";
+    elements.chatInput.style.height =
+      `${Math.min(elements.chatInput.scrollHeight, 180)}px`;
+  }
 
-  select.value = selectedModel;
-}
+  function closeSidebar() {
+    document.body.classList.remove("sidebar-open");
+  }
 
-/* START */
+  function openSidebar() {
+    document.body.classList.add("sidebar-open");
+  }
 
-function init() {
-  ensureConversation();
-  bindComposer();
-  initializeModels();
-  initializeTools();
-  initializeNavigation();
-  initializeSettings();
-  updateView();
+  function showView(viewName) {
+    if (!pageMap[viewName]) return;
 
-  console.info("HAOMI siap.", { models: MODELS.length });
-}
+    activeView = viewName;
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init, { once: true });
-} else {
-  init();
-}
+    Object.entries(pageMap).forEach(([name, page]) => {
+      const isActive = name === viewName;
+
+      page.element.hidden = !isActive;
+      page.element.classList.toggle("active", isActive);
+    });
+
+    $$(".nav-item[data-view]").forEach(button => {
+      button.classList.toggle(
+        "active",
+        button.dataset.view === viewName
+      );
+    });
+
+    elements.breadcrumbTitle.textContent = pageMap[viewName].title;
+    closeSidebar();
+
+    if (viewName === "chat") {
+      renderMessages();
+      elements.chatInput.focus({ preventScroll: true });
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function newChat() {
+    if (isSending) {
+      showToast("Tunggu jawaban selesai sebelum membuat obrolan baru.");
+      return;
+    }
+
+    const conversation = createConversation();
+
+    state.conversations.unshift(conversation);
+    state.activeId = conversation.id;
+
+    saveState();
+    renderHistory();
+    renderMessages();
+    showView("chat");
+    closeSidebar();
+  }
+
+  function openSettings() {
+    const model = getDefaultModel();
+
+    elements.defaultModelSelect.value = model;
+    elements.settingsModal.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeSettings() {
+    elements.settingsModal.hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  function updateAlightFields() {
+    const needsLink = elements.alightAction.value === "am-verify";
+
+    elements.verificationLinkGroup.hidden = !needsLink;
+    elements.alightLink.required = needsLink;
+
+    elements.alightSubmit.firstChild.textContent = needsLink
+      ? "Verifikasi tautan "
+      : "Kirim permintaan ";
+  }
+
+  function showToolResult(element, content, status = "normal") {
+    element.classList.remove("is-error", "is-success");
+
+    if (status === "error") {
+      element.classList.add("is-error");
+    } else if (status === "success") {
+      element.classList.add("is-success");
+    }
+
+    element.textContent = content;
+  }
+
+  function stringifyResult(result) {
+    if (result == null) return "Tidak ada hasil dari server.";
+
+    if (typeof result === "string") return result;
+
+    return JSON.stringify(result, null, 2);
+  }
+
+  async function runTool({
+    form,
+    button,
+    resultElement,
+    action,
+    payload,
+    loadingText
+  }) {
+    if (form.dataset.busy === "true") return;
+
+    form.dataset.busy = "true";
+    button.disabled = true;
+
+    const originalText = button.textContent;
+    button.textContent = loadingText;
+
+    showToolResult(resultElement, "Sedang menghubungi layanan API…");
+
+    try {
+      const result = await requestApi(action, payload);
+
+      showToolResult(
+        resultElement,
+        stringifyResult(result.result ?? result),
+        "success"
+      );
+
+      showToast("Permintaan selesai.");
+    } catch (error) {
+      showToolResult(
+        resultElement,
+        `Permintaan gagal: ${error.message || "Terjadi kesalahan."}`,
+        "error"
+      );
+
+      showToast("Permintaan gagal. Periksa hasil untuk detail.", true);
+    } finally {
+      form.dataset.busy = "false";
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+
+  function bindEvents() {
+    elements.openSidebar.addEventListener("click", openSidebar);
+    elements.closeSidebar.addEventListener("click", closeSidebar);
+    elements.sidebarOverlay.addEventListener("click", closeSidebar);
+
+    elements.newChatButton.addEventListener("click", newChat);
+
+    $$("[data-view]").forEach(button => {
+      button.addEventListener("click", () => {
+        showView(button.dataset.view);
+      });
+    });
+
+    elements.historySearch.addEventListener("input", renderHistory);
+
+    elements.chatForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      if (isSending) return;
+
+      const prompt = elements.chatInput.value.trim();
+      if (!prompt) return;
+
+      sendMessage(prompt);
+    });
+
+    elements.chatInput.addEventListener("input", autoResizeInput);
+
+    elements.chatInput.addEventListener("keydown", event => {
+      if (
+        event.key === "Enter" &&
+        !event.shiftKey &&
+        !event.isComposing
+      ) {
+        event.preventDefault();
+
+        if (!isSending) {
+          elements.chatForm.requestSubmit();
+        }
+      }
+    });
+
+    $$(".prompt-card[data-prompt]").forEach(button => {
+      button.addEventListener("click", () => {
+        showView("chat");
+        elements.chatInput.value = button.dataset.prompt || "";
+        autoResizeInput();
+        elements.chatInput.focus();
+      });
+    });
+
+    elements.composerToolsButton.addEventListener("click", () => {
+      showToast("Pilih alat dari menu di kiri atas.");
+      openSidebar();
+    });
+
+    elements.openSettings.addEventListener("click", openSettings);
+    elements.openSettingsTop.addEventListener("click", openSettings);
+    elements.closeSettings.addEventListener("click", closeSettings);
+
+    elements.settingsModal.addEventListener("click", event => {
+      if (event.target === elements.settingsModal) {
+        closeSettings();
+      }
+    });
+
+    elements.defaultModelSelect.addEventListener("change", () => {
+      const model = elements.defaultModelSelect.value;
+
+      saveSettings({ defaultModel: model });
+
+      const conversation = getActiveConversation();
+
+      if (conversation && conversation.messages.length === 0) {
+        conversation.model = model;
+        elements.modelSelect.value = model;
+        saveState();
+      }
+
+      showToast("Model default diperbarui.");
+    });
+
+    elements.modelSelect.addEventListener("change", () => {
+      const conversation = getActiveConversation();
+
+      if (conversation && conversation.messages.length === 0) {
+        conversation.model = elements.modelSelect.value;
+        saveState();
+      }
+    });
+
+    elements.clearAllHistory.addEventListener("click", () => {
+      if (isSending) {
+        showToast("Tunggu jawaban selesai sebelum menghapus riwayat.");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Hapus semua percakapan yang tersimpan di browser ini?"
+      );
+
+      if (!confirmed) return;
+
+      state = {
+        conversations: [],
+        activeId: ""
+      };
+
+      const conversation = createConversation();
+      state.conversations.push(conversation);
+      state.activeId = conversation.id;
+
+      saveState();
+      renderHistory();
+      renderMessages();
+      closeSettings();
+      showToast("Riwayat lokal sudah dibersihkan.");
+    });
+
+    elements.alightAction.addEventListener("change", updateAlightFields);
+
+    elements.alightForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const action = elements.alightAction.value;
+      const payload = {
+        email: elements.alightEmail.value.trim()
+      };
+
+      if (action === "am-verify") {
+        payload.link = elements.alightLink.value.trim();
+      }
+
+      runTool({
+        form: elements.alightForm,
+        button: elements.alightSubmit,
+        resultElement: elements.alightResult,
+        action,
+        payload,
+        loadingText: "Memproses…"
+      });
+    });
+
+    elements.urlscanForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      runTool({
+        form: elements.urlscanForm,
+        button: elements.urlscanSubmit,
+        resultElement: elements.urlscanResult,
+        action: "urlscan",
+        payload: {
+          url: elements.scanUrl.value.trim()
+        },
+        loadingText: "Memindai…"
+      });
+    });
+
+    elements.whatsappForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      runTool({
+        form: elements.whatsappForm,
+        button: elements.whatsappSubmit,
+        resultElement: elements.whatsappResult,
+        action: "whatsapp-react",
+        payload: {
+          url: elements.whatsappUrl.value.trim(),
+          reaction: elements.whatsappReaction.value.trim()
+        },
+        loadingText: "Mengirim…"
+      });
+    });
+
+    $$("[data-copy-result]").forEach(button => {
+      button.addEventListener("click", () => {
+        const element = document.getElementById(
+          button.dataset.copyResult
+        );
+
+        if (element) copyText(element.textContent);
+      });
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        closeSidebar();
+
+        if (!elements.settingsModal.hidden) {
+          closeSettings();
+        }
+      }
+
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "k"
+      ) {
+        event.preventDefault();
+
+        if (isSending) return;
+
+        newChat();
+      }
+    });
+  }
+
+  function initialize() {
+    if (!state.conversations.length) {
+      const conversation = createConversation();
+      state.conversations.push(conversation);
+      state.activeId = conversation.id;
+    }
+
+    if (
+      !state.conversations.some(
+        conversation => conversation.id === state.activeId
+      )
+    ) {
+      state.activeId = state.conversations[0].id;
+    }
+
+    const conversation = getActiveConversation();
+
+    if (conversation) {
+      const model = validModels.has(conversation.model)
+        ? conversation.model
+        : getDefaultModel();
+
+      conversation.model = model;
+      elements.modelSelect.value = model;
+    }
+
+    elements.defaultModelSelect.value = getDefaultModel();
+
+    bindEvents();
+    updateAlightFields();
+    renderHistory();
+    renderMessages();
+    saveState();
+  }
+
+  initialize();
+})();
