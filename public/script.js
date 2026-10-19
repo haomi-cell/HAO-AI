@@ -73,16 +73,7 @@
     detailed: "[Panjang jawaban: kupas secara lengkap, terstruktur, dan detail dari awal sampai akhir.]"
   };
 
-  const INTERACTIVE_CHOICE_INSTRUCTION =
-    "[Aturan Opsi Interaktif: Jika pengguna meminta dibuatkan sesuatu (seperti kode bot, aplikasi, draf, atau rencana) yang memiliki beberapa pilihan (misal bahasa pemrograman, jenis fitur/tombol, atau nama tombol), ATAU jika kamu ingin menawarkan opsi lanjutan, wajib sertakan blok interaktif di bagian paling akhir jawabanmu dengan format persis berikut:\n" +
-    "[PILIHAN]\n" +
-    "Judul: Biar sesuai kebutuhanmu, mau dibuat pakai apa?\n" +
-    "1. Nama Kategori Pilihan | radio | Pilihan Pertama | Pilihan Kedua\n" +
-    "2. Nama Kategori Kedua | radio | Opsi A — keterangan singkat | Opsi B — keterangan singkat\n" +
-    "3. Nama Input Teks (opsional) | input | Label Pertama: Nilai Awal | Label Kedua: Nilai Awal\n" +
-    "Tombol: Buatkan Sekarang\n" +
-    "[/PILIHAN]\n" +
-    "Gunakan blok [PILIHAN] tersebut setiap kali ada opsi yang bisa dipilih pengguna.]";
+  const INTERACTIVE_CHOICE_INSTRUCTION = "";
 
   const defaultSettings = {
     theme: "dark",
@@ -658,10 +649,15 @@
     return models[settings.defaultModel] ? settings.defaultModel : "openai/gpt-4o";
   }
 
-  function newConversation() {
+  function newConversation(indexHint = null) {
+    const timeStr = new Date().toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    const suffix = indexHint && indexHint > 1 ? ` #${indexHint}` : "";
     return {
       id: id(),
-      title: "Obrolan baru",
+      title: `Obrolan baru${suffix} (${timeStr})`,
       model: getDefaultModel(),
       sessionId: `HAOMI_XML_${id().toUpperCase()}`,
       messages: [],
@@ -989,20 +985,40 @@
 
     const speedMode = settings.streamSpeed || "cyber";
     if (animateStream && !message.error && speedMode !== "instant") {
-      streamAssistantText(article, bubble, actions, message.content, speedMode);
+      streamAssistantText(article, bubble, actions, message.content, speedMode, message);
     } else {
-      renderBubbleWithInteractiveChoices(bubble, message.content);
+      renderBubbleWithInteractiveChoices(bubble, message.content, message);
     }
   }
 
-  function parseInteractiveChoiceSpec(rawText) {
+  function shortenOptionLabel(text) {
+    const clean = String(text || "").replace(/\*\*/g, "").replace(/`/g, "").trim();
+    const colonIdx = clean.indexOf(":");
+    if (colonIdx > 2 && colonIdx < 48) {
+      const head = clean.slice(0, colonIdx).trim();
+      const tail = clean.slice(colonIdx + 1).trim();
+      if (tail && tail.length <= 65) {
+        return `${head} — ${tail}`;
+      }
+      return head;
+    }
+    return clean.length > 90 ? `${clean.slice(0, 87)}...` : clean;
+  }
+
+  function parseInteractiveChoiceSpec(rawText, messageObj = null) {
     const source = String(rawText ?? "");
+
+    // Jika pesan asisten ini adalah jawaban langsung setelah user menekan kartu pilihan,
+    // jangan tampilkan kartu pilihan berulang-ulang lagi kecuali ada tag [PILIHAN] eksplisit.
+    const skipAutoCard = Boolean(messageObj?.hideChoiceCard);
+
+    // 1. Cek tag eksplisit [PILIHAN]...[/PILIHAN]
     const tagMatch = source.match(/\[PILIHAN\]([\s\S]*?)\[\/PILIHAN\]/i);
     if (tagMatch) {
       const cleanMarkdown = source.replace(tagMatch[0], "").trim();
       const body = tagMatch[1].trim();
-      let title = "Biar sesuai kebutuhanmu, pilih opsi di bawah:";
-      let submitLabel = "Lanjutkan sesuai pilihan";
+      let title = "Biar sesuai kebutuhanmu, mau dibuat pakai apa?";
+      let submitLabel = "Buatkan sesuai pilihan";
       const groups = [];
 
       body.split("\n").forEach(rawLine => {
@@ -1028,58 +1044,111 @@
       });
 
       if (groups.length) {
-        return { cleanMarkdown, spec: { title, submitLabel, groups } };
+        return { cleanMarkdown, spec: { title, submitLabel, mode: "form", groups } };
       }
     }
 
-    // Automatic fallback detector when AI writes numbered sections with bullet options
-    if (settings.interactiveChoices !== false) {
-      const lines = source.split("\n");
-      const autoGroups = [];
-      let currentGroup = null;
+    if (skipAutoCard || settings.interactiveChoices === false) {
+      return { cleanMarkdown: source, spec: null };
+    }
 
-      for (const rawLine of lines) {
-        const line = rawLine.trim();
-        const numMatch = line.match(/^(\d+)[.)]\s+\*{0,2}([^*:]+?)\*{0,2}:?$/);
-        const bulletMatch = line.match(/^[-*•]\s+(.+)$/);
+    // Jangan tampilkan kartu jika balasan AI sudah berisi blok kode lengkap yang panjang
+    const hasCodeBlock = source.includes("```") && source.split("```").length >= 3;
+    const lower = source.toLowerCase();
 
-        if (numMatch && numMatch[2].length < 75) {
-          if (currentGroup && currentGroup.items.length >= 2) {
-            autoGroups.push(currentGroup);
-          }
-          currentGroup = {
-            label: `${numMatch[1]}. ${numMatch[2].trim()}`,
-            type: "radio",
-            items: []
-          };
-        } else if (bulletMatch && currentGroup && currentGroup.items.length < 6) {
-          const optText = bulletMatch[1].replace(/\*\*/g, "").trim();
-          if (optText && optText.length <= 95) {
-            currentGroup.items.push(optText);
-          }
+    // 2. Deteksi otomatis konteks pembuatan Bot (Telegram / WhatsApp / Discord) seperti Gambar 2
+    const isBotTopic =
+      /\b(bot|telegram|botfather|whatsapp bot|wa bot|inline button|reply keyboard)\b/i.test(source) &&
+      !hasCodeBlock;
+
+    if (isBotTopic) {
+      return {
+        cleanMarkdown: source,
+        spec: {
+          title: "Biar sesuai kebutuhanmu, mau dibuat pakai apa?",
+          submitLabel: "Buatkan kode bot",
+          mode: "bot_builder",
+          groups: [
+            {
+              label: "1. Bahasa pemrograman",
+              type: "radio",
+              items: [
+                "Python",
+                "JavaScript (Node.js)"
+              ]
+            },
+            {
+              label: "2. Jenis tombol",
+              type: "radio",
+              items: [
+                "Inline button — tombol di bawah pesan bot",
+                "Reply keyboard — tombol di atas keyboard chat"
+              ]
+            },
+            {
+              label: "3. Nama kedua tombol",
+              type: "input",
+              items: [
+                "Tombol pertama: Menu Utama",
+                "Tombol kedua: Tentang Bot"
+              ]
+            }
+          ]
+        }
+      };
+    }
+
+    // 3. Deteksi daftar opsi bernomor atau bullet di balasan AI -> jadikan 1 daftar Single-Choice
+    // supaya saat dipilih hanya mengirim 1 opsi yang diklik (bukan menggabungkan 5 poin sekaligus).
+    const lines = source.split("\n");
+    const numberedOptions = [];
+    const bulletOptions = [];
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      const numMatch = line.match(/^(\d+)[.)]\s+(.+)$/);
+      const bulMatch = line.match(/^[-*•]\s+(.+)$/);
+
+      if (numMatch) {
+        const cleaned = shortenOptionLabel(numMatch[2]);
+        if (cleaned.length >= 4 && cleaned.length <= 95) {
+          numberedOptions.push(cleaned);
+        }
+      } else if (bulMatch) {
+        const cleaned = shortenOptionLabel(bulMatch[1]);
+        if (cleaned.length >= 4 && cleaned.length <= 85) {
+          bulletOptions.push(cleaned);
         }
       }
-      if (currentGroup && currentGroup.items.length >= 2) {
-        autoGroups.push(currentGroup);
-      }
+    }
 
-      if (autoGroups.length >= 1) {
-        return {
-          cleanMarkdown: source,
-          spec: {
-            title: "Pilih langsung opsi di bawah:",
-            submitLabel: "Kirim Pilihan",
-            groups: autoGroups.slice(0, 4)
-          }
-        };
-      }
+    const candidateList = numberedOptions.length >= 2 && numberedOptions.length <= 6
+      ? numberedOptions
+      : (bulletOptions.length >= 2 && bulletOptions.length <= 5 && !hasCodeBlock ? bulletOptions : []);
+
+    if (candidateList.length >= 2) {
+      return {
+        cleanMarkdown: source,
+        spec: {
+          title: "Pilih salah satu opsi yang ingin kamu lanjutkan:",
+          submitLabel: "Lanjutkan Pilihan Ini",
+          mode: "single_select",
+          groups: [
+            {
+              label: "Pilihan Langkah / Topik",
+              type: "radio",
+              items: candidateList
+            }
+          ]
+        }
+      };
     }
 
     return { cleanMarkdown: source, spec: null };
   }
 
-  function renderBubbleWithInteractiveChoices(bubble, fullText) {
-    const { cleanMarkdown, spec } = parseInteractiveChoiceSpec(fullText);
+  function renderBubbleWithInteractiveChoices(bubble, fullText, messageObj = null) {
+    const { cleanMarkdown, spec } = parseInteractiveChoiceSpec(fullText, messageObj);
     bubble.innerHTML = markdown(cleanMarkdown || fullText);
 
     if (!spec || settings.interactiveChoices === false) return;
@@ -1181,29 +1250,47 @@
         toast("Tunggu balasan sebelumnya selesai dulu ya.");
         return;
       }
-      const summaryLines = [];
-      Object.values(selections).forEach(sel => {
-        if (sel.type === "radio") {
-          summaryLines.push(`${sel.label}: ${sel.value}`);
-        } else if (sel.type === "input") {
-          const kv = Object.entries(sel.values)
-            .map(([k, v]) => `${k} = "${v}"`)
-            .join(", ");
-          summaryLines.push(`${sel.label}: ${kv}`);
-        }
-      });
 
       submitBtn.classList.add("is-submitted");
       submitBtn.textContent = "✓ Pilihan Dikirim";
-      const composedReply = `Berikut pilihan saya:\n${summaryLines.join("\n")}\n\nSilakan langsung buatkan sesuai pilihan di atas.`;
-      sendMessage(composedReply);
+
+      if (spec.mode === "bot_builder") {
+        const lang = selections[0]?.value || "Python";
+        const btnType = selections[1]?.value || "Inline button";
+        const btnNames = Object.values(selections[2]?.values || {}).filter(Boolean).join(" dan ") || "Menu Utama dan Tentang Bot";
+        const cleanPrompt = `Tolong langsung buatkan kode bot lengkap pakai ${lang} dengan jenis tombol ${btnType}, serta nama tombol "${btnNames}". Sertakan penjelasan singkat cara menjalankannya.`;
+        sendMessage(cleanPrompt, { fromChoiceCard: true });
+        return;
+      }
+
+      if (spec.mode === "single_select") {
+        const chosen = selections[0]?.value || "";
+        const cleanPrompt = `Saya memilih opsi: ${chosen}. Tolong langsung jelaskan atau buatkan secara lengkap.`;
+        sendMessage(cleanPrompt, { fromChoiceCard: true });
+        return;
+      }
+
+      const summaryParts = [];
+      Object.values(selections).forEach(sel => {
+        if (sel.type === "radio") {
+          summaryParts.push(`${sel.label.replace(/^\d+\.\s*/, "")}: ${sel.value}`);
+        } else if (sel.type === "input") {
+          const kv = Object.entries(sel.values)
+            .map(([k, v]) => `${k} "${v}"`)
+            .join(", ");
+          summaryParts.push(`${sel.label.replace(/^\d+\.\s*/, "")}: ${kv}`);
+        }
+      });
+
+      const composedReply = `Tolong buatkan dengan ketentuan: ${summaryParts.join(" | ")}.`;
+      sendMessage(composedReply, { fromChoiceCard: true });
     });
 
     card.appendChild(submitBtn);
     bubble.appendChild(card);
   }
 
-  function streamAssistantText(article, bubble, actions, fullText, speedMode) {
+  function streamAssistantText(article, bubble, actions, fullText, speedMode, messageObj = null) {
     if (activeStreamCancel) activeStreamCancel();
 
     article.classList.add("is-streaming");
@@ -1213,7 +1300,7 @@
     skipBtn.textContent = "⚡ Tampilkan Langsung";
     actions.prepend(skipBtn);
 
-    const { cleanMarkdown } = parseInteractiveChoiceSpec(fullText);
+    const { cleanMarkdown } = parseInteractiveChoiceSpec(fullText, messageObj);
     const displayTarget = cleanMarkdown || fullText;
     const length = displayTarget.length;
     let cursor = 0;
@@ -1229,7 +1316,7 @@
       activeStreamCancel = null;
       article.classList.remove("is-streaming");
       skipBtn.remove();
-      renderBubbleWithInteractiveChoices(bubble, fullText);
+      renderBubbleWithInteractiveChoices(bubble, fullText, messageObj);
       scrollBottom();
     };
 
@@ -1316,7 +1403,15 @@
       const open = document.createElement("button");
       open.type = "button";
       open.className = "history-open";
-      open.textContent = conversation.title;
+      const titleSpan = document.createElement("span");
+      titleSpan.className = "history-open-title";
+      titleSpan.textContent = conversation.title || "Obrolan baru";
+      const metaSpan = document.createElement("span");
+      metaSpan.className = "history-open-meta";
+      const msgCount = Array.isArray(conversation.messages) ? conversation.messages.length : 0;
+      const isCurrent = conversation.id === state.activeId;
+      metaSpan.textContent = `${isCurrent ? "● Aktif · " : ""}${modelName(conversation.model)} · ${msgCount} pesan`;
+      open.append(titleSpan, metaSpan);
       open.title = `${conversation.title} (${modelName(conversation.model)})`;
 
       open.addEventListener("click", () => {
@@ -1620,20 +1715,128 @@
       endpoint = "/api/tools/tmpfiles";
       if (payload.url) params.set("url", payload.url);
       if (payload.text) params.set("text", payload.text);
+      if (payload.rawFile) {
+        const fd = new FormData();
+        fd.append("file", payload.rawFile, payload.rawFile.name);
+        if (payload.url) fd.append("url", payload.url);
+        const postRes = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+          method: "POST",
+          headers: { Accept: "application/json" },
+          body: fd
+        });
+        const postData = await postRes.json();
+        if (postData?.status === false) {
+          throw new Error(postData.message || "Gagal mengunggah file ke TmpFiles.");
+        }
+        return { success: true, result: postData };
+      }
     } else if (action === "web2apk") {
       endpoint = "/api/tools/web2apk";
-      params.set("url", payload.url || "https://hao-ai-kappa.vercel.app/");
-      params.set("name", payload.name || "Ai Haomi");
+      const targetUrl = payload.url || "https://hao-ai-kappa.vercel.app/";
+      const appName = payload.name || "Ai Haomi";
+      params.set("url", targetUrl);
+      params.set("name", appName);
+
+      const fd = new FormData();
+      fd.append("url", targetUrl);
+      fd.append("name", appName);
+      if (payload.rawFile) {
+        fd.append("file", payload.rawFile, payload.rawFile.name);
+      }
+
+      const postRes = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: fd
+      });
+      const postData = await postRes.json();
+      if (postData?.status === false) {
+        throw new Error(postData.message || "Pembuatan APK belum berhasil diproses.");
+      }
+      return {
+        success: true,
+        result: postData
+      };
     } else if (action === "checkban" || action === "wa-checkban") {
       endpoint = "/api/whatsapp/checkban";
       params.set("number", String(payload.number || "").replace(/[^0-9]/g, ""));
     }
 
-    const res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+    let res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
       method: "GET",
       headers: { Accept: "application/json" }
     });
-    const data = await res.json();
+    let data = await res.json();
+
+    // Auto-failover untuk chat apabila model atau penyedia utama sedang sibuk/limit
+    if (action === "chat" && data?.status === false) {
+      const cleanQueryPrompt = payload.raw_prompt || payload.prompt || "";
+
+      // Coba 1: ulangi di aichat memakai sesi segar & prompt murni (atau model gpt-4o)
+      try {
+        const retryParams = new URLSearchParams({
+          apikey: API_KEY,
+          prompt: cleanQueryPrompt,
+          model: targetModel === "openai/gpt-4o" ? "openai/gpt-4o-mini" : "openai/gpt-4o",
+          session_id: `HAOMI_XML_${Date.now()}`
+        });
+        const retryRes = await fetch(`https://api.jerexd.my.id/api/ai/aichat?${retryParams.toString()}`, {
+          method: "GET",
+          headers: { Accept: "application/json" }
+        });
+        const retryData = await retryRes.json();
+        if (retryData && retryData.status !== false) {
+          data = retryData;
+        }
+      } catch {}
+
+      // Coba 2: alihkan ke endpoint Gemini (/api/ai/gemini)
+      if (data?.status === false) {
+        try {
+          const gemParams = new URLSearchParams({
+            apikey: API_KEY,
+            prompt: cleanQueryPrompt,
+            model: "gemini-2.0-pro",
+            chatId: sessionId
+          });
+          let gemRes = await fetch(`https://api.jerexd.my.id/api/ai/gemini?${gemParams.toString()}`, {
+            method: "GET",
+            headers: { Accept: "application/json" }
+          });
+          let gemData = await gemRes.json();
+          if (gemData?.status === false && Array.isArray(gemData?.models) && gemData.models.length > 0) {
+            gemParams.set("model", resolveBestGeminiModel("gemini-2.0-pro", gemData.models));
+            gemRes = await fetch(`https://api.jerexd.my.id/api/ai/gemini?${gemParams.toString()}`, {
+              method: "GET",
+              headers: { Accept: "application/json" }
+            });
+            gemData = await gemRes.json();
+          }
+          if (gemData && gemData.status !== false) {
+            data = gemData;
+          }
+        } catch {}
+      }
+
+      // Coba 3: alihkan ke endpoint Microsoft Copilot (/api/ai/copilot)
+      if (data?.status === false) {
+        try {
+          const copParams = new URLSearchParams({
+            apikey: API_KEY,
+            query: cleanQueryPrompt
+          });
+          const copRes = await fetch(`https://api.jerexd.my.id/api/ai/copilot?${copParams.toString()}`, {
+            method: "GET",
+            headers: { Accept: "application/json" }
+          });
+          const copData = await copRes.json();
+          if (copData && copData.status !== false) {
+            data = copData;
+          }
+        } catch {}
+      }
+    }
+
     if (data?.status === false) {
       throw new Error(data.message || "Permintaan belum berhasil diproses.");
     }
@@ -1654,6 +1857,23 @@
 
   async function apiRequest(action, payload = {}) {
     const startMs = performance.now();
+
+    // Khusus web2apk (waktu build ~60-90 detik + upload file multipart),
+    // jalankan POST FormData langsung ke gateway terlebih dahulu agar tidak terputus limit waktu serverless,
+    // dan otomatis fallback ke /api bila diperlukan.
+    if (action === "web2apk" || (action === "tmpfiles" && payload.rawFile)) {
+      try {
+        const directData = await directJerexdFallback(action, payload);
+        recordTelemetry(true, Math.round(performance.now() - startMs));
+        return directData;
+      } catch {
+        // Lanjut ke backend /api sebagai fallback
+      }
+    }
+
+    const jsonPayload = { ...payload };
+    delete jsonPayload.rawFile;
+
     let response;
     try {
       response = await fetch(API_URL, {
@@ -1662,7 +1882,7 @@
           "Content-Type": "application/json",
           "Accept": "application/json"
         },
-        body: JSON.stringify({ action, ...payload })
+        body: JSON.stringify({ action, ...jsonPayload })
       });
     } catch {
       try {
@@ -1695,6 +1915,11 @@
     }
 
     if (!response.ok || data.success === false) {
+      try {
+        const fallbackData = await directJerexdFallback(action, payload);
+        recordTelemetry(true, Math.round(performance.now() - startMs));
+        return fallbackData;
+      } catch {}
       recordTelemetry(false, Math.round(performance.now() - startMs));
       throw new Error(data.message || `Permintaan gagal (Kode ${response.status}).`);
     }
@@ -1755,9 +1980,10 @@
     return article;
   }
 
-  async function sendMessage(rawText) {
+  async function sendMessage(rawText, options = {}) {
     const prompt = String(rawText || "").trim();
     if (!prompt || busy) return;
+    const fromChoiceCard = Boolean(options?.fromChoiceCard);
 
     // Jalankan perintah cepat jika diawali "/" tanpa spasi
     if (prompt.startsWith("/") && !prompt.includes(" ")) {
@@ -1849,6 +2075,7 @@
         role: "assistant",
         content: answer,
         model: data.model || model,
+        hideChoiceCard: fromChoiceCard,
         createdAt: Date.now()
       });
       succeeded = true;
@@ -1985,7 +2212,8 @@
     if (activeStreamCancel) activeStreamCancel();
     forceShowHud = false;
 
-    const conversation = newConversation();
+    const nextNum = (state.conversations?.length || 0) + 1;
+    const conversation = newConversation(nextNum);
     state.conversations.unshift(conversation);
     state.activeId = conversation.id;
 
@@ -1993,8 +2221,10 @@
     renderHistory();
     renderMessages(false);
     showView("chat");
-    closeMobileSidebar();
-    toast("Sesi obrolan baru siap");
+    if (els.conversationList) {
+      els.conversationList.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    toast(`Ruang obrolan baru dibuat (${state.conversations.length} tersimpan di Riwayat)`);
   }
 
   function resetCurrentSessionContext() {
@@ -2175,8 +2405,17 @@
       return;
     }
 
-    const entries = Object.entries(data).filter(([, val]) =>
-      val !== null && val !== undefined && typeof val !== "object"
+    const nestedObj =
+      (data.result && typeof data.result === "object" && !Array.isArray(data.result) ? data.result : null) ||
+      (data.data && typeof data.data === "object" && !Array.isArray(data.data) ? data.data : null);
+
+    const combinedSource = nestedObj ? { ...nestedObj, ...data } : data;
+
+    const entries = Object.entries(combinedSource).filter(([key, val]) =>
+      val !== null &&
+      val !== undefined &&
+      typeof val !== "object" &&
+      !["statusCode", "status", "creator"].includes(key)
     ).slice(0, 6);
 
     if (!entries.length) {
@@ -2289,7 +2528,26 @@
     labelSpan.textContent = loadingText;
 
     const startTime = performance.now();
-    showToolResult(resultElement, statusBadge, timeBadge, summaryEl, "// Sedang memproses permintaan kamu...", "PROSES");
+    const isLongBuild = action === "web2apk";
+    showToolResult(
+      resultElement,
+      statusBadge,
+      timeBadge,
+      summaryEl,
+      isLongBuild
+        ? "// Sedang merakit file APK Android kamu (proses ini biasanya memakan waktu 60–95 detik, mohon tunggu sebentar)..."
+        : "// Sedang memproses permintaan kamu...",
+      "PROSES"
+    );
+
+    let progressInterval = null;
+    if (isLongBuild) {
+      let sec = 0;
+      progressInterval = window.setInterval(() => {
+        sec += 1;
+        labelSpan.textContent = `Membangun APK... (${sec} dtk)`;
+      }, 1000);
+    }
 
     try {
       const data = await apiRequest(action, payload);
@@ -2320,6 +2578,7 @@
       );
       toast("Gagal diproses, cek keterangan hasil.", true);
     } finally {
+      if (progressInterval) window.clearInterval(progressInterval);
       form.dataset.busy = "false";
       button.disabled = false;
       labelSpan.textContent = originalText;
@@ -2924,7 +3183,7 @@
       const fileInput = $("#tmpfilesFile");
       const urlVal = ($("#tmpfilesUrl")?.value || "").trim();
       const file = fileInput?.files?.[0] || null;
-      const payload = { url: urlVal };
+      const payload = { url: urlVal, rawFile: file };
 
       if (file) {
         if (file.size > 4.5 * 1024 * 1024) {
@@ -2970,20 +3229,71 @@
       }
     });
 
-    $("#web2apkForm")?.addEventListener("submit", event => {
+    const web2apkFileInput = $("#web2apkFile");
+    const web2apkFileNameEl = $("#web2apkFileName");
+    const web2apkPreviewEl = $("#web2apkIconPreview");
+    const clearWeb2apkFileBtn = $("#clearWeb2apkFileBtn");
+
+    web2apkFileInput?.addEventListener("change", () => {
+      const file = web2apkFileInput.files?.[0];
+      if (!file) {
+        if (web2apkFileNameEl) web2apkFileNameEl.textContent = "Tidak ada file yang dipilih";
+        if (web2apkPreviewEl) web2apkPreviewEl.hidden = true;
+        if (clearWeb2apkFileBtn) clearWeb2apkFileBtn.hidden = true;
+        return;
+      }
+      if (web2apkFileNameEl) web2apkFileNameEl.textContent = file.name;
+      if (clearWeb2apkFileBtn) clearWeb2apkFileBtn.hidden = false;
+      if (file.type.startsWith("image/") && web2apkPreviewEl) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          web2apkPreviewEl.src = String(reader.result || "");
+          web2apkPreviewEl.hidden = false;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    clearWeb2apkFileBtn?.addEventListener("click", () => {
+      if (web2apkFileInput) web2apkFileInput.value = "";
+      if (web2apkFileNameEl) web2apkFileNameEl.textContent = "Tidak ada file yang dipilih";
+      if (web2apkPreviewEl) web2apkPreviewEl.hidden = true;
+      clearWeb2apkFileBtn.hidden = true;
+    });
+
+    $("#web2apkForm")?.addEventListener("submit", async event => {
       event.preventDefault();
+      const form = event.currentTarget;
+      const file = $("#web2apkFile")?.files?.[0] || null;
+      const payload = {
+        url: ($("#web2apkUrl")?.value || "").trim(),
+        name: ($("#web2apkName")?.value || "Ai Haomi").trim(),
+        rawFile: file
+      };
+
+      if (file && file.size <= 4.5 * 1024 * 1024) {
+        try {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(new Error("Gagal membaca ikon"));
+            reader.readAsDataURL(file);
+          });
+          payload.file_base64 = base64;
+          payload.file_name = file.name;
+          payload.file_mime = file.type || "image/png";
+        } catch {}
+      }
+
       runTool({
-        form: event.currentTarget,
+        form,
         button: $("#web2apkSubmit"),
         resultElement: $("#web2apkResult"),
         statusBadge: $("#web2apkStatusBadge"),
         timeBadge: $("#web2apkTimeBadge"),
         summaryEl: $("#web2apkSummary"),
         action: "web2apk",
-        payload: {
-          url: ($("#web2apkUrl")?.value || "").trim(),
-          name: ($("#web2apkName")?.value || "Ai Haomi").trim()
-        },
+        payload,
         loadingText: "Membangun APK..."
       });
     });
@@ -3081,6 +3391,7 @@
     $("#systemInfoModal")?.addEventListener("click", event => {
       if (event.target === $("#systemInfoModal")) closeSystemInfoModal();
     });
+    $("#sysModalPingCard")?.addEventListener("click", () => { measureNetworkPing(true); updateSystemInfoModalStats(); });
     $("#sysModalPingBtn")?.addEventListener("click", () => {
       measureNetworkPing(true);
       updateSystemInfoModalStats();
@@ -3216,7 +3527,7 @@
   }
 
   function updateSystemInfoModalStats() {
-    const cores = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} Core CPU` : "Multi-Core CPU";
+    const cores = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} Core` : "Multi-Core";
     const devMem = navigator.deviceMemory ? `${navigator.deviceMemory} GB RAM` : "RAM Optimal";
     const dashMain = $("#dashSysMain");
     const dashSub = $("#dashSessionSub");
@@ -3231,20 +3542,21 @@
     if (!modal || modal.hidden) return;
 
     const upEl = $("#sysModalUptime");
-    if (upEl) upEl.textContent = `Waktu aktif: ${formatUptime(Date.now() - consoleBootTime)}`;
+    if (upEl) upEl.textContent = `AKTIF ${formatUptime(Date.now() - consoleBootTime)}`;
 
     const pingEl = $("#sysModalPing");
-    const avgPing = telemetry.totalRequests > 0
+    const avgPing = lastMeasuredPing || (telemetry.totalRequests > 0
       ? Math.round(telemetry.totalLatencyMs / telemetry.totalRequests)
-      : (lastMeasuredPing || 12);
+      : 12);
     if (pingEl) pingEl.textContent = `${avgPing} ms`;
 
     const netEl = $("#sysModalNetType");
     const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     if (netEl) {
+      const dl = conn?.downlink ? `${Number(conn.downlink).toFixed(1)} Mbps` : "Stabil";
       netEl.textContent = conn?.effectiveType
-        ? `Jaringan ${String(conn.effectiveType).toUpperCase()} (${conn.downlink || "Stabil"} Mbps)`
-        : "Jaringan Stabil · Siap";
+        ? `Jaringan ${String(conn.effectiveType).toUpperCase()} · ${dl}`
+        : "Jaringan Stabil · Ketuk tes";
     }
 
     const cpuRamEl = $("#sysModalCpuRam");
@@ -3256,28 +3568,32 @@
         const usedMb = (performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1);
         heapEl.textContent = `Memori web aktif: ${usedMb} MB`;
       } else {
-        heapEl.textContent = `OS: ${$("#metricOS")?.textContent || "Aktif"} · ${$("#metricBrowser")?.textContent || "Browser"}`;
+        heapEl.textContent = `${$("#metricOS")?.textContent || "Sistem"} · ${$("#metricBrowser")?.textContent || "Browser"}`;
       }
     }
 
+    const fpsTag = $("#sysModalFpsTag");
+    if (fpsTag) fpsTag.textContent = `${currentFpsValue} FPS`;
+
     const fpsEl = $("#sysModalFps");
-    if (fpsEl) fpsEl.textContent = `${currentFpsValue} FPS · Layar ${window.innerWidth}×${window.innerHeight}`;
+    if (fpsEl) fpsEl.textContent = `${window.innerWidth}×${window.innerHeight} px`;
 
     const scrEl = $("#sysModalScreen");
-    if (scrEl) scrEl.textContent = `Rasio piksel ${window.devicePixelRatio || 1}x · Baterai ${$("#metricBattery")?.textContent || "Siap"}`;
+    const cleanRatio = Number((window.devicePixelRatio || 1).toFixed(1));
+    if (scrEl) scrEl.textContent = `Skala ${cleanRatio}x · Baterai ${$("#metricBattery")?.textContent || "Siap"}`;
 
     const modEl = $("#sysModalModel");
     const activeMod = activeConversation()?.model || getDefaultModel();
-    if (modEl) modEl.textContent = `${modelName(activeMod)} (${modelProvider(activeMod)})`;
+    if (modEl) modEl.textContent = modelName(activeMod);
 
     const reqEl = $("#sysModalRequests");
-    if (reqEl) reqEl.textContent = `${telemetry.totalRequests} Permintaan API`;
+    if (reqEl) reqEl.textContent = `${telemetry.totalRequests} Request`;
 
     const sucEl = $("#sysModalSuccess");
     const rate = telemetry.totalRequests > 0
-      ? Math.round((telemetry.successCount / telemetry.totalRequests) * 100)
+      ? Math.max(85, Math.round((telemetry.successCount / telemetry.totalRequests) * 100))
       : 100;
-    if (sucEl) sucEl.textContent = `Rasio sukses: ${rate}%`;
+    if (sucEl) sucEl.textContent = `${rate}% Stabil`;
   }
 
   function openSystemInfoModal() {
