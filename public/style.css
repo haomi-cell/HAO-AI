@@ -267,8 +267,11 @@ body {
 }
 
 .card-icon {
-    width: 30px; height: 30px;
-    display: flex;align-items: center; justify-content: center;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--text-muted);
 }
 
@@ -290,8 +293,11 @@ body {
     right: 20px;
     background: #333;
     border-radius: 50%;
-    width: 25px; height: 25px;
-    display: flex; align-items: center; justify-content: center;
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 0.8rem;
 }
 
@@ -314,7 +320,6 @@ body {
 }
 
 .ai-bubble {
-    background: var(--bg-main); /* White/light in ref, but dark mode here */
     background: #ffffff;
     color: #1a201d; /* Text Dark on White Bubble */
     border-radius: 20px 20px 20px 0;
@@ -335,6 +340,9 @@ body {
 
 .bubble-content {
     font-size: 0.95rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.7;
 }
 
 .bubble-footer {
@@ -369,9 +377,14 @@ body {
     font-size: 0.9rem;
 }
 
+.source-list, .similar-list, #history-list {
+    list-style: none;
+    padding-left: 0;
+}
+
 .source-list a, .similar-list li {
     display: block;
-    padding: 10px;
+    padding: 10px 14px;
     background: rgba(0,0,0,0.2);
     margin-bottom: 8px;
     border-radius: 8px;
@@ -381,7 +394,7 @@ body {
     transition: 0.2s;
 }
 
-.similar-list li:hover {
+.similar-list li:hover, .source-list a:hover {
     background: rgba(255,255,255,0.1);
     cursor: pointer;
 }
@@ -476,6 +489,20 @@ body {
     padding: 12px;
     color: var(--text-muted);
     border-bottom: 1px solid var(--border-glass);
+    cursor: pointer;
+}
+
+.clear-btn {
+    margin-top: 15px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     cursor: pointer;
 }
 
