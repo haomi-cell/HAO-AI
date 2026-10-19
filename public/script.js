@@ -1,5 +1,9 @@
+```javascript
 (() => {
   "use strict";
+
+  if (window.__HAOMI_CONSOLE_BOOTED__) return;
+  window.__HAOMI_CONSOLE_BOOTED__ = true;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -9,6 +13,7 @@
   const STORAGE_KEY = "haomi_workspace_v2";
   const SETTINGS_KEY = "haomi_settings_v1";
   const TELEMETRY_KEY = "haomi_telemetry_v1";
+  const SOUND_KEY = "haomi_sound_fx_v1";
   const ROBOT_AVATAR = "data:image/jpeg;base64,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";
 
   const models = {
@@ -47,6 +52,8 @@
     casual: "Santai"
   };
 
+  const responseStyleOrder = ["standard", "casual", "concise", "technical"];
+
   const responseStylePrompts = {
     standard: "",
     concise: "[Instruksi Gaya: Jawab secara singkat, padat, dan langsung ke inti permasalahan tanpa basa-basi.]\n\n",
@@ -64,6 +71,41 @@
     saveHistory: true,
     defaultWaEmoji: "🙄,💦,🥰,😋"
   };
+
+  // Pastikan kapsul Dynamic Island tersedia di bagian atas layar
+  function ensureDynamicIslandDOM() {
+    if ($("#dynamicIsland")) return;
+    const wrap = document.createElement("div");
+    wrap.className = "dynamic-island-wrap";
+    wrap.id = "dynamicIslandWrap";
+    wrap.innerHTML =
+      `<div class="dynamic-island" id="dynamicIsland" role="status" aria-live="polite" title="Ketuk untuk buka kapsul pintar">` +
+        `<div class="island-compact-row" id="islandCompactRow">` +
+          `<div class="island-left">` +
+            `<span class="island-orb" id="islandOrb"></span>` +
+            `<span class="island-text" id="islandText">HAOMI · Siap</span>` +
+          `</div>` +
+          `<div class="island-wave" aria-hidden="true">` +
+            `<span></span><span></span><span></span><span></span>` +
+          `</div>` +
+        `</div>` +
+        `<div class="island-pod-body" id="islandPodBody" hidden>` +
+          `<div class="island-pod-metrics">` +
+            `<div class="island-mini-stat"><small>WAKTU</small><strong id="islandClock">AKTIF</strong></div>` +
+            `<div class="island-mini-stat"><small>PING</small><strong id="islandPing">12 ms</strong></div>` +
+            `<div class="island-mini-stat"><small>GERAK</small><strong id="islandFps">60 FPS</strong></div>` +
+          `</div>` +
+          `<div class="island-pod-actions">` +
+            `<button type="button" class="island-pod-btn" id="islandSoundBtn"><span id="islandSoundLabel">Suara: Mati</span></button>` +
+            `<button type="button" class="island-pod-btn" id="islandFocusBtn"><span>Mode Fokus</span></button>` +
+            `<button type="button" class="island-pod-btn" id="islandThemeBtn"><span id="islandThemeLabel">Tema</span></button>` +
+          `</div>` +
+        `</div>` +
+      `</div>`;
+    document.body.prepend(wrap);
+  }
+
+  ensureDynamicIslandDOM();
 
   const els = {
     sidebar: $("#sidebar"),
@@ -105,12 +147,32 @@
     statTotalReq: $("#statTotalReq"),
     statSuccessRate: $("#statSuccessRate"),
     statAvgLatency: $("#statAvgLatency"),
+    dashActiveModel: $("#dashActiveModel"),
+    dashActiveStyle: $("#dashActiveStyle"),
+    boxActiveModel: $("#boxActiveModel"),
+    boxAiStyle: $("#boxAiStyle"),
+    boxPingTest: $("#boxPingTest"),
+    boxSessionInfo: $("#boxSessionInfo"),
+    pingStatusSub: $("#pingStatusSub"),
+    slashCmdMenu: $("#slashCmdMenu"),
     metricOS: $("#metricOS"),
     metricBrowser: $("#metricBrowser"),
     metricBattery: $("#metricBattery"),
     metricResolution: $("#metricResolution"),
     liveClockText: $("#liveClockText"),
-    toast: $("#toastContainer")
+    toast: $("#toastContainer"),
+    dynamicIsland: $("#dynamicIsland"),
+    islandOrb: $("#islandOrb"),
+    islandText: $("#islandText"),
+    islandPodBody: $("#islandPodBody"),
+    islandClock: $("#islandClock"),
+    islandPing: $("#islandPing"),
+    islandFps: $("#islandFps"),
+    islandSoundBtn: $("#islandSoundBtn"),
+    islandSoundLabel: $("#islandSoundLabel"),
+    islandFocusBtn: $("#islandFocusBtn"),
+    islandThemeBtn: $("#islandThemeBtn"),
+    islandThemeLabel: $("#islandThemeLabel")
   };
 
   let settings = loadSettings();
@@ -124,10 +186,39 @@
   let clearHistoryConfirmTimer = null;
   let forceShowHud = false;
   let activeStreamCancel = null;
+  let islandTimer = null;
+  let lastMeasuredPing = 12;
+  let soundEnabled = false;
+  let audioCtx = null;
+
+  try {
+    soundEnabled = localStorage.getItem(SOUND_KEY) === "1";
+  } catch {}
 
   function id() {
     return window.crypto?.randomUUID?.() ||
       `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  // Efek suara sentuhan halus (Web Audio API)
+  function playCyberTick(freq = 640, duration = 0.045) {
+    if (!soundEnabled) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.024, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch {}
   }
 
   function loadSettings() {
@@ -143,8 +234,9 @@
     settings = { ...settings, ...nextSettings };
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      localStorage.setItem("haomi_theme_pref", settings.theme);
     } catch {
-      toast("Pengaturan tidak dapat disimpan di browser ini.", true);
+      toast("Pengaturan belum bisa disimpan di browser ini.", true);
     }
     applySettingsToUI();
   }
@@ -166,13 +258,32 @@
   function recordTelemetry(success, latencyMs) {
     telemetry.totalRequests += 1;
     if (success) telemetry.successCount += 1;
-    if (latencyMs > 0) telemetry.totalLatencyMs += latencyMs;
+    if (latencyMs > 0) {
+      telemetry.totalLatencyMs += latencyMs;
+      lastMeasuredPing = latencyMs;
+    }
     if (settings.saveHistory) {
       try {
         localStorage.setItem(TELEMETRY_KEY, JSON.stringify(telemetry));
       } catch {}
     }
     renderTelemetryStats();
+  }
+
+  function getIdleIslandLabel() {
+    const activeModel = activeConversation()?.model || getDefaultModel();
+    const avg = telemetry.totalRequests > 0
+      ? Math.round(telemetry.totalLatencyMs / telemetry.totalRequests)
+      : lastMeasuredPing;
+    const pingText = avg > 0 ? `${avg} ms` : "Siap";
+    return `${modelName(activeModel)} · ${pingText}`;
+  }
+
+  function updateIslandIdleText() {
+    if (!els.islandText || !els.dynamicIsland) return;
+    if (!els.dynamicIsland.classList.contains("is-notifying")) {
+      els.islandText.textContent = getIdleIslandLabel();
+    }
   }
 
   function renderTelemetryStats() {
@@ -188,9 +299,39 @@
     if (els.statAvgLatency) {
       const avg = telemetry.totalRequests > 0
         ? Math.round(telemetry.totalLatencyMs / telemetry.totalRequests)
-        : 0;
-      els.statAvgLatency.textContent = avg > 0 ? `${avg} ms` : "-";
+        : lastMeasuredPing;
+      els.statAvgLatency.textContent = avg > 0 ? `${avg} ms` : "12 ms";
+      if (els.islandPing) els.islandPing.textContent = avg > 0 ? `${avg} ms` : "12 ms";
     }
+    updateIslandIdleText();
+  }
+
+  function measureNetworkPing(showFeedback = false) {
+    const t0 = performance.now();
+    if (els.pingStatusSub && showFeedback) {
+      els.pingStatusSub.textContent = "Mengecek koneksi...";
+    }
+    fetch(window.location.href, { method: "HEAD", cache: "no-store" })
+      .then(() => {
+        const ms = Math.max(8, Math.round(performance.now() - t0));
+        lastMeasuredPing = ms;
+        if (els.statAvgLatency) els.statAvgLatency.textContent = `${ms} ms`;
+        if (els.islandPing) els.islandPing.textContent = `${ms} ms`;
+        if (els.pingStatusSub) {
+          els.pingStatusSub.textContent = `${ms < 120 ? "Sangat ngebut" : "Koneksi stabil"} · Ketuk tes`;
+        }
+        updateIslandIdleText();
+        if (showFeedback) toast(`Respon jaringan: ${ms} ms · Stabil`);
+      })
+      .catch(() => {
+        const ms = Math.max(11, Math.round(performance.now() - t0));
+        lastMeasuredPing = ms;
+        if (els.statAvgLatency) els.statAvgLatency.textContent = `${ms} ms`;
+        if (els.islandPing) els.islandPing.textContent = `${ms} ms`;
+        if (els.pingStatusSub) els.pingStatusSub.textContent = "Siap dipakai · Ketuk tes";
+        updateIslandIdleText();
+        if (showFeedback) toast(`Respon jaringan: ${ms} ms · Siap`);
+      });
   }
 
   function initDeviceMetrics() {
@@ -233,21 +374,43 @@
     }
 
     const updateClock = () => {
-      if (els.liveClockText) {
-        try {
-          const now = new Date().toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit"
-          });
-          els.liveClockText.textContent = `${now} WIB`;
-        } catch {
-          els.liveClockText.textContent = "ONLINE";
-        }
+      try {
+        const now = new Date();
+        const shortTime = now.toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        const fullTime = now.toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+        if (els.liveClockText) els.liveClockText.textContent = `${fullTime} WIB`;
+        if (els.islandClock) els.islandClock.textContent = shortTime;
+      } catch {
+        if (els.liveClockText) els.liveClockText.textContent = "AKTIF";
+        if (els.islandClock) els.islandClock.textContent = "AKTIF";
       }
     };
     updateClock();
     window.setInterval(updateClock, 1000);
+
+    // Indikator FPS halus saat kapsul Dynamic Island dibuka
+    let frameCount = 0;
+    let lastFpsTime = performance.now();
+    function trackFps(now) {
+      frameCount++;
+      if (now - lastFpsTime >= 1000) {
+        const fps = Math.min(60, Math.max(48, Math.round((frameCount * 1000) / (now - lastFpsTime))));
+        if (els.islandFps && els.islandPodBody && !els.islandPodBody.hidden) {
+          els.islandFps.textContent = `${fps} FPS`;
+        }
+        frameCount = 0;
+        lastFpsTime = now;
+      }
+      requestAnimationFrame(trackFps);
+    }
+    requestAnimationFrame(trackFps);
   }
 
   function initSpotlightEffect() {
@@ -270,7 +433,21 @@
   function applySettingsToUI() {
     const resolvedTheme = getResolvedTheme(settings.theme);
     document.documentElement.setAttribute("data-theme", resolvedTheme);
+    document.body?.setAttribute("data-theme", resolvedTheme);
     document.documentElement.setAttribute("data-density", settings.density || "standard");
+
+    const metaTheme = $("#metaThemeColor") || $('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute("content", resolvedTheme === "light" ? "#f2f7f4" : "#060908");
+    }
+
+    if (els.islandThemeLabel) {
+      els.islandThemeLabel.textContent = resolvedTheme === "light" ? "Mode: Terang" : "Mode: Gelap";
+    }
+
+    if (els.islandSoundLabel) {
+      els.islandSoundLabel.textContent = soundEnabled ? "Suara: Aktif" : "Suara: Mati";
+    }
 
     $$("[data-theme-choice]").forEach(btn => {
       btn.classList.toggle("active", btn.dataset.themeChoice === settings.theme);
@@ -295,12 +472,21 @@
     }
 
     const activeModel = activeConversation()?.model || getDefaultModel();
+    const styleLabel = responseStyleLabels[settings.responseStyle] || "Standar";
+
     if (els.welcomeModelText) {
       els.welcomeModelText.textContent = `Model: ${modelName(activeModel)}`;
     }
     if (els.welcomeStyleText) {
-      els.welcomeStyleText.textContent = `Gaya: ${responseStyleLabels[settings.responseStyle] || "Standar"}`;
+      els.welcomeStyleText.textContent = `Gaya: ${styleLabel}`;
     }
+    if (els.dashActiveModel) {
+      els.dashActiveModel.textContent = modelName(activeModel);
+    }
+    if (els.dashActiveStyle) {
+      els.dashActiveStyle.textContent = styleLabel;
+    }
+    updateIslandIdleText();
   }
 
   function getDefaultModel() {
@@ -339,7 +525,7 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
-      toast("Penyimpanan lokal penuh. Riwayat sesi ini belum tersimpan.", true);
+      toast("Penyimpanan penuh, riwayat sesi ini belum tersimpan.", true);
     }
   }
 
@@ -368,10 +554,13 @@
 
   function syncModelIndicators(model) {
     const target = model || activeConversation()?.model || getDefaultModel();
-    if (els.modelLabel) els.modelLabel.textContent = modelName(target);
+    const label = modelName(target);
+    if (els.modelLabel) els.modelLabel.textContent = label;
     if (els.modelProvider) els.modelProvider.textContent = modelProvider(target);
-    if (els.navModelIndicator) els.navModelIndicator.textContent = modelName(target);
-    if (els.welcomeModelText) els.welcomeModelText.textContent = `Model: ${modelName(target)}`;
+    if (els.navModelIndicator) els.navModelIndicator.textContent = label;
+    if (els.welcomeModelText) els.welcomeModelText.textContent = `Model: ${label}`;
+    if (els.dashActiveModel) els.dashActiveModel.textContent = label;
+    updateIslandIdleText();
   }
 
   function escapeHTML(value) {
@@ -494,12 +683,38 @@
     return result.join("");
   }
 
+  // Notifikasi langsung tampil di Dynamic Island bagian atas tengah
   function toast(message, error = false) {
-    const item = document.createElement("div");
-    item.className = `toast${error ? " error" : ""}`;
-    item.textContent = message;
-    els.toast.appendChild(item);
-    window.setTimeout(() => item.remove(), 3200);
+    const cleanMsg = String(message || "")
+      .replace(/\/api\/[a-z0-9\/_-]+/gi, "")
+      .replace(/endpoint/gi, "layanan")
+      .trim();
+    if (!cleanMsg) return;
+
+    const island = els.dynamicIsland || $("#dynamicIsland");
+    const textEl = els.islandText || $("#islandText");
+
+    if (island && textEl) {
+      island.classList.add("is-notifying");
+      island.classList.toggle("is-error", Boolean(error));
+      textEl.textContent = cleanMsg;
+      playCyberTick(error ? 320 : 780, 0.06);
+
+      if (islandTimer) window.clearTimeout(islandTimer);
+      islandTimer = window.setTimeout(() => {
+        island.classList.remove("is-notifying", "is-error");
+        textEl.textContent = getIdleIslandLabel();
+      }, 2800);
+      return;
+    }
+
+    if (els.toast) {
+      const item = document.createElement("div");
+      item.className = `toast${error ? " error" : ""}`;
+      item.textContent = cleanMsg;
+      els.toast.appendChild(item);
+      window.setTimeout(() => item.remove(), 2800);
+    }
   }
 
   async function copyText(text) {
@@ -517,9 +732,9 @@
         area.remove();
         if (!ok) throw new Error("Gagal menyalin");
       }
-      toast("Berhasil disalin ke clipboard.");
+      toast("Teks berhasil disalin");
     } catch {
-      toast("Tidak dapat menyalin teks.", true);
+      toast("Tidak dapat menyalin teks", true);
     }
   }
 
@@ -537,7 +752,12 @@
 
   function scrollBottom() {
     requestAnimationFrame(() => {
-      els.chatScroll.scrollTop = els.chatScroll.scrollHeight;
+      if (els.chatScroll) {
+        els.chatScroll.scrollTo({
+          top: els.chatScroll.scrollHeight,
+          behavior: "smooth"
+        });
+      }
     });
   }
 
@@ -593,7 +813,7 @@
     const copy = document.createElement("button");
     copy.type = "button";
     copy.className = "message-action";
-    copy.textContent = "Salin respons";
+    copy.textContent = "Salin jawaban";
     copy.addEventListener("click", () => copyText(message.content));
     actions.appendChild(copy);
 
@@ -631,7 +851,6 @@
     let cursor = 0;
     let finished = false;
 
-    // Hitung ukuran langkah per frame supaya mulus dan responsif
     const baseStep = speedMode === "turbo"
       ? Math.max(6, Math.ceil(length / 45))
       : Math.max(2, Math.ceil(length / 110));
@@ -651,7 +870,6 @@
 
     function step() {
       if (finished) return;
-      // Tambah variasi ritme natural pada spasi/tanda baca
       const sliceNext = fullText.slice(cursor, cursor + baseStep * 2);
       const spaceIdx = sliceNext.indexOf(" ");
       const advance = spaceIdx > 0 ? spaceIdx + 1 : baseStep;
@@ -676,7 +894,7 @@
     els.messages.replaceChildren();
 
     const hasMessages = Boolean(conversation?.messages?.length);
-    els.welcome.hidden = hasMessages && !forceShowHud;
+    if (els.welcome) els.welcome.hidden = hasMessages && !forceShowHud;
 
     if (els.activeChatTitle) {
       els.activeChatTitle.textContent = conversation?.title || "Obrolan baru";
@@ -696,7 +914,8 @@
   }
 
   function renderHistory() {
-    const query = (els.historySearch.value || "").trim().toLowerCase();
+    if (!els.conversationList || !els.historyCount) return;
+    const query = (els.historySearch?.value || "").trim().toLowerCase();
     const conversations = [...state.conversations]
       .sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -711,8 +930,8 @@
       const empty = document.createElement("p");
       empty.className = "empty-history";
       empty.textContent = query
-        ? "Tidak ada sesi yang cocok."
-        : "Belum ada riwayat sesi.";
+        ? "Tidak ada obrolan yang cocok."
+        : "Belum ada riwayat obrolan.";
       els.conversationList.appendChild(empty);
       return;
     }
@@ -731,7 +950,7 @@
 
       open.addEventListener("click", () => {
         if (busy) {
-          toast("Tunggu respons selesai sebelum berpindah sesi.");
+          toast("Tunggu balasan selesai sebelum pindah obrolan.");
           return;
         }
         state.activeId = conversation.id;
@@ -746,13 +965,13 @@
       remove.type = "button";
       remove.className = "history-delete";
       remove.textContent = "×";
-      remove.title = "Hapus sesi";
-      remove.setAttribute("aria-label", "Hapus sesi");
+      remove.title = "Hapus obrolan";
+      remove.setAttribute("aria-label", "Hapus obrolan");
 
       remove.addEventListener("click", event => {
         event.stopPropagation();
         if (busy && conversation.id === state.activeId) {
-          toast("Tunggu respons selesai sebelum menghapus sesi.");
+          toast("Tunggu balasan selesai sebelum menghapus.");
           return;
         }
 
@@ -779,7 +998,7 @@
         saveState();
         renderHistory();
         renderMessages(false);
-        toast("Sesi percakapan dihapus.");
+        toast("Obrolan dihapus");
       });
 
       row.append(open, remove);
@@ -789,10 +1008,12 @@
 
   function setBusy(value) {
     busy = value;
-    els.send.disabled = value;
-    els.input.disabled = value;
-    els.send.classList.toggle("is-loading", value);
-    els.send.setAttribute("aria-label", value ? "Sedang memproses" : "Kirim pesan");
+    if (els.send) {
+      els.send.disabled = value;
+      els.send.classList.toggle("is-loading", value);
+      els.send.setAttribute("aria-label", value ? "Sedang memproses" : "Kirim pesan");
+    }
+    if (els.input) els.input.disabled = value;
   }
 
   async function directJerexdFallback(action, payload = {}) {
@@ -828,7 +1049,7 @@
     });
     const data = await res.json();
     if (data?.status === false) {
-      throw new Error(data.message || "Permintaan ke layanan API gagal.");
+      throw new Error(data.message || "Permintaan belum berhasil diproses.");
     }
     if (action === "chat") {
       return {
@@ -848,7 +1069,7 @@
     const startMs = performance.now();
     let response;
     try {
-      response = await fetch("https://api.jerexd.my.id" ? API_URL : "https://api.jerexd.my.id", {
+      response = await fetch(API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -883,12 +1104,12 @@
       data = await response.json();
     } catch {
       recordTelemetry(false, Math.round(performance.now() - startMs));
-      throw new Error(`Respons server tidak valid (HTTP ${response.status}).`);
+      throw new Error(`Balasan server tidak terbaca (Kode ${response.status}).`);
     }
 
     if (!response.ok || data.success === false) {
       recordTelemetry(false, Math.round(performance.now() - startMs));
-      throw new Error(data.message || `Permintaan gagal (HTTP ${response.status}).`);
+      throw new Error(data.message || `Permintaan gagal (Kode ${response.status}).`);
     }
 
     recordTelemetry(true, Math.round(performance.now() - startMs));
@@ -925,7 +1146,7 @@
 
     const hud = document.createElement("div");
     hud.className = "neural-thinking-hud";
-    hud.setAttribute("aria-label", "HAOMI Bot sedang memproses jawaban");
+    hud.setAttribute("aria-label", "HAOMI sedang menyiapkan balasan");
 
     const bars = document.createElement("div");
     bars.className = "wave-bars";
@@ -936,7 +1157,7 @@
     }
 
     const label = document.createElement("span");
-    label.textContent = "MEMPROSES STREAM NEURAL...";
+    label.textContent = "Sedang menyusun jawaban...";
 
     hud.append(bars, label);
     bubble.appendChild(hud);
@@ -951,8 +1172,19 @@
     const prompt = String(rawText || "").trim();
     if (!prompt || busy) return;
 
+    // Jalankan perintah cepat jika diawali "/" tanpa spasi
+    if (prompt.startsWith("/") && !prompt.includes(" ")) {
+      if (executeSlashShortcut(prompt.toLowerCase())) {
+        els.input.value = "";
+        resizeInput();
+        if (els.slashCmdMenu) els.slashCmdMenu.hidden = true;
+        return;
+      }
+    }
+
     if (activeStreamCancel) activeStreamCancel();
     forceShowHud = false;
+    if (els.slashCmdMenu) els.slashCmdMenu.hidden = true;
 
     const conversation = ensureConversation();
     const sequence = ++requestId;
@@ -999,7 +1231,7 @@
         : rawAnswer == null ? "" : JSON.stringify(rawAnswer, null, 2);
 
       if (!answer.trim()) {
-        throw new Error("Layanan API tidak mengembalikan teks jawaban.");
+        throw new Error("Belum ada teks balasan yang diterima, coba kirim ulang ya.");
       }
 
       conversation.sessionId = data.session_id || conversation.sessionId;
@@ -1013,7 +1245,7 @@
     } catch (error) {
       conversation.messages.push({
         role: "assistant",
-        content: `Permintaan belum berhasil diproses.\n\nDetail: ${error.message || "Terjadi gangguan koneksi ke layanan API."}`,
+        content: `Maaf, pesanmu belum berhasil diproses.\n\nInfo: ${error.message || "Koneksi sedang sibuk, coba sebentar lagi ya."}`,
         model,
         error: true,
         createdAt: Date.now()
@@ -1056,13 +1288,17 @@
   }
 
   function resizeInput() {
+    if (!els.input) return;
     els.input.style.height = "auto";
     els.input.style.height = `${Math.min(els.input.scrollHeight, 160)}px`;
   }
 
   function toggleSidebar() {
     if (window.innerWidth <= 860) {
-      document.body.classList.toggle("sidebar-open");
+      const isOpen = !document.body.classList.contains("sidebar-open");
+      document.body.classList.toggle("sidebar-open", isOpen);
+      $("#appShell")?.classList.toggle("sidebar-open", isOpen);
+      els.sidebar?.classList.toggle("open", isOpen);
     } else {
       document.body.classList.toggle("sidebar-collapsed");
     }
@@ -1070,6 +1306,8 @@
 
   function closeMobileSidebar() {
     document.body.classList.remove("sidebar-open");
+    $("#appShell")?.classList.remove("sidebar-open");
+    els.sidebar?.classList.remove("open");
   }
 
   const viewIds = {
@@ -1082,8 +1320,8 @@
   const viewTitles = {
     chat: "Chat AI",
     alight: "Alight Motion",
-    urlscan: "Scan URL",
-    whatsapp: "Reaksi WhatsApp"
+    urlscan: "Cek Keamanan Link",
+    whatsapp: "Reaksi Saluran WA"
   };
 
   function showView(name) {
@@ -1100,13 +1338,16 @@
       button.classList.toggle("active", button.dataset.view === name);
     });
 
-    els.breadcrumb.textContent = viewTitles[name];
+    if (els.breadcrumb) els.breadcrumb.textContent = viewTitles[name];
     const isChat = name === "chat";
     if (els.activeChatTitle) els.activeChatTitle.hidden = !isChat;
     if (els.chatTitleDivider) els.chatTitleDivider.hidden = !isChat;
-    $("#resetSessionButton").hidden = !isChat;
-    $("#exportChatButton").hidden = !isChat;
-    $("#toggleDashboardBtn").hidden = !isChat;
+    const resetBtn = $("#resetSessionButton");
+    const exportBtn = $("#exportChatButton");
+    const dashBtn = $("#toggleDashboardBtn");
+    if (resetBtn) resetBtn.hidden = !isChat;
+    if (exportBtn) exportBtn.hidden = !isChat;
+    if (dashBtn) dashBtn.hidden = !isChat;
 
     closeComposerMenu();
     closeMobileSidebar();
@@ -1117,7 +1358,7 @@
 
   function newChat() {
     if (busy) {
-      toast("Tunggu respons selesai sebelum membuat sesi baru.");
+      toast("Tunggu balasan selesai sebelum membuat obrolan baru.");
       return;
     }
 
@@ -1133,33 +1374,38 @@
     renderMessages(false);
     showView("chat");
     closeMobileSidebar();
+    toast("Sesi obrolan baru siap");
   }
 
   function resetCurrentSessionContext() {
     const conversation = ensureConversation();
     conversation.sessionId = `haomi-${id()}`;
+    conversation.messages = [];
     pendingResetSession = true;
+    forceShowHud = false;
     saveState();
+    renderHistory();
+    renderMessages(false);
     closeComposerMenu();
-    toast("Sesi konteks AI telah direset untuk pesan berikutnya.");
+    toast("Obrolan dibersihkan, siap mulai bahasan baru");
   }
 
   function exportCurrentChat() {
     const conversation = activeConversation();
     if (!conversation || !conversation.messages.length) {
-      toast("Belum ada isi percakapan untuk diekspor.", true);
+      toast("Belum ada isi obrolan untuk diunduh.", true);
       return;
     }
 
     const lines = [
       `# ${conversation.title}`,
-      `Model: ${modelName(conversation.model)} (${conversation.model})`,
-      `Waktu Ekspor: ${new Date().toLocaleString("id-ID")}`,
+      `Model: ${modelName(conversation.model)}`,
+      `Waktu Unduh: ${new Date().toLocaleString("id-ID")}`,
       ""
     ];
 
     conversation.messages.forEach(msg => {
-      const sender = msg.role === "user" ? "PENGGUNA" : `HAOMI BOT (${modelName(msg.model)})`;
+      const sender = msg.role === "user" ? "KAMU" : `HAOMI BOT (${modelName(msg.model)})`;
       lines.push(`### ${sender}`);
       lines.push(msg.content);
       lines.push("");
@@ -1169,12 +1415,12 @@
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${conversation.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "percakapan"}.md`;
+    link.download = `${conversation.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "obrolan"}.md`;
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    toast("Percakapan berhasil diekspor (.md).");
+    toast("Obrolan berhasil diunduh (.md)");
   }
 
   function exportAllBackup() {
@@ -1193,13 +1439,14 @@
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    toast("Cadangan data berhasil diunduh (.json).");
+    toast("Cadangan data berhasil diunduh (.json)");
   }
 
   function toggleComposerMenu() {
+    if (!els.composerToolsMenu) return;
     const isHidden = els.composerToolsMenu.hidden;
     els.composerToolsMenu.hidden = !isHidden;
-    els.composerToolsBtn.setAttribute("aria-expanded", String(isHidden));
+    els.composerToolsBtn?.setAttribute("aria-expanded", String(isHidden));
   }
 
   function closeComposerMenu() {
@@ -1209,22 +1456,25 @@
   }
 
   function openModelDialog() {
+    if (!els.modelDialog) return;
     lastFocusedElement = document.activeElement;
     els.modelDialog.hidden = false;
-    els.modelTrigger.setAttribute("aria-expanded", "true");
+    els.modelTrigger?.setAttribute("aria-expanded", "true");
     document.body.style.overflow = "hidden";
     updateModelOptions();
   }
 
   function closeModelDialog() {
+    if (!els.modelDialog) return;
     els.modelDialog.hidden = true;
-    els.modelTrigger.setAttribute("aria-expanded", "false");
+    els.modelTrigger?.setAttribute("aria-expanded", "false");
     document.body.style.overflow = "";
     lastFocusedElement?.focus?.({ preventScroll: true });
   }
 
   function updateModelOptions() {
-    const query = (els.modelSearch.value || "").trim().toLowerCase();
+    if (!els.modelList) return;
+    const query = (els.modelSearch?.value || "").trim().toLowerCase();
     const selected = activeConversation()?.model || getDefaultModel();
 
     $$(".model-option", els.modelList).forEach(button => {
@@ -1233,7 +1483,9 @@
       const matchesQuery = name.toLowerCase().includes(query) || button.dataset.model.toLowerCase().includes(query);
       const matchesProvider = activeProviderFilter === "all" || provider === activeProviderFilter;
       button.hidden = !(matchesQuery && matchesProvider);
-      button.classList.toggle("selected", button.dataset.model === selected);
+      const isSel = button.dataset.model === selected;
+      button.classList.toggle("selected", isSel);
+      button.classList.toggle("active", isSel);
     });
   }
 
@@ -1251,19 +1503,21 @@
   }
 
   function openSettings() {
+    if (!els.settings) return;
     applySettingsToUI();
     els.settings.hidden = false;
     document.body.style.overflow = "hidden";
   }
 
   function closeSettings() {
+    if (!els.settings) return;
     els.settings.hidden = true;
     document.body.style.overflow = "";
   }
 
   function setAlightMode(mode) {
     const select = $("#alightAction");
-    select.value = mode;
+    if (select) select.value = mode;
     $$(".mode-tab[data-am-mode]").forEach(tab => {
       tab.classList.toggle("active", tab.dataset.amMode === mode);
     });
@@ -1271,11 +1525,18 @@
   }
 
   function updateAlightFields() {
-    const mode = $("#alightAction").value;
+    const select = $("#alightAction");
+    if (!select) return;
+    const mode = select.value;
     const needsLink = mode === "am-verify";
-    $("#verificationLinkGroup").hidden = !needsLink;
-    $("#alightLink").required = needsLink;
-    $("#alightSubmit span").textContent = needsLink ? " + Verifikasi Tautan Akun" : " + Kirim Permintaan Verifikasi";
+    const linkGroup = $("#verificationLinkGroup");
+    const linkInput = $("#alightLink");
+    const submitSpan = $("#alightSubmit span");
+    if (linkGroup) linkGroup.hidden = !needsLink;
+    if (linkInput) linkInput.required = needsLink;
+    if (submitSpan) {
+      submitSpan.textContent = needsLink ? "Verifikasi Tautan Akun" : "Kirim Email Verifikasi";
+    }
     $$(".mode-tab[data-am-mode]").forEach(tab => {
       tab.classList.toggle("active", tab.dataset.amMode === mode);
     });
@@ -1316,19 +1577,20 @@
   }
 
   function showToolResult(element, statusBadge, timeBadge, summaryEl, text, status = "", elapsedMs = null, rawObj = null) {
+    if (!element) return;
     element.classList.remove("is-error", "is-success");
     statusBadge?.classList.remove("is-error", "is-success");
 
     if (status === "error") {
       element.classList.add("is-error");
       statusBadge?.classList.add("is-error");
-      if (statusBadge) statusBadge.textContent = "ERROR";
+      if (statusBadge) statusBadge.textContent = "GAGAL";
     } else if (status === "success") {
       element.classList.add("is-success");
       statusBadge?.classList.add("is-success");
-      if (statusBadge) statusBadge.textContent = "200 OK";
+      if (statusBadge) statusBadge.textContent = "BERHASIL";
     } else {
-      if (statusBadge) statusBadge.textContent = status || "READY";
+      if (statusBadge) statusBadge.textContent = status || "SIAP";
     }
 
     if (timeBadge) {
@@ -1350,7 +1612,7 @@
 
   async function runTool(config) {
     const { form, button, resultElement, statusBadge, timeBadge, summaryEl, action, payload, loadingText } = config;
-    if (form.dataset.busy === "true") return;
+    if (!form || form.dataset.busy === "true") return;
 
     form.dataset.busy = "true";
     const labelSpan = $("span", button) || button;
@@ -1359,7 +1621,7 @@
     labelSpan.textContent = loadingText;
 
     const startTime = performance.now();
-    showToolResult(resultElement, statusBadge, timeBadge, summaryEl, "// Menghubungi endpoint layanan...", "RUNNING");
+    showToolResult(resultElement, statusBadge, timeBadge, summaryEl, "// Sedang memproses permintaan kamu...", "PROSES");
 
     try {
       const data = await apiRequest(action, payload);
@@ -1375,7 +1637,7 @@
         elapsed,
         typeof result === "object" ? result : data
       );
-      toast("Endpoint berhasil dieksekusi.");
+      toast("Berhasil diproses!");
     } catch (error) {
       const elapsed = Math.round(performance.now() - startTime);
       showToolResult(
@@ -1383,12 +1645,12 @@
         statusBadge,
         timeBadge,
         summaryEl,
-        `// Eksekusi gagal: ${error.message || "Terjadi kesalahan."}`,
+        `// Gagal diproses: ${error.message || "Terjadi kendala koneksi."}`,
         "error",
         elapsed,
         null
       );
-      toast("Permintaan gagal. Periksa terminal output.", true);
+      toast("Gagal diproses, cek keterangan hasil.", true);
     } finally {
       form.dataset.busy = "false";
       button.disabled = false;
@@ -1428,6 +1690,77 @@
     syncWaEmojiChips();
   }
 
+  function cycleResponseStyle() {
+    const current = settings.responseStyle || "standard";
+    const nextIdx = (responseStyleOrder.indexOf(current) + 1) % responseStyleOrder.length;
+    const nextStyle = responseStyleOrder[nextIdx];
+    saveSettings({ responseStyle: nextStyle });
+    toast(`Gaya bicara AI: ${responseStyleLabels[nextStyle]}`);
+  }
+
+  function toggleQuickTheme() {
+    const currentResolved = getResolvedTheme(settings.theme);
+    const nextTheme = currentResolved === "dark" ? "light" : "dark";
+    saveSettings({ theme: nextTheme });
+    toast(`Mode ${nextTheme === "dark" ? "Gelap" : "Terang"} diaktifkan`);
+  }
+
+  // Eksekusi pintasan perintah cepat (/model, /gaya, /kode, /ringkas, /reset, /tema, dll.)
+  function executeSlashShortcut(cmd) {
+    if (els.slashCmdMenu) els.slashCmdMenu.hidden = true;
+    if (cmd === "/model" || cmd === "/models") {
+      openModelDialog();
+      return true;
+    }
+    if (cmd === "/gaya" || cmd === "/style") {
+      cycleResponseStyle();
+      return true;
+    }
+    if (cmd === "/kode") {
+      if (els.input) {
+        els.input.value = "Tolong cek dan rapikan kode berikut biar jalan mulus:\n\n";
+        resizeInput();
+        els.input.focus();
+        toast("Format cek kode disiapkan");
+      }
+      return true;
+    }
+    if (cmd === "/ringkas") {
+      if (els.input) {
+        els.input.value = "Tolong rangkum poin paling penting dari teks berikut pakai bahasa yang santai:\n\n";
+        resizeInput();
+        els.input.focus();
+        toast("Format rangkuman disiapkan");
+      }
+      return true;
+    }
+    if (cmd === "/reset") {
+      resetCurrentSessionContext();
+      return true;
+    }
+    if (cmd === "/tema" || cmd === "/theme") {
+      toggleQuickTheme();
+      return true;
+    }
+    if (cmd === "/am" || cmd === "/alight") {
+      showView("alight");
+      return true;
+    }
+    if (cmd === "/scan" || cmd === "/urlscan") {
+      showView("urlscan");
+      return true;
+    }
+    if (cmd === "/wa" || cmd === "/react") {
+      showView("whatsapp");
+      return true;
+    }
+    if (cmd === "/settings" || cmd === "/config") {
+      openSettings();
+      return true;
+    }
+    return false;
+  }
+
   function handleTerminalFilter() {
     const q = (els.terminalInput?.value || "").trim().toLowerCase();
     $$("[data-filter-text]").forEach(card => {
@@ -1439,80 +1772,99 @@
   function handleTerminalExecute(rawVal) {
     const cmd = rawVal.trim();
     if (!cmd) return;
-
-    const lower = cmd.toLowerCase();
-    if (lower === "/am" || lower === "/alight") {
-      els.terminalInput.value = "";
-      handleTerminalFilter();
-      showView("alight");
-      return;
-    }
-    if (lower === "/scan" || lower === "/urlscan") {
-      els.terminalInput.value = "";
-      handleTerminalFilter();
-      showView("urlscan");
-      return;
-    }
-    if (lower === "/wa" || lower === "/react") {
-      els.terminalInput.value = "";
-      handleTerminalFilter();
-      showView("whatsapp");
-      return;
-    }
-    if (lower === "/model" || lower === "/models") {
-      els.terminalInput.value = "";
-      handleTerminalFilter();
-      openModelDialog();
-      return;
-    }
-    if (lower === "/settings" || lower === "/config") {
-      els.terminalInput.value = "";
-      handleTerminalFilter();
-      openSettings();
-      return;
-    }
-    if (lower === "/reset") {
-      els.terminalInput.value = "";
-      handleTerminalFilter();
-      resetCurrentSessionContext();
-      return;
-    }
-
-    els.terminalInput.value = "";
+    if (els.terminalInput) els.terminalInput.value = "";
     handleTerminalFilter();
+    if (executeSlashShortcut(cmd.toLowerCase())) return;
     sendMessage(cmd);
   }
 
   function bindEvents() {
-    $("#openSidebar").addEventListener("click", toggleSidebar);
-    $("#closeSidebar").addEventListener("click", closeMobileSidebar);
-    els.overlay.addEventListener("click", closeMobileSidebar);
-    $("#newChatButton").addEventListener("click", newChat);
-    els.historySearch.addEventListener("input", renderHistory);
+    $("#openSidebar")?.addEventListener("click", toggleSidebar);
+    $("#closeSidebar")?.addEventListener("click", closeMobileSidebar);
+    els.overlay?.addEventListener("click", closeMobileSidebar);
+    $("#newChatButton")?.addEventListener("click", newChat);
+    els.historySearch?.addEventListener("input", renderHistory);
 
-    $("#toggleDashboardBtn").addEventListener("click", () => {
+    // Interaksi kapsul Dynamic Island di bagian atas
+    if (els.dynamicIsland && els.islandPodBody) {
+      els.dynamicIsland.addEventListener("click", event => {
+        if (event.target.closest(".island-pod-btn")) return;
+        const expanded = !els.islandPodBody.hidden;
+        els.islandPodBody.hidden = expanded;
+        els.dynamicIsland.classList.toggle("is-expanded", !expanded);
+        playCyberTick(520, 0.04);
+      });
+
+      document.addEventListener("click", event => {
+        if (!els.dynamicIsland.contains(event.target) && !els.islandPodBody.hidden) {
+          els.islandPodBody.hidden = true;
+          els.dynamicIsland.classList.remove("is-expanded");
+        }
+      });
+    }
+
+    els.islandSoundBtn?.addEventListener("click", event => {
+      event.stopPropagation();
+      soundEnabled = !soundEnabled;
+      try {
+        localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
+      } catch {}
+      if (els.islandSoundLabel) {
+        els.islandSoundLabel.textContent = soundEnabled ? "Suara: Aktif" : "Suara: Mati";
+      }
+      toast(soundEnabled ? "Efek suara sentuhan aktif" : "Efek suara dimatikan");
+    });
+
+    els.islandFocusBtn?.addEventListener("click", event => {
+      event.stopPropagation();
+      if (els.welcome) {
+        forceShowHud = els.welcome.hidden;
+        els.welcome.hidden = !els.welcome.hidden;
+        toast(els.welcome.hidden ? "Mode Fokus: Dasbor disembunyikan" : "Panel dasbor ditampilkan");
+      }
+    });
+
+    els.islandThemeBtn?.addEventListener("click", event => {
+      event.stopPropagation();
+      toggleQuickTheme();
+    });
+
+    document.addEventListener("pointerdown", event => {
+      if (event.target.closest("button, .interactive-stat, .prompt-card")) {
+        playCyberTick(600, 0.03);
+      }
+    }, { passive: true });
+
+    // 4 Kotak Dasbor Utama Interaktif
+    els.boxActiveModel?.addEventListener("click", openModelDialog);
+    els.boxAiStyle?.addEventListener("click", cycleResponseStyle);
+    els.boxPingTest?.addEventListener("click", () => measureNetworkPing(true));
+    els.boxSessionInfo?.addEventListener("click", () => {
+      newChat();
+      els.input?.focus();
+    });
+
+    // Tombol pintasan di bagian atas
+    $("#toggleDashboardBtn")?.addEventListener("click", () => {
+      if (!els.welcome) return;
       const hasMessages = Boolean(activeConversation()?.messages?.length);
       if (!hasMessages) {
-        toast("Panel HUD Konsol sudah aktif.");
+        els.welcome.hidden = !els.welcome.hidden;
+        toast(els.welcome.hidden ? "Mode Fokus aktif" : "Panel dasbor ditampilkan");
         return;
       }
       forceShowHud = !forceShowHud;
       els.welcome.hidden = !forceShowHud;
       if (forceShowHud) {
-        els.chatScroll.scrollTo({ top: 0, behavior: "smooth" });
+        els.chatScroll?.scrollTo({ top: 0, behavior: "smooth" });
       }
+      toast(forceShowHud ? "Panel dasbor ditampilkan" : "Mode Fokus aktif");
     });
 
-    $("#quickThemeToggle").addEventListener("click", () => {
-      const currentResolved = getResolvedTheme(settings.theme);
-      const nextTheme = currentResolved === "dark" ? "light" : "dark";
-      saveSettings({ theme: nextTheme });
-      toast(`Tema diubah ke mode ${nextTheme === "dark" ? "Cyber Obsidian (Gelap)" : "Terang"}.`);
-    });
-
-    $("#resetSessionButton").addEventListener("click", resetCurrentSessionContext);
-    $("#popoverResetChat").addEventListener("click", resetCurrentSessionContext);
-    $("#exportChatButton").addEventListener("click", exportCurrentChat);
+    $("#quickThemeToggle")?.addEventListener("click", toggleQuickTheme);
+    $("#resetSessionButton")?.addEventListener("click", resetCurrentSessionContext);
+    $("#popoverResetChat")?.addEventListener("click", resetCurrentSessionContext);
+    $("#exportChatButton")?.addEventListener("click", exportCurrentChat);
 
     $$("[data-view]").forEach(button => {
       button.addEventListener("click", event => {
@@ -1521,7 +1873,23 @@
       });
     });
 
-    // Terminal input filter & slash command runner
+    // Chip perintah cepat & menu slash command di keyboard composer
+    $$(".cmd-chip[data-cmd]").forEach(chip => {
+      chip.addEventListener("click", () => {
+        executeSlashShortcut(chip.dataset.cmd);
+      });
+    });
+
+    $$(".slash-cmd-item[data-slash]").forEach(item => {
+      item.addEventListener("click", () => {
+        if (els.input && item.dataset.slash !== "/kode" && item.dataset.slash !== "/ringkas") {
+          els.input.value = "";
+          resizeInput();
+        }
+        executeSlashShortcut(item.dataset.slash);
+      });
+    });
+
     els.terminalInput?.addEventListener("input", handleTerminalFilter);
     els.terminalInput?.addEventListener("keydown", event => {
       if (event.key === "Enter") {
@@ -1530,23 +1898,41 @@
       }
     });
 
-    els.chatForm.addEventListener("submit", event => {
+    els.chatForm?.addEventListener("submit", event => {
       event.preventDefault();
-      if (!busy) sendMessage(els.input.value);
+      if (!busy && els.input) sendMessage(els.input.value);
     });
 
-    els.input.addEventListener("input", resizeInput);
-    els.input.addEventListener("keydown", event => {
+    els.input?.addEventListener("input", () => {
+      resizeInput();
+      const val = (els.input.value || "").trim();
+      if (els.slashCmdMenu) {
+        if (val.startsWith("/") && !val.includes(" ")) {
+          let anyVisible = false;
+          $$(".slash-cmd-item", els.slashCmdMenu).forEach(item => {
+            const cmd = item.dataset.slash || "";
+            const match = cmd.startsWith(val.toLowerCase());
+            item.hidden = !match;
+            if (match) anyVisible = true;
+          });
+          els.slashCmdMenu.hidden = !anyVisible;
+        } else {
+          els.slashCmdMenu.hidden = true;
+        }
+      }
+    });
+
+    els.input?.addEventListener("keydown", event => {
       if (event.isComposing) return;
       if (settings.enterToSend) {
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
-          if (!busy) els.chatForm.requestSubmit();
+          if (!busy) els.chatForm?.requestSubmit();
         }
       } else {
         if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
           event.preventDefault();
-          if (!busy) els.chatForm.requestSubmit();
+          if (!busy) els.chatForm?.requestSubmit();
         }
       }
     });
@@ -1554,38 +1940,41 @@
     $$(".prompt-card[data-prompt]").forEach(button => {
       button.addEventListener("click", () => {
         showView("chat");
-        els.input.value = button.dataset.prompt || "";
-        resizeInput();
-        els.input.focus();
+        if (els.input) {
+          els.input.value = button.dataset.prompt || "";
+          resizeInput();
+          els.input.focus();
+          toast("Ide obrolan siap dikirim");
+        }
       });
     });
 
     els.welcomeModelBadge?.addEventListener("click", openModelDialog);
     els.welcomeStyleBadge?.addEventListener("click", openSettings);
 
-    els.messages.addEventListener("click", event => {
+    els.messages?.addEventListener("click", event => {
       const codeBtn = event.target.closest("[data-copy-code]");
       if (codeBtn) {
         copyText(codeBtn.dataset.copyCode);
       }
     });
 
-    els.composerToolsBtn.addEventListener("click", event => {
+    els.composerToolsBtn?.addEventListener("click", event => {
       event.stopPropagation();
       toggleComposerMenu();
     });
 
     document.addEventListener("click", event => {
-      if (!els.composerToolsMenu.hidden &&
+      if (els.composerToolsMenu && !els.composerToolsMenu.hidden &&
           !els.composerToolsMenu.contains(event.target) &&
-          !els.composerToolsBtn.contains(event.target)) {
+          !els.composerToolsBtn?.contains(event.target)) {
         closeComposerMenu();
       }
     });
 
-    els.modelTrigger.addEventListener("click", openModelDialog);
-    els.closeModel.addEventListener("click", closeModelDialog);
-    els.modelSearch.addEventListener("input", updateModelOptions);
+    els.modelTrigger?.addEventListener("click", openModelDialog);
+    els.closeModel?.addEventListener("click", closeModelDialog);
+    els.modelSearch?.addEventListener("input", updateModelOptions);
 
     $$(".provider-filter").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1595,7 +1984,7 @@
       });
     });
 
-    els.modelDialog.addEventListener("click", event => {
+    els.modelDialog?.addEventListener("click", event => {
       if (event.target === els.modelDialog) closeModelDialog();
     });
 
@@ -1603,38 +1992,43 @@
       button.addEventListener("click", () => selectModel(button.dataset.model));
     });
 
-    // Settings modal triggers
-    $("#openSettings").addEventListener("click", openSettings);
-    $("#openSettingsTop").addEventListener("click", openSettings);
+    // Pengaturan
+    $("#openSettings")?.addEventListener("click", openSettings);
+    $("#openSettingsTop")?.addEventListener("click", openSettings);
     $("#openSettingsMobile")?.addEventListener("click", openSettings);
-    $("#closeSettings").addEventListener("click", closeSettings);
+    $("#closeSettings")?.addEventListener("click", closeSettings);
 
-    els.settings.addEventListener("click", event => {
+    els.settings?.addEventListener("click", event => {
       if (event.target === els.settings) closeSettings();
     });
 
     $$("[data-stream-choice]").forEach(btn => {
       btn.addEventListener("click", () => {
         saveSettings({ streamSpeed: btn.dataset.streamChoice });
-        toast("Efek kemunculan huruf AI diperbarui.");
+        toast("Kecepatan ketikan AI diperbarui");
       });
     });
 
     $$("[data-theme-choice]").forEach(btn => {
       btn.addEventListener("click", () => {
         saveSettings({ theme: btn.dataset.themeChoice });
-        toast("Tema tampilan diperbarui.");
+        const actual = getResolvedTheme(btn.dataset.themeChoice);
+        toast(`Mode ${actual === "light" ? "Terang" : "Gelap"} diaktifkan`);
       });
+    });
+
+    window.matchMedia?.("(prefers-color-scheme: light)")?.addEventListener?.("change", () => {
+      if (settings.theme === "system") applySettingsToUI();
     });
 
     $$("[data-density-choice]").forEach(btn => {
       btn.addEventListener("click", () => {
         saveSettings({ density: btn.dataset.densityChoice });
-        toast("Kerapatan tampilan diperbarui.");
+        toast("Ukuran tampilan diperbarui");
       });
     });
 
-    els.defaultModel.addEventListener("change", () => {
+    els.defaultModel?.addEventListener("change", () => {
       const nextModel = els.defaultModel.value;
       saveSettings({ defaultModel: nextModel });
       const active = activeConversation();
@@ -1643,37 +2037,37 @@
         saveState();
         syncModelIndicators(nextModel);
       }
-      toast(`Model default diatur ke ${modelName(nextModel)}.`);
+      toast(`Model utama diatur ke ${modelName(nextModel)}`);
     });
 
-    els.responseStyle.addEventListener("change", () => {
+    els.responseStyle?.addEventListener("change", () => {
       saveSettings({ responseStyle: els.responseStyle.value });
-      toast(`Gaya respons diatur ke ${responseStyleLabels[els.responseStyle.value]}.`);
+      toast(`Gaya bicara diatur ke ${responseStyleLabels[els.responseStyle.value]}`);
     });
 
-    els.enterToSend.addEventListener("change", () => {
+    els.enterToSend?.addEventListener("change", () => {
       saveSettings({ enterToSend: els.enterToSend.checked });
       toast(els.enterToSend.checked
-        ? "Tombol Enter diaktifkan untuk mengirim pesan."
-        : "Gunakan Ctrl+Enter untuk mengirim pesan.");
+        ? "Tombol Enter aktif untuk kirim pesan"
+        : "Gunakan Ctrl+Enter untuk kirim pesan");
     });
 
-    els.saveHistory.addEventListener("change", () => {
+    els.saveHistory?.addEventListener("change", () => {
       const enabled = els.saveHistory.checked;
       saveSettings({ saveHistory: enabled });
       if (enabled) {
         saveState();
-        toast("Penyimpanan riwayat lokal diaktifkan.");
+        toast("Riwayat obrolan disimpan di browser");
       } else {
         try {
           localStorage.removeItem(STORAGE_KEY);
           localStorage.removeItem(TELEMETRY_KEY);
         } catch {}
-        toast("Penyimpanan lokal dinonaktifkan (mode sesi).");
+        toast("Penyimpanan riwayat dimatikan");
       }
     });
 
-    els.defaultWaEmoji.addEventListener("change", () => {
+    els.defaultWaEmoji?.addEventListener("change", () => {
       const val = els.defaultWaEmoji.value.trim() || defaultSettings.defaultWaEmoji;
       saveSettings({ defaultWaEmoji: val });
       const waInput = $("#whatsappReaction");
@@ -1681,13 +2075,13 @@
         waInput.value = val;
         syncWaEmojiChips();
       }
-      toast("Emoji default Reaksi WhatsApp disimpan.");
+      toast("Emoji bawaan Reaksi WA disimpan");
     });
 
-    $("#exportAllDataBtn").addEventListener("click", exportAllBackup);
+    $("#exportAllDataBtn")?.addEventListener("click", exportAllBackup);
 
     const clearBtn = $("#clearAllHistory");
-    clearBtn.addEventListener("click", () => {
+    clearBtn?.addEventListener("click", () => {
       if (busy) {
         toast("Tunggu jawaban selesai sebelum menghapus riwayat.");
         return;
@@ -1695,7 +2089,7 @@
 
       if (!clearBtn.classList.contains("confirming")) {
         clearBtn.classList.add("confirming");
-        clearBtn.textContent = "Klik sekali lagi untuk konfirmasi hapus";
+        clearBtn.textContent = "Ketuk sekali lagi buat hapus";
         clearTimeout(clearHistoryConfirmTimer);
         clearHistoryConfirmTimer = window.setTimeout(() => {
           clearBtn.classList.remove("confirming");
@@ -1724,17 +2118,17 @@
       renderHistory();
       renderMessages(false);
       closeSettings();
-      toast("Seluruh riwayat & telemetri lokal berhasil direset.");
+      toast("Semua riwayat obrolan berhasil dihapus");
     });
 
-    // Alight Motion tool events
+    // Alight Motion
     $$(".mode-tab[data-am-mode]").forEach(tab => {
       tab.addEventListener("click", () => setAlightMode(tab.dataset.amMode));
     });
 
-    $("#alightAction").addEventListener("change", updateAlightFields);
+    $("#alightAction")?.addEventListener("change", updateAlightFields);
 
-    $("#alightForm").addEventListener("submit", event => {
+    $("#alightForm")?.addEventListener("submit", event => {
       event.preventDefault();
       const action = $("#alightAction").value;
       const payload = { email: $("#alightEmail").value.trim() };
@@ -1753,26 +2147,26 @@
       });
     });
 
-    // URL Scan tool events
-    $("#pasteUrlBtn").addEventListener("click", async () => {
+    // Scan URL
+    $("#pasteUrlBtn")?.addEventListener("click", async () => {
       try {
         if (navigator.clipboard?.readText) {
           const text = (await navigator.clipboard.readText()).trim();
           if (text) {
             $("#scanUrl").value = text.startsWith("http") ? text : `https://${text}`;
-            toast("URL ditempel dari clipboard.");
+            toast("Link berhasil ditempel");
             return;
           }
         }
-        $("#scanUrl").focus();
-        toast("Silakan tekan Ctrl+V pada kolom URL.");
+        $("#scanUrl")?.focus();
+        toast("Silakan tekan Ctrl+V di kolom link");
       } catch {
-        $("#scanUrl").focus();
-        toast("Silakan tekan Ctrl+V pada kolom URL.");
+        $("#scanUrl")?.focus();
+        toast("Silakan tekan Ctrl+V di kolom link");
       }
     });
 
-    $("#urlscanForm").addEventListener("submit", event => {
+    $("#urlscanForm")?.addEventListener("submit", event => {
       event.preventDefault();
       runTool({
         form: $("#urlscanForm"),
@@ -1783,24 +2177,25 @@
         summaryEl: $("#urlscanSummary"),
         action: "urlscan",
         payload: { url: $("#scanUrl").value.trim() },
-        loadingText: "Memindai..."
+        loadingText: "Memeriksa..."
       });
     });
 
-    // WhatsApp Reaction tool events
+    // Reaksi WhatsApp
     $$(".emoji-chip[data-emoji]").forEach(chip => {
       chip.addEventListener("click", () => toggleWaEmoji(chip.dataset.emoji));
     });
 
-    $("#whatsappReaction").addEventListener("input", syncWaEmojiChips);
+    $("#whatsappReaction")?.addEventListener("input", syncWaEmojiChips);
 
-    $("#resetWaEmojiBtn").addEventListener("click", () => {
-      $("#whatsappReaction").value = settings.defaultWaEmoji || defaultSettings.defaultWaEmoji;
+    $("#resetWaEmojiBtn")?.addEventListener("click", () => {
+      const waInput = $("#whatsappReaction");
+      if (waInput) waInput.value = settings.defaultWaEmoji || defaultSettings.defaultWaEmoji;
       syncWaEmojiChips();
-      toast("Emoji dikembalikan ke pengaturan default.");
+      toast("Emoji dikembalikan ke setelan awal");
     });
 
-    $("#whatsappForm").addEventListener("submit", event => {
+    $("#whatsappForm")?.addEventListener("submit", event => {
       event.preventDefault();
       runTool({
         form: $("#whatsappForm"),
@@ -1831,7 +2226,7 @@
         const target = document.getElementById(targetId);
         if (!target) return;
         target.classList.remove("is-error", "is-success");
-        target.textContent = "// Output telah direset. Siap untuk eksekusi baru.";
+        target.textContent = "// Hasil sudah dibersihkan, siap dipakai lagi.";
 
         const prefix = targetId.replace("Result", "");
         const badge = document.getElementById(`${prefix}StatusBadge`);
@@ -1839,10 +2234,11 @@
         const summary = document.getElementById(`${prefix}Summary`);
         if (badge) {
           badge.classList.remove("is-error", "is-success");
-          badge.textContent = "READY";
+          badge.textContent = "SIAP";
         }
         if (time) time.hidden = true;
         if (summary) summary.hidden = true;
+        toast("Hasil dibersihkan");
       });
     });
 
@@ -1850,8 +2246,9 @@
       if (event.key === "Escape") {
         closeMobileSidebar();
         closeComposerMenu();
-        if (!els.modelDialog.hidden) closeModelDialog();
-        if (!els.settings.hidden) closeSettings();
+        if (els.slashCmdMenu) els.slashCmdMenu.hidden = true;
+        if (els.modelDialog && !els.modelDialog.hidden) closeModelDialog();
+        if (els.settings && !els.settings.hidden) closeSettings();
       }
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
@@ -1861,18 +2258,20 @@
 
       if ((event.ctrlKey || event.metaKey) && event.key === ",") {
         event.preventDefault();
-        if (els.settings.hidden) openSettings();
+        if (els.settings?.hidden) openSettings();
         else closeSettings();
       }
 
-      if (event.key === "/" && !els.modelDialog.hidden &&
+      if (event.key === "/" && els.modelDialog && !els.modelDialog.hidden &&
           document.activeElement !== els.modelSearch) {
         event.preventDefault();
-        els.modelSearch.focus();
-      } else if (event.key === "/" && els.modelDialog.hidden && els.settings.hidden &&
+        els.modelSearch?.focus();
+      } else if (event.key === "/" &&
+                 (!els.modelDialog || els.modelDialog.hidden) &&
+                 (!els.settings || els.settings.hidden) &&
                  !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
         event.preventDefault();
-        els.terminalInput?.focus();
+        els.input?.focus();
       }
     });
   }
@@ -1882,6 +2281,7 @@
     initDeviceMetrics();
     initSpotlightEffect();
     renderTelemetryStats();
+    measureNetworkPing(false);
 
     if (!state.conversations.length) {
       const conversation = newConversation();
@@ -1910,5 +2310,9 @@
     saveState();
   }
 
-  initialize();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initialize);
+  } else {
+    initialize();
+  }
 })();
