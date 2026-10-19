@@ -19,72 +19,62 @@
     const closeSidebar = $('#close-sidebar');
     const sidebarOverlay = $('#sidebar-overlay');
     const clearHistoryBtn = $('#clear-history');
+    const chatArea = $('.chat-area');
 
     const STORAGE_SESSIONS = 'smartAIChatSessions';
     const STORAGE_ACTIVE = 'smartAIActiveSession';
 
-    // =====================================
-    // TEMPLATE DAN AREA CHAT
-    // =====================================
+    let isSending = false;
+
+    // =========================================
+    // SIAPKAN AREA PERCAKAPAN
+    // =========================================
 
     resultTemplate.classList.add('hidden');
 
-    const conversationList = document.createElement('div');
-    conversationList.id = 'conversation-list';
+    let conversationList = $('#conversation-list');
 
-    Object.assign(conversationList.style, {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '24px',
-        width: '100%'
-    });
+    if (!conversationList) {
+        conversationList = document.createElement('div');
+        conversationList.id = 'conversation-list';
 
-    resultTemplate.parentNode.insertBefore(
-        conversationList,
-        resultTemplate
-    );
-
-    // Tombol obrolan baru di sidebar
-    const newChatButton = document.createElement('button');
-
-    newChatButton.type = 'button';
-    newChatButton.id = 'new-chat-button';
-    newChatButton.innerHTML =
-        '<span class="material-icons-round">add</span>' +
-        '<span>Obrolan Baru</span>';
-
-    Object.assign(newChatButton.style, {
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        padding: '13px',
-        marginBottom: '16px',
-        border: '1px solid rgba(255,255,255,.14)',
-        borderRadius: '12px',
-        background: '#26312b',
-        color: '#ffffff',
-        fontFamily: 'inherit',
-        fontSize: '14px',
-        cursor: 'pointer'
-    });
-
-    const sidebarContent = $('.sidebar-content');
-    const historyContainer = historyList?.closest(
-        '.history-list-container'
-    );
-
-    if (sidebarContent && historyContainer) {
-        sidebarContent.insertBefore(
-            newChatButton,
-            historyContainer
+        resultTemplate.parentNode.insertBefore(
+            conversationList,
+            resultTemplate
         );
     }
 
-    // =====================================
-    // STORAGE
-    // =====================================
+    // =========================================
+    // TOMBOL OBROLAN BARU
+    // =========================================
+
+    let newChatButton = $('#new-chat-button');
+
+    if (!newChatButton) {
+        newChatButton = document.createElement('button');
+        newChatButton.type = 'button';
+        newChatButton.id = 'new-chat-button';
+
+        newChatButton.innerHTML = `
+            <span class="material-icons-round">add</span>
+            <span>Obrolan Baru</span>
+        `;
+
+        const historyContainer = historyList?.closest(
+            '.history-list-container'
+        );
+
+        if (historyContainer) {
+            historyContainer.parentNode.insertBefore(
+                newChatButton,
+                historyContainer
+            );
+        }
+    }
+
+    // =========================================
+    // STORAGE DAN SESSION
+    // =========================================
 
     function readJSON(key, fallback) {
         try {
@@ -99,14 +89,16 @@
     }
 
     function createId() {
-        return Date.now().toString(36) +
-            Math.random().toString(36).slice(2, 9);
+        return (
+            Date.now().toString(36) +
+            Math.random().toString(36).slice(2, 9)
+        );
     }
 
-    function createSession(title = 'Obrolan Baru') {
+    function createSession() {
         return {
             id: createId(),
-            title,
+            title: 'Obrolan Baru',
             createdAt: Date.now(),
             updatedAt: Date.now(),
             messages: []
@@ -119,7 +111,7 @@
         sessions = [];
     }
 
-    // Migrasi data chat dari versi sebelumnya
+    // Migrasi riwayat lama jika tersedia.
     if (sessions.length === 0) {
         const oldChats = readJSON(
             'smartAIConversations',
@@ -153,27 +145,6 @@
                 });
             });
         }
-
-        if (sessions.length === 0) {
-            const oldHistory = readJSON('turboHistory', []);
-
-            if (Array.isArray(oldHistory)) {
-                oldHistory.forEach(question => {
-                    if (typeof question !== 'string') return;
-
-                    sessions.push({
-                        ...createSession(question.slice(0, 45)),
-                        messages: [
-                            {
-                                id: createId(),
-                                role: 'user',
-                                content: question
-                            }
-                        ]
-                    });
-                });
-            }
-        }
     }
 
     let activeSessionId = localStorage.getItem(
@@ -184,7 +155,7 @@
         session => session.id === activeSessionId
     );
 
-    if (!activeSession && sessions.length) {
+    if (!activeSession && sessions.length > 0) {
         activeSession = [...sessions].sort(
             (a, b) => b.updatedAt - a.updatedAt
         )[0];
@@ -209,17 +180,29 @@
                 activeSessionId
             );
         } catch (error) {
-            console.error('Gagal menyimpan chat:', error);
+            console.error('Gagal menyimpan riwayat:', error);
         }
     }
 
-    // =====================================
+    function updateSession() {
+        activeSession.updatedAt = Date.now();
+
+        sessions.sort(
+            (a, b) => b.updatedAt - a.updatedAt
+        );
+
+        saveSessions();
+        renderHistory();
+    }
+
+    // =========================================
     // NAVIGASI
-    // =====================================
+    // =========================================
 
     enterAppBtn?.addEventListener('click', () => {
         landingPage.style.display = 'none';
         mainApp.classList.remove('hidden-section');
+        input?.focus();
     });
 
     menuToggle?.addEventListener('click', () => {
@@ -236,11 +219,16 @@
         }
     });
 
-    // =====================================
-    // OBROLAN BARU
-    // =====================================
+    // =========================================
+    // FITUR OBROLAN BARU
+    // =========================================
 
     function newChat() {
+        if (isSending) {
+            alert('Tunggu jawaban selesai sebelum membuat obrolan baru.');
+            return;
+        }
+
         activeSession = createSession();
         activeSessionId = activeSession.id;
 
@@ -259,17 +247,19 @@
 
     newChatButton.addEventListener('click', newChat);
 
-    // =====================================
-    // HISTORY PER SESI
-    // =====================================
+    // =========================================
+    // HISTORY PER OBROLAN
+    // =========================================
 
     function renderHistory() {
+        if (!historyList) return;
+
         historyList.innerHTML = '';
 
         [...sessions]
             .sort((a, b) => b.updatedAt - a.updatedAt)
             .forEach(session => {
-                if (!session.messages.length) return;
+                if (!session.messages?.length) return;
 
                 const li = document.createElement('li');
                 li.className = 'session-history-item';
@@ -286,16 +276,25 @@
                 const preview = document.createElement('small');
                 preview.className = 'session-history-preview';
 
-                const lastMessage = [...session.messages]
+                const lastUserMessage = [...session.messages]
                     .reverse()
                     .find(message => message.role === 'user');
 
-                preview.textContent = lastMessage?.content || '';
+                preview.textContent =
+                    lastUserMessage?.content || '';
 
                 li.append(title, preview);
 
                 li.addEventListener('click', () => {
+                    if (isSending) {
+                        alert(
+                            'Tunggu jawaban selesai sebelum berpindah obrolan.'
+                        );
+                        return;
+                    }
+
                     openSession(session.id);
+
                     sidebarOverlay.classList.remove(
                         'sidebar-visible'
                     );
@@ -313,35 +312,16 @@
         if (!session) return;
 
         activeSession = session;
-        activeSessionId = session.id;
+        activeSessionId = id;
 
         saveSessions();
         renderSession();
         renderHistory();
     }
 
-    // =====================================
-    // RENDER PESAN
-    // =====================================
-
-    function renderSession() {
-        conversationList.innerHTML = '';
-
-        if (!activeSession.messages.length) {
-            welcomeScreen.classList.remove('hidden');
-            return;
-        }
-
-        welcomeScreen.classList.add('hidden');
-
-        activeSession.messages.forEach(message => {
-            if (message.role === 'user') {
-                renderUserMessage(message);
-            } else {
-                renderAssistantMessage(message);
-            }
-        });
-    }
+    // =========================================
+    // RENDER PESAN PENGGUNA
+    // =========================================
 
     function renderUserMessage(message) {
         const bubble = document.createElement('div');
@@ -352,19 +332,27 @@
         conversationList.appendChild(bubble);
     }
 
+    // =========================================
+    // RENDER JAWABAN AI
+    // =========================================
+
     function renderAssistantMessage(message) {
         const card = resultTemplate.cloneNode(true);
 
         card.removeAttribute('id');
         card.classList.remove('hidden');
 
-        // Hilangkan bubble user dari template karena
-        // pertanyaan sudah dirender sebagai pesan tersendiri.
         $('.user-bubble', card)?.remove();
 
         const answer = $('#answer-text', card);
         const sources = $('#sources-list', card);
         const related = $('#similar-list', card);
+        const infoCards = card.querySelectorAll('.info-card');
+
+        // Hilangkan sources/related kosong sebelum ditampilkan.
+        infoCards.forEach(infoCard => {
+            infoCard.classList.add('hidden');
+        });
 
         if (message.loading) {
             answer.innerHTML = `
@@ -385,32 +373,124 @@
             message.similarQuestions || []
         );
 
-        const copyButton = $('.action-icons', card)?.children[0];
+        // Tombol salin, suka, dan tidak suka.
+        const actionButtons = $$('.action-icons span', card);
 
-        if (copyButton) {
-            copyButton.addEventListener('click', async () => {
-                try {
-                    await navigator.clipboard.writeText(
-                        message.content || ''
-                    );
+        const copyButton = actionButtons[0];
+        const likeButton = actionButtons[1];
+        const dislikeButton = actionButtons[2];
 
-                    copyButton.textContent = 'check';
+        copyButton?.addEventListener('click', async () => {
+            const text = message.content || '';
 
-                    setTimeout(() => {
-                        copyButton.textContent = 'content_copy';
-                    }, 1000);
-                } catch {
-                    alert('Gagal menyalin jawaban.');
+            if (!text || message.loading) return;
+
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const textarea = document.createElement('textarea');
+
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+
+                    document.body.appendChild(textarea);
+                    textarea.select();
+
+                    const copied = document.execCommand('copy');
+
+                    textarea.remove();
+
+                    if (!copied) {
+                        throw new Error('Gagal menyalin.');
+                    }
                 }
+
+                copyButton.textContent = 'check';
+
+                setTimeout(() => {
+                    copyButton.textContent = 'content_copy';
+                }, 1200);
+            } catch (error) {
+                console.error(error);
+                alert('Tidak bisa menyalin jawaban. Coba lagi.');
+            }
+        });
+
+        function giveFeedback(button, positive) {
+            if (message.loading) return;
+
+            const feedback = positive ? 'like' : 'dislike';
+
+            message.feedback =
+                message.feedback === feedback ? null : feedback;
+
+            saveSessions();
+
+            [likeButton, dislikeButton].forEach(item => {
+                if (!item) return;
+
+                item.style.color = '#aaa';
+                item.style.transform = 'scale(1)';
+                item.title = '';
             });
+
+            if (message.feedback) {
+                button.style.color = '#52685a';
+                button.style.transform = 'scale(1.12)';
+                button.title = 'Feedback tersimpan';
+            }
+        }
+
+        likeButton?.addEventListener('click', () => {
+            giveFeedback(likeButton, true);
+        });
+
+        dislikeButton?.addEventListener('click', () => {
+            giveFeedback(dislikeButton, false);
+        });
+
+        // Pulihkan tampilan feedback ketika chat dibuka kembali.
+        if (message.feedback === 'like' && likeButton) {
+            likeButton.style.color = '#52685a';
+            likeButton.title = 'Feedback tersimpan';
+        }
+
+        if (message.feedback === 'dislike' && dislikeButton) {
+            dislikeButton.style.color = '#52685a';
+            dislikeButton.title = 'Feedback tersimpan';
         }
 
         conversationList.appendChild(card);
     }
 
-    // =====================================
+    function $$(selector, root = document) {
+        return Array.from(root.querySelectorAll(selector));
+    }
+
+    function renderSession() {
+        conversationList.innerHTML = '';
+
+        if (!activeSession.messages.length) {
+            welcomeScreen.classList.remove('hidden');
+            return;
+        }
+
+        welcomeScreen.classList.add('hidden');
+
+        activeSession.messages.forEach(message => {
+            if (message.role === 'user') {
+                renderUserMessage(message);
+            } else {
+                renderAssistantMessage(message);
+            }
+        });
+    }
+
+    // =========================================
     // SOURCES
-    // =====================================
+    // =========================================
 
     function renderSources(element, items) {
         if (!element) return;
@@ -459,9 +539,9 @@
         infoCard?.classList.remove('hidden');
     }
 
-    // =====================================
+    // =========================================
     // RELATED QUESTIONS
-    // =====================================
+    // =========================================
 
     function renderRelated(element, items) {
         if (!element) return;
@@ -491,6 +571,7 @@
                 : item.question || item.text;
 
             const li = document.createElement('li');
+
             li.textContent = question;
 
             li.addEventListener('click', () => {
@@ -503,21 +584,28 @@
         infoCard?.classList.remove('hidden');
     }
 
-    // =====================================
+    // =========================================
     // KIRIM PERTANYAAN
-    // =====================================
+    // =========================================
 
     form.addEventListener('submit', event => {
         event.preventDefault();
 
         const question = input.value.trim();
 
-        if (question) {
+        if (question && !isSending) {
             sendMessage(question);
         }
     });
 
     async function sendMessage(question) {
+        if (isSending) return;
+
+        isSending = true;
+
+        const submitButton = $('#submit-btn');
+        if (submitButton) submitButton.disabled = true;
+
         welcomeScreen.classList.add('hidden');
 
         input.value = '';
@@ -546,17 +634,9 @@
 
         activeSession.messages.push(assistantMessage);
 
-        activeSession.updatedAt = Date.now();
-
-        saveSessions();
-        renderHistory();
+        updateSession();
         renderSession();
-
-        const chatArea = $('.chat-area');
-
-        if (chatArea) {
-            chatArea.scrollTop = chatArea.scrollHeight;
-        }
+        scrollToBottom();
 
         try {
             const response = await fetch(
@@ -587,36 +667,125 @@
                     : [];
 
         } catch (error) {
-            console.error('SmartAI:', error);
+            console.error('SmartAI API:', error);
 
             assistantMessage.content =
                 'Maaf, ada kendala saat mengambil jawaban. ' +
-                'Coba kirim pertanyaan sekali lagi, ya.';
-        }
+                'Silakan coba lagi sebentar, ya.';
+        } finally {
+            assistantMessage.loading = false;
+            isSending = false;
 
-        assistantMessage.loading = false;
+            if (submitButton) submitButton.disabled = false;
 
-        activeSession.updatedAt = Date.now();
-
-        saveSessions();
-        renderHistory();
-        renderSession();
-
-        if (chatArea) {
-            chatArea.scrollTop = chatArea.scrollHeight;
+            updateSession();
+            renderSession();
+            scrollToBottom();
         }
     }
 
-    // =====================================
-    // HAPUS SEMUA HISTORY
-    // =====================================
+    function scrollToBottom() {
+        requestAnimationFrame(() => {
+            if (chatArea) {
+                chatArea.scrollTo({
+                    top: chatArea.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        });
+    }
+
+    // =========================================
+    // AKTIFKAN QUICK ACTIONS
+    // =========================================
+
+    const quickActionPrompts = {
+        'Job Finder UX':
+            'Bantu saya merancang UX aplikasi pencarian kerja yang modern. Jelaskan fitur utama, alur pengguna, dan contoh tampilannya.',
+
+        'Marketing Strategy':
+            'Bantu saya menyusun strategi pemasaran yang efektif. Jelaskan target pasar, positioning, kanal pemasaran, dan cara mengukur hasilnya.'
+    };
+
+    $$('.action-pill').forEach(pill => {
+        pill.style.cursor = 'pointer';
+        pill.setAttribute('role', 'button');
+        pill.setAttribute('tabindex', '0');
+
+        function activate() {
+            const label = pill.innerText.trim();
+            const prompt = quickActionPrompts[label];
+
+            if (prompt) {
+                sendMessage(prompt);
+            } else {
+                input.value = label;
+                input.focus();
+            }
+        }
+
+        pill.addEventListener('click', activate);
+
+        pill.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                activate();
+            }
+        });
+    });
+
+    // =========================================
+    // AKTIFKAN KARTU BUSINESS DAN CODING
+    // =========================================
+
+    const explorePrompts = {
+        Business:
+            'Bantu saya menganalisis sebuah bisnis. Jelaskan target pasar, pesaing, peluang, risiko, dan strategi pengembangannya.',
+
+        Coding:
+            'Bantu saya membuat program. Tanyakan kebutuhan saya jika bahasa pemrograman, tujuan, atau fitur yang diperlukan belum jelas.'
+    };
+
+    $$('.explore-card').forEach(card => {
+        card.style.cursor = 'pointer';
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+
+        function activate() {
+            const heading = $('h3', card)?.textContent.trim();
+            const prompt = explorePrompts[heading];
+
+            if (prompt) {
+                sendMessage(prompt);
+            }
+        }
+
+        card.addEventListener('click', activate);
+
+        card.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                activate();
+            }
+        });
+    });
+
+    // =========================================
+    // CLEAR HISTORY
+    // =========================================
 
     clearHistoryBtn?.addEventListener('click', () => {
         if (!confirm('Hapus semua riwayat obrolan?')) {
             return;
         }
 
+        if (isSending) {
+            alert('Tunggu jawaban selesai sebelum menghapus riwayat.');
+            return;
+        }
+
         sessions = [];
+
         activeSession = createSession();
         activeSessionId = activeSession.id;
 
@@ -632,9 +801,9 @@
         sidebarOverlay.classList.remove('sidebar-visible');
     });
 
-    // =====================================
+    // =========================================
     // MULAI APLIKASI
-    // =====================================
+    // =========================================
 
     saveSessions();
     renderHistory();
