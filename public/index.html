@@ -1,124 +1,255 @@
-
 <!doctype html>
-<html lang="id">
+<html lang="id" data-theme="dark" data-density="standard">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f7f5ef">
-  <meta name="description" content="HAOMI — AI serbaguna dan ruang kerja digital.">
-  <title>HAOMI — Ruang Kerja AI</title>
+  <meta name="theme-color" content="#09090b">
+  <meta name="description" content="HAOMI — Ruang kerja AI multi-model dan utilitas digital.">
+  <title>HAOMI — AI &amp; Digital Utilities</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <script src="/script.js" defer></script>
 </head>
 <body>
-  <div class="app-shell">
+  <div class="app-shell" id="appShell">
+    <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
-      <div class="sidebar-brand">
-        <a class="brand-lockup" href="/" aria-label="HAOMI beranda">
-          <span class="brand-mark">h</span>
-          <span class="brand-name">haomi<span class="brand-dot">.</span></span>
+      <div class="sidebar-header">
+        <a class="brand-lockup" href="#chat" data-view="chat" aria-label="HAOMI Beranda">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 6v12"/>
+              <path d="M20 6v12"/>
+              <path d="M4 12h16"/>
+              <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+            </svg>
+          </span>
+          <span class="brand-text">
+            <span class="brand-name">HAOMI</span>
+            <span class="brand-tag">CONSOLE</span>
+          </span>
         </a>
-        <button class="icon-button sidebar-close" id="closeSidebar" aria-label="Tutup menu">×</button>
+        <button type="button" class="icon-button sidebar-close" id="closeSidebar" aria-label="Tutup navigasi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
       </div>
 
-      <button class="new-chat-button" id="newChatButton">
-        <span class="new-chat-plus">＋</span>
-        <span>Obrolan baru</span>
-        <span class="shortcut">Ctrl K</span>
-      </button>
+      <div class="sidebar-top-actions">
+        <button type="button" class="new-chat-button" id="newChatButton">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Obrolan baru</span>
+          <kbd class="kbd-hint">Ctrl K</kbd>
+        </button>
+      </div>
 
       <div class="sidebar-section">
-        <div class="section-label">RUANG KERJA</div>
-        <nav class="workspace-nav">
-          <button class="nav-item active" data-view="chat">
-            <span class="nav-icon">◇</span><span>Chat AI</span>
+        <div class="section-label">MODUL &amp; UTILITAS</div>
+        <nav class="workspace-nav" aria-label="Menu fitur">
+          <button type="button" class="nav-item active" data-view="chat">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>Chat AI</span>
+            <span class="nav-meta" id="navModelIndicator">GPT-4o</span>
           </button>
-          <button class="nav-item" data-view="alight">
-            <span class="nav-icon">▶</span><span>Alight Motion</span>
+          <button type="button" class="nav-item" data-view="alight">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            <span>Alight Motion</span>
           </button>
-          <button class="nav-item" data-view="urlscan">
-            <span class="nav-icon">⌕</span><span>Scan URL</span>
+          <button type="button" class="nav-item" data-view="urlscan">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.3-4.3"/>
+              <path d="M8 11h6"/>
+            </svg>
+            <span>Scan URL</span>
           </button>
-          <button class="nav-item" data-view="whatsapp">
-            <span class="nav-icon">◎</span><span>Reaksi WhatsApp</span>
+          <button type="button" class="nav-item" data-view="whatsapp">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+              <path d="M9 10h.01M15 10h.01M9.5 14a3.5 3.5 0 0 0 5 0"/>
+            </svg>
+            <span>Reaksi WhatsApp</span>
           </button>
         </nav>
       </div>
 
       <div class="history-section">
         <div class="history-heading">
-          <span class="section-label">RIWAYAT</span>
+          <span class="section-label">RIWAYAT OBROLAN</span>
           <span class="history-count" id="historyCount">0</span>
         </div>
-        <label class="history-search">
-          <span>⌕</span>
-          <input id="historySearch" type="search" placeholder="Cari percakapan..." autocomplete="off">
-          <span class="search-shortcut">/</span>
+        <label class="history-search" aria-label="Cari riwayat percakapan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="historySearch" type="search" placeholder="Filter percakapan..." autocomplete="off">
+          <kbd class="kbd-hint">/</kbd>
         </label>
-        <div id="conversationList" class="conversation-list"></div>
+        <div id="conversationList" class="conversation-list" role="list"></div>
       </div>
 
-      <div class="sidebar-bottom">
-        <div class="sidebar-note"><span class="status-dot"></span><span>Ruang kerja pribadi</span></div>
-        <button class="settings-nav-button" id="openSettings" type="button">
-          <span class="settings-nav-icon">⚙</span><span>Pengaturan</span><span class="settings-nav-shortcut">↗</span>
+      <div class="sidebar-footer">
+        <button type="button" class="sidebar-utility-btn" id="openSettings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+            <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+            <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+          </svg>
+          <span>Pengaturan</span>
+          <kbd class="kbd-hint">Ctrl ,</kbd>
+        </button>
+        <button type="button" class="icon-button theme-quick-btn" id="quickThemeToggle" aria-label="Ganti tema tampilan" title="Ganti Tema (Gelap / Terang)">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+          </svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+          </svg>
         </button>
       </div>
     </aside>
 
-    <button id="sidebarOverlay" class="sidebar-overlay" aria-label="Tutup menu"></button>
+    <button type="button" id="sidebarOverlay" class="sidebar-overlay" aria-label="Tutup navigasi"></button>
 
+    <!-- Main Workspace Panel -->
     <main class="main-panel">
       <header class="topbar">
         <div class="topbar-left">
-          <button class="icon-button menu-button" id="openSidebar" aria-label="Buka menu">
-            <span class="hamburger">☰</span>
+          <button type="button" class="icon-button menu-button" id="openSidebar" aria-label="Buka atau tutup sidebar" title="Toggle Sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2"/>
+              <path d="M9 3v18"/>
+            </svg>
           </button>
           <div class="breadcrumb">
             <span class="breadcrumb-brand">HAOMI</span>
             <span class="breadcrumb-divider">/</span>
-            <span id="breadcrumbTitle">Chat AI</span>
+            <span id="breadcrumbTitle" class="breadcrumb-current">Chat AI</span>
+            <span class="breadcrumb-divider" id="chatTitleDivider">/</span>
+            <span id="activeChatTitle" class="breadcrumb-sub">Obrolan baru</span>
           </div>
         </div>
+
         <div class="topbar-right">
-          <span class="workspace-indicator"><span class="status-dot"></span> Siap membantu</span>
-          <button class="icon-button settings-top-button" id="openSettingsTop" aria-label="Pengaturan">⚙</button>
+          <button type="button" class="topbar-action-btn" id="resetSessionButton" title="Mulai ulang sesi konteks AI pada obrolan ini">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            <span>Reset Konteks</span>
+          </button>
+          <button type="button" class="topbar-action-btn" id="exportChatButton" title="Unduh salinan percakapan saat ini (.md)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Ekspor</span>
+          </button>
+          <button type="button" class="icon-button settings-top-button" id="openSettingsTop" aria-label="Buka pengaturan" title="Pengaturan (Ctrl ,)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
         </div>
       </header>
 
+      <!-- VIEW 1: CHAT AI -->
       <section class="view chat-view active" id="chatView">
         <div class="chat-scroll" id="chatScroll">
           <section class="welcome-screen" id="welcomeScreen">
-            <div class="welcome-kicker"><span class="status-dot"></span> RUANG KERJA AI PRIBADI</div>
-            <div class="welcome-emblem">h.</div>
-            <h1>Selamat datang.<br><span>Apa yang sedang kamu pikirkan?</span></h1>
-            <p class="welcome-description">
-              Ruang untuk mengurai ide, menyelesaikan pekerjaan, dan menemukan langkah berikutnya.
-            </p>
+            <div class="welcome-header">
+              <div class="welcome-status-pills">
+                <button type="button" class="status-pill" id="welcomeModelBadge" title="Klik untuk mengganti model AI">
+                  <span class="status-dot"></span>
+                  <span id="welcomeModelText">Model: GPT-4o</span>
+                </button>
+                <button type="button" class="status-pill" id="welcomeStyleBadge" title="Klik untuk mengatur gaya respons di Pengaturan">
+                  <span id="welcomeStyleText">Gaya: Standar</span>
+                </button>
+                <button type="button" class="status-pill" id="welcomeStorageBadge" title="Status penyimpanan riwayat lokal">
+                  <span id="welcomeStorageText">Riwayat Lokal: Aktif</span>
+                </button>
+              </div>
+              <h1>Apa yang ingin Anda kerjakan hari ini?</h1>
+              <p class="welcome-description">
+                Pilih template perintah di bawah, ketik pertanyaan langsung, atau jalankan modul utilitas dari bilah alat.
+              </p>
+            </div>
 
             <div class="prompt-grid">
-              <button class="prompt-card" data-prompt="Jelaskan suatu topik dengan bahasa sederhana, contoh nyata, dan ringkasan yang mudah diingat.">
-                <span class="prompt-card-icon">✳</span>
-                <span class="prompt-card-copy"><strong>Belajar sesuatu</strong><small>Pahami topik dengan mudah</small></span>
-                <span class="prompt-arrow">↗</span>
+              <button type="button" class="prompt-card" data-prompt="Bantu saya menulis, meninjau, atau memperbaiki kode. Jelaskan penyebab masalah secara teknis dan berikan solusi yang bersih.">
+                <div class="prompt-card-top">
+                  <span class="prompt-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                  </span>
+                  <span class="prompt-tag">Engineering</span>
+                </div>
+                <div class="prompt-card-copy">
+                  <strong>Tulis &amp; Debug Kode</strong>
+                  <small>Audit logika, perbaiki bug, atau bangun fungsi baru secara terstruktur</small>
+                </div>
               </button>
-              <button class="prompt-card" data-prompt="Bantu aku mencari ide kreatif. Berikan beberapa alternatif beserta kelebihan dan kekurangannya.">
-                <span class="prompt-card-icon">✧</span>
-                <span class="prompt-card-copy"><strong>Cari ide</strong><small>Mulai dari kemungkinan baru</small></span>
-                <span class="prompt-arrow">↗</span>
+
+              <button type="button" class="prompt-card" data-prompt="Jelaskan topik berikut secara mendalam namun ringkas: mulai dari konsep inti, cara kerja, contoh nyata, dan poin kuncinya.">
+                <div class="prompt-card-top">
+                  <span class="prompt-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                  </span>
+                  <span class="prompt-tag">Analisis</span>
+                </div>
+                <div class="prompt-card-copy">
+                  <strong>Bedah Konsep &amp; Materi</strong>
+                  <small>Pelajari topik kompleks dengan penjelasan terstruktur dan contoh nyata</small>
+                </div>
               </button>
-              <button class="prompt-card" data-prompt="Bantu aku menulis, meninjau, atau memperbaiki kode. Tanyakan detail yang diperlukan jika konteksnya belum cukup.">
-                <span class="prompt-card-icon">⌘</span>
-                <span class="prompt-card-copy"><strong>Bantu coding</strong><small>Bangun dan perbaiki kode</small></span>
-                <span class="prompt-arrow">↗</span>
+
+              <button type="button" class="prompt-card" data-prompt="Bantu saya menyusun rencana eksekusi yang realistis lengkap dengan tahapan, prioritas, estimasi langkah, dan mitigasi risiko.">
+                <div class="prompt-card-top">
+                  <span class="prompt-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
+                  </span>
+                  <span class="prompt-tag">Perencanaan</span>
+                </div>
+                <div class="prompt-card-copy">
+                  <strong>Susun Rencana Kerja</strong>
+                  <small>Ubah target proyek menjadi daftar langkah prioritas yang terukur</small>
+                </div>
               </button>
-              <button class="prompt-card" data-prompt="Bantu aku menyusun rencana yang realistis dengan langkah-langkah, prioritas, dan target yang jelas.">
-                <span class="prompt-card-icon">◷</span>
-                <span class="prompt-card-copy"><strong>Susun rencana</strong><small>Ubah tujuan jadi langkah nyata</small></span>
-                <span class="prompt-arrow">↗</span>
+
+              <button type="button" class="prompt-card" data-prompt="Rapikan dan tulis ulang draf teks berikut agar terdengar profesional, lugas, dan mengalir alami tanpa mengubah intinya.">
+                <div class="prompt-card-top">
+                  <span class="prompt-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                  </span>
+                  <span class="prompt-tag">Penulisan</span>
+                </div>
+                <div class="prompt-card-copy">
+                  <strong>Editor &amp; Penulisan Ulang</strong>
+                  <small>Perbaiki tata bahasa, nada komunikasi, dan kejelasan dokumen</small>
+                </div>
+              </button>
+            </div>
+
+            <div class="quick-modules-bar">
+              <span class="quick-modules-label">Modul langsung:</span>
+              <button type="button" class="quick-module-chip" data-view="alight">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>Alight Motion</span>
+              </button>
+              <button type="button" class="quick-module-chip" data-view="urlscan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <span>Scan URL</span>
+              </button>
+              <button type="button" class="quick-module-chip" data-view="whatsapp">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                <span>Reaksi WhatsApp</span>
               </button>
             </div>
           </section>
@@ -127,187 +258,482 @@
         </div>
 
         <div class="composer-dock">
+          <!-- Popover menu for quick tools inside composer -->
+          <div class="composer-tools-popover" id="composerToolsMenu" hidden>
+            <div class="popover-label">Pindah ke Modul atau Tindakan</div>
+            <button type="button" class="popover-item" data-view="alight">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <div>
+                <strong>Alight Motion</strong>
+                <small>Kirim &amp; verifikasi tautan akun</small>
+              </div>
+            </button>
+            <button type="button" class="popover-item" data-view="urlscan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <div>
+                <strong>Scan URL</strong>
+                <small>Periksa tautan melalui URL scanner</small>
+              </div>
+            </button>
+            <button type="button" class="popover-item" data-view="whatsapp">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+              <div>
+                <strong>Reaksi WhatsApp</strong>
+                <small>Kirim reaksi emoji ke saluran WA</small>
+              </div>
+            </button>
+            <div class="popover-divider"></div>
+            <button type="button" class="popover-item" id="popoverResetChat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              <div>
+                <strong>Reset Konteks Sesi</strong>
+                <small>Segarkan memori sesi AI pada obrolan ini</small>
+              </div>
+            </button>
+          </div>
+
           <form id="chatForm" class="composer">
-            <textarea id="chatInput" rows="1" placeholder="Tulis pesan untuk HAOMI..." aria-label="Pesan untuk HAOMI"></textarea>
+            <textarea id="chatInput" rows="1" placeholder="Ketik pesan atau instruksi..." aria-label="Pesan untuk HAOMI"></textarea>
             <div class="composer-toolbar">
-              <button type="button" class="composer-tool-button" id="composerToolsButton" aria-label="Lihat alat">＋</button>
+              <button type="button" class="composer-tool-button" id="composerToolsButton" aria-label="Menu modul dan tindakan" aria-expanded="false" title="Modul &amp; Tindakan Cepat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="7" height="7" x="3" y="3" rx="1"/>
+                  <rect width="7" height="7" x="14" y="3" rx="1"/>
+                  <rect width="7" height="7" x="14" y="14" rx="1"/>
+                  <rect width="7" height="7" x="3" y="14" rx="1"/>
+                </svg>
+                <span>Modul</span>
+              </button>
 
               <div class="model-picker">
-                <button type="button" class="model-picker-trigger" id="modelPickerTrigger" aria-haspopup="dialog" aria-expanded="false">
-                  <span class="model-live-dot"></span>
+                <button type="button" class="model-picker-trigger" id="modelPickerTrigger" aria-haspopup="dialog" aria-expanded="false" title="Pilih Model AI">
+                  <span class="model-provider-tag" id="selectedModelProvider">OpenAI</span>
                   <span id="selectedModelLabel">GPT-4o</span>
-                  <span class="model-chevron">⌄</span>
+                  <svg class="model-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
                 </button>
               </div>
 
-              <button type="submit" class="send-button" id="sendButton" aria-label="Kirim pesan">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>
-              </button>
+              <div class="composer-right">
+                <span class="enter-hint" id="enterHintBadge">Enter ↵</span>
+                <button type="submit" class="send-button" id="sendButton" aria-label="Kirim pesan">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </form>
-          <p class="disclaimer">HAOMI bisa keliru. Periksa kembali informasi penting.</p>
         </div>
       </section>
 
+      <!-- VIEW 2: ALIGHT MOTION -->
       <section class="view tool-view" id="alightView" hidden>
-        <button class="back-to-chat" data-view="chat">← Kembali ke chat</button>
-        <div class="tool-hero">
-          <div class="tool-hero-icon">▶</div>
-          <div><div class="eyebrow">HAOMI TOOLS</div><h1>Alight Motion</h1><p>Kirim permintaan verifikasi atau proses tautan verifikasi akun milikmu.</p></div>
+        <div class="tool-topbar">
+          <button type="button" class="back-to-chat" data-view="chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Kembali ke Chat AI</span>
+          </button>
+          <span class="endpoint-badge">POST /api · am-send / am-verify</span>
         </div>
-        <form id="alightForm" class="tool-card">
-          <label for="alightAction">Tindakan</label>
-          <select id="alightAction">
-            <option value="am-send">Kirim permintaan verifikasi</option>
-            <option value="am-verify">Verifikasi tautan akun</option>
-          </select>
-          <label for="alightEmail">Email akun</label>
-          <input id="alightEmail" type="email" placeholder="nama@email.com" required autocomplete="email">
-          <p class="field-hint">Gunakan email yang kamu miliki atau berwenang mengelolanya.</p>
-          <div id="verificationLinkGroup" hidden>
-            <label for="alightLink">Tautan verifikasi</label>
-            <textarea id="alightLink" rows="3" placeholder="Tempel tautan verifikasi milikmu"></textarea>
-            <p class="field-hint">Tautan autentikasi bersifat rahasia. Jangan bagikan kepada orang lain.</p>
+
+        <div class="tool-hero">
+          <div class="tool-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
           </div>
-          <button class="primary-tool-button" id="alightSubmit" type="submit">Jalankan alat <span>→</span></button>
-        </form>
-        <div class="tool-notice">Gunakan email dan tautan verifikasi milikmu sendiri. Jangan gunakan alat ini untuk mengakses akun orang lain.</div>
-        <section class="result-card">
-          <div class="result-heading"><h2>Hasil</h2><button type="button" data-copy-result="alightResult">Salin hasil</button></div>
-          <pre id="alightResult" class="tool-result">Hasil akan muncul di sini setelah alat dijalankan.</pre>
-        </section>
+          <div>
+            <h1>Alight Motion</h1>
+            <p>Kirim permintaan email verifikasi atau proses tautan autentikasi akun Alight Motion Anda.</p>
+          </div>
+        </div>
+
+        <div class="workbench-grid">
+          <form id="alightForm" class="tool-card">
+            <div class="card-section-title">Konfigurasi Permintaan</div>
+
+            <div class="segmented-tabs" role="tablist" aria-label="Pilih mode Alight Motion">
+              <button type="button" class="mode-tab active" data-am-mode="am-send">1. Kirim Verifikasi</button>
+              <button type="button" class="mode-tab" data-am-mode="am-verify">2. Verifikasi Tautan</button>
+            </div>
+
+            <div class="visually-hidden-select">
+              <label for="alightAction">Tindakan</label>
+              <select id="alightAction">
+                <option value="am-send">Kirim permintaan verifikasi</option>
+                <option value="am-verify">Verifikasi tautan akun</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label for="alightEmail">Alamat Email Akun</label>
+              <input id="alightEmail" type="email" placeholder="nama@domain.com" required autocomplete="email">
+              <p class="field-hint">Pastikan email aktif dan dapat menerima pesan masuk untuk tautan autentikasi.</p>
+            </div>
+
+            <div id="verificationLinkGroup" class="field-group" hidden>
+              <label for="alightLink">Tautan Verifikasi</label>
+              <textarea id="alightLink" rows="3" placeholder="https://..."></textarea>
+              <p class="field-hint">Tempel tautan verifikasi lengkap yang diterima pada kotak masuk email Anda.</p>
+            </div>
+
+            <button class="primary-tool-button" id="alightSubmit" type="submit">
+              <span>Kirim permintaan</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <section class="result-card">
+            <div class="result-heading">
+              <div class="result-title-group">
+                <h2>Respons Layanan</h2>
+                <span class="status-tag" id="alightStatusBadge">Siap</span>
+                <span class="time-tag" id="alightTimeBadge" hidden>0 ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="result-action-btn" data-copy-result="alightResult">Salin</button>
+                <button type="button" class="result-action-btn" data-clear-result="alightResult">Bersihkan</button>
+              </div>
+            </div>
+            <div id="alightSummary" class="structured-summary" hidden></div>
+            <pre id="alightResult" class="tool-result">Menunggu eksekusi permintaan. Isi formulir di samping lalu jalankan alat.</pre>
+          </section>
+        </div>
       </section>
 
+      <!-- VIEW 3: SCAN URL -->
       <section class="view tool-view" id="urlscanView" hidden>
-        <button class="back-to-chat" data-view="chat">← Kembali ke chat</button>
-        <div class="tool-hero">
-          <div class="tool-hero-icon">⌕</div>
-          <div><div class="eyebrow">HAOMI TOOLS</div><h1>Scan URL</h1><p>Periksa sebuah tautan menggunakan layanan pemindai yang tersedia.</p></div>
+        <div class="tool-topbar">
+          <button type="button" class="back-to-chat" data-view="chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Kembali ke Chat AI</span>
+          </button>
+          <span class="endpoint-badge">POST /api · urlscan</span>
         </div>
-        <form id="urlscanForm" class="tool-card">
-          <label for="scanUrl">URL yang ingin diperiksa</label>
-          <input id="scanUrl" type="url" placeholder="https://contoh.com" required>
-          <p class="field-hint">Pemindaian bergantung pada respons endpoint. Hasil bukan jaminan mutlak bahwa sebuah situs aman.</p>
-          <button class="primary-tool-button" id="urlscanSubmit" type="submit">Periksa URL <span>→</span></button>
-        </form>
-        <section class="result-card">
-          <div class="result-heading"><h2>Hasil pemindaian</h2><button type="button" data-copy-result="urlscanResult">Salin hasil</button></div>
-          <pre id="urlscanResult" class="tool-result">Hasil pemindaian akan muncul di sini.</pre>
-        </section>
+
+        <div class="tool-hero">
+          <div class="tool-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/>
+            </svg>
+          </div>
+          <div>
+            <h1>Scan URL</h1>
+            <p>Inspeksi reputasi, metadata, dan hasil pemindaian keamanan tautan melalui endpoint URL Scanner.</p>
+          </div>
+        </div>
+
+        <div class="workbench-grid">
+          <form id="urlscanForm" class="tool-card">
+            <div class="card-section-title">Target Pemindaian</div>
+
+            <div class="field-group">
+              <div class="label-row">
+                <label for="scanUrl">URL Target</label>
+                <button type="button" class="inline-helper-btn" id="pasteUrlBtn">Tempel Clipboard</button>
+              </div>
+              <input id="scanUrl" type="url" placeholder="https://contoh.com" required>
+              <p class="field-hint">Wajib menggunakan protokol HTTP atau HTTPS (contoh: https://example.com).</p>
+            </div>
+
+            <button class="primary-tool-button" id="urlscanSubmit" type="submit">
+              <span>Periksa URL</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <section class="result-card">
+            <div class="result-heading">
+              <div class="result-title-group">
+                <h2>Hasil Pemindaian</h2>
+                <span class="status-tag" id="urlscanStatusBadge">Siap</span>
+                <span class="time-tag" id="urlscanTimeBadge" hidden>0 ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="result-action-btn" data-copy-result="urlscanResult">Salin</button>
+                <button type="button" class="result-action-btn" data-clear-result="urlscanResult">Bersihkan</button>
+              </div>
+            </div>
+            <div id="urlscanSummary" class="structured-summary" hidden></div>
+            <pre id="urlscanResult" class="tool-result">Hasil pemindaian URL akan ditampilkan di sini.</pre>
+          </section>
+        </div>
       </section>
 
+      <!-- VIEW 4: REAKSI WHATSAPP -->
       <section class="view tool-view" id="whatsappView" hidden>
-        <button class="back-to-chat" data-view="chat">← Kembali ke chat</button>
-        <div class="tool-hero">
-          <div class="tool-hero-icon">◎</div>
-          <div><div class="eyebrow">HAOMI TOOLS</div><h1>Reaksi WhatsApp</h1><p>Kirim reaksi ke tautan pesan atau kanal yang didukung endpoint.</p></div>
+        <div class="tool-topbar">
+          <button type="button" class="back-to-chat" data-view="chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Kembali ke Chat AI</span>
+          </button>
+          <span class="endpoint-badge">POST /api · whatsapp-react</span>
         </div>
-        <form id="whatsappForm" class="tool-card">
-          <label for="whatsappUrl">Tautan WhatsApp</label>
-          <input id="whatsappUrl" type="url" placeholder="https://whatsapp.com/channel/..." required>
-          <label for="whatsappReaction">Emoji reaksi</label>
-          <input id="whatsappReaction" type="text" value="🙄,💦,🥰,😋" required>
-          <p class="field-hint">Pisahkan beberapa emoji dengan koma. Dukungan bergantung pada endpoint dan izin akun.</p>
-          <button class="primary-tool-button" id="whatsappSubmit" type="submit">Kirim reaksi <span>→</span></button>
-        </form>
-        <section class="result-card">
-          <div class="result-heading"><h2>Hasil</h2><button type="button" data-copy-result="whatsappResult">Salin hasil</button></div>
-          <pre id="whatsappResult" class="tool-result">Status permintaan akan muncul di sini.</pre>
-        </section>
-      </section>
 
-      <footer class="app-footer">HAOMI <span>·</span> Ruang kerja AI pribadi</footer>
+        <div class="tool-hero">
+          <div class="tool-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9 10h.01M15 10h.01M9.5 14a3.5 3.5 0 0 0 5 0"/>
+            </svg>
+          </div>
+          <div>
+            <h1>Reaksi WhatsApp</h1>
+            <p>Kirim kombinasi reaksi emoji ke tautan postingan saluran (channel) WhatsApp.</p>
+          </div>
+        </div>
+
+        <div class="workbench-grid">
+          <form id="whatsappForm" class="tool-card">
+            <div class="card-section-title">Parameter Reaksi</div>
+
+            <div class="field-group">
+              <label for="whatsappUrl">Tautan Saluran / Postingan WhatsApp</label>
+              <input id="whatsappUrl" type="url" placeholder="https://whatsapp.com/channel/..." required>
+            </div>
+
+            <div class="field-group">
+              <div class="label-row">
+                <label for="whatsappReaction">Daftar Emoji Reaksi</label>
+                <button type="button" class="inline-helper-btn" id="resetWaEmojiBtn" title="Kembalikan ke emoji default dari Pengaturan">Reset Default</button>
+              </div>
+              <input id="whatsappReaction" type="text" value="🙄,💦,🥰,😋" required>
+              <p class="field-hint">Pisahkan setiap emoji dengan tanda koma. Klik emoji di bawah untuk menambah atau menghapus cepat:</p>
+              <div class="emoji-picker-bar" id="waEmojiQuickBar" aria-label="Pilihan cepat emoji">
+                <button type="button" class="emoji-chip" data-emoji="❤️">❤️</button>
+                <button type="button" class="emoji-chip" data-emoji="🔥">🔥</button>
+                <button type="button" class="emoji-chip" data-emoji="👍">👍</button>
+                <button type="button" class="emoji-chip" data-emoji="😂">😂</button>
+                <button type="button" class="emoji-chip" data-emoji="🥰">🥰</button>
+                <button type="button" class="emoji-chip" data-emoji="😋">😋</button>
+                <button type="button" class="emoji-chip" data-emoji="🙄">🙄</button>
+                <button type="button" class="emoji-chip" data-emoji="💦">💦</button>
+                <button type="button" class="emoji-chip" data-emoji="🎉">🎉</button>
+                <button type="button" class="emoji-chip" data-emoji="⚡">⚡</button>
+              </div>
+            </div>
+
+            <button class="primary-tool-button" id="whatsappSubmit" type="submit">
+              <span>Kirim reaksi</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <section class="result-card">
+            <div class="result-heading">
+              <div class="result-title-group">
+                <h2>Status Pengiriman</h2>
+                <span class="status-tag" id="whatsappStatusBadge">Siap</span>
+                <span class="time-tag" id="whatsappTimeBadge" hidden>0 ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="result-action-btn" data-copy-result="whatsappResult">Salin</button>
+                <button type="button" class="result-action-btn" data-clear-result="whatsappResult">Bersihkan</button>
+              </div>
+            </div>
+            <div id="whatsappSummary" class="structured-summary" hidden></div>
+            <pre id="whatsappResult" class="tool-result">Status pengiriman reaksi akan ditampilkan di sini.</pre>
+          </section>
+        </div>
+      </section>
     </main>
   </div>
 
-  <section class="model-dialog-backdrop" id="modelDialog" hidden>
-    <div class="model-dialog" role="dialog" aria-modal="true" aria-labelledby="modelDialogTitle">
-      <div class="model-dialog-header">
-        <div><span class="eyebrow">PILIHAN MODEL</span><h2 id="modelDialogTitle">Pilih cara berpikir</h2><p>Pilih model untuk obrolan ini.</p></div>
-        <button type="button" class="icon-button" id="closeModelDialog" aria-label="Tutup">×</button>
+  <!-- MODAL 1: MODEL PICKER -->
+  <section class="dialog-backdrop" id="modelDialog" hidden>
+    <div class="modal-card model-dialog" role="dialog" aria-modal="true" aria-labelledby="modelDialogTitle">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">ARSITEKTUR MODEL</span>
+          <h2 id="modelDialogTitle">Pilih Model AI</h2>
+        </div>
+        <button type="button" class="icon-button" id="closeModelDialog" aria-label="Tutup dialog model">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
       </div>
-      <label class="model-search"><span>⌕</span><input id="modelSearch" type="search" placeholder="Cari model AI..." autocomplete="off"></label>
+
+      <div class="model-controls">
+        <label class="model-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="modelSearch" type="search" placeholder="Cari nama model atau penyedia (cth: Claude, GPT, Gemini)..." autocomplete="off">
+        </label>
+        <div class="provider-filters" id="providerFilters" role="tablist" aria-label="Filter penyedia model">
+          <button type="button" class="provider-filter active" data-provider="all">Semua (26)</button>
+          <button type="button" class="provider-filter" data-provider="OpenAI">OpenAI</button>
+          <button type="button" class="provider-filter" data-provider="Anthropic">Anthropic</button>
+          <button type="button" class="provider-filter" data-provider="Google">Google</button>
+          <button type="button" class="provider-filter" data-provider="DeepSeek">DeepSeek</button>
+          <button type="button" class="provider-filter" data-provider="other">Lainnya</button>
+        </div>
+      </div>
+
       <div class="model-list" id="modelList">
-        <button type="button" class="model-option" data-model="openai/gpt-4o"><span class="model-option-icon">O</span><span class="model-option-copy"><strong>GPT-4o</strong><small>Serbaguna dan responsif</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="openai/gpt-4o-mini"><span class="model-option-icon">O</span><span class="model-option-copy"><strong>GPT-4o mini</strong><small>Ringan untuk tugas sehari-hari</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="openai/gpt-5.6-terra"><span class="model-option-icon">O</span><span class="model-option-copy"><strong>GPT-5.6 Terra</strong><small>Model OpenAI yang tersedia di API</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="openai/gpt-5.5"><span class="model-option-icon">O</span><span class="model-option-copy"><strong>GPT-5.5</strong><small>Model OpenAI</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="openai/gpt-5.4"><span class="model-option-icon">O</span><span class="model-option-copy"><strong>GPT-5.4</strong><small>Model OpenAI</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="openai/gpt-5.3-chat"><span class="model-option-icon">O</span><span class="model-option-copy"><strong>GPT-5.3 Chat</strong><small>Model percakapan OpenAI</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="openai/gpt-5.1-instant"><span class="model-option-icon">O</span><span class="model-option-copy"><strong>GPT-5.1 Instant</strong><small>Model respons cepat</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="openai/gpt-5"><span class="model-option-icon">O</span><span class="model-option-copy"><strong>GPT-5</strong><small>Model OpenAI</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="chatday/ai-chat"><span class="model-option-icon">C</span><span class="model-option-copy"><strong>Chatday AI</strong><small>Model percakapan alternatif</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="xai/grok-4.1-fast-non-reasoning"><span class="model-option-icon">X</span><span class="model-option-copy"><strong>Grok 4.1 Fast</strong><small>xAI</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="anthropic/claude-haiku-4.5"><span class="model-option-icon">A</span><span class="model-option-copy"><strong>Claude Haiku 4.5</strong><small>Anthropic</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="anthropic/claude-sonnet-5"><span class="model-option-icon">A</span><span class="model-option-copy"><strong>Claude Sonnet 5</strong><small>Anthropic</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="anthropic/claude-sonnet-4.6"><span class="model-option-icon">A</span><span class="model-option-copy"><strong>Claude Sonnet 4.6</strong><small>Anthropic</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="anthropic/claude-opus-4.5"><span class="model-option-icon">A</span><span class="model-option-copy"><strong>Claude Opus 4.5</strong><small>Anthropic</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="anthropic/claude-opus-4.6"><span class="model-option-icon">A</span><span class="model-option-copy"><strong>Claude Opus 4.6</strong><small>Anthropic</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="anthropic/claude-opus-4.7"><span class="model-option-icon">A</span><span class="model-option-copy"><strong>Claude Opus 4.7</strong><small>Anthropic</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="anthropic/claude-opus-4.8"><span class="model-option-icon">A</span><span class="model-option-copy"><strong>Claude Opus 4.8</strong><small>Anthropic</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="deepseek/deepseek-v4-pro"><span class="model-option-icon">D</span><span class="model-option-copy"><strong>DeepSeek V4 Pro</strong><small>DeepSeek</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="deepseek/deepseek-v4-flash"><span class="model-option-icon">D</span><span class="model-option-copy"><strong>DeepSeek V4 Flash</strong><small>DeepSeek</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="deepseek/deepseek-v3.2-thinking"><span class="model-option-icon">D</span><span class="model-option-copy"><strong>DeepSeek V3.2 Thinking</strong><small>DeepSeek</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="google/gemini-3.1-pro-preview"><span class="model-option-icon">G</span><span class="model-option-copy"><strong>Gemini 3.1 Pro</strong><small>Google</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="google/gemini-3-pro-preview"><span class="model-option-icon">G</span><span class="model-option-copy"><strong>Gemini 3 Pro</strong><small>Google</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="google/gemini-3.1-flash-lite"><span class="model-option-icon">G</span><span class="model-option-copy"><strong>Gemini 3.1 Flash Lite</strong><small>Google</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="alibaba/qwen3-max"><span class="model-option-icon">Q</span><span class="model-option-copy"><strong>Qwen3 Max</strong><small>Alibaba</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="meta/llama-4-maverick"><span class="model-option-icon">L</span><span class="model-option-copy"><strong>Llama 4 Maverick</strong><small>Meta</small></span><span class="model-check">✓</span></button>
-        <button type="button" class="model-option" data-model="moonshotai/kimi-k2.6"><span class="model-option-icon">K</span><span class="model-option-copy"><strong>Kimi K2.6</strong><small>Moonshot AI</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="openai/gpt-4o" data-provider="OpenAI"><span class="model-option-icon">OA</span><span class="model-option-copy"><strong>GPT-4o</strong><small>OpenAI · Flagship multimodal cepat dan akurat</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="openai/gpt-4o-mini" data-provider="OpenAI"><span class="model-option-icon">OA</span><span class="model-option-copy"><strong>GPT-4o mini</strong><small>OpenAI · Ringan dan instan untuk tugas harian</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="openai/gpt-5.6-terra" data-provider="OpenAI"><span class="model-option-icon">OA</span><span class="model-option-copy"><strong>GPT-5.6 Terra</strong><small>OpenAI · Penalaran tingkat lanjut &amp; konteks luas</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="openai/gpt-5.5" data-provider="OpenAI"><span class="model-option-icon">OA</span><span class="model-option-copy"><strong>GPT-5.5</strong><small>OpenAI · Generasi lanjut untuk analisis &amp; teknis</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="openai/gpt-5.4" data-provider="OpenAI"><span class="model-option-icon">OA</span><span class="model-option-copy"><strong>GPT-5.4</strong><small>OpenAI · Presisi tinggi untuk penulisan &amp; kode</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="openai/gpt-5.3-chat" data-provider="OpenAI"><span class="model-option-icon">OA</span><span class="model-option-copy"><strong>GPT-5.3 Chat</strong><small>OpenAI · Dioptimalkan untuk dialog interaktif</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="openai/gpt-5.1-instant" data-provider="OpenAI"><span class="model-option-icon">OA</span><span class="model-option-copy"><strong>GPT-5.1 Instant</strong><small>OpenAI · Latensi rendah untuk jawaban cepat</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="openai/gpt-5" data-provider="OpenAI"><span class="model-option-icon">OA</span><span class="model-option-copy"><strong>GPT-5</strong><small>OpenAI · Model dasar seri GPT-5</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="anthropic/claude-sonnet-5" data-provider="Anthropic"><span class="model-option-icon">AN</span><span class="model-option-copy"><strong>Claude Sonnet 5</strong><small>Anthropic · Keseimbangan tinggi kode &amp; penulisan</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="anthropic/claude-sonnet-4.6" data-provider="Anthropic"><span class="model-option-icon">AN</span><span class="model-option-copy"><strong>Claude Sonnet 4.6</strong><small>Anthropic · Andal untuk rekayasa perangkat lunak</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="anthropic/claude-haiku-4.5" data-provider="Anthropic"><span class="model-option-icon">AN</span><span class="model-option-copy"><strong>Claude Haiku 4.5</strong><small>Anthropic · Respons sangat cepat &amp; ringkas</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="anthropic/claude-opus-4.8" data-provider="Anthropic"><span class="model-option-icon">AN</span><span class="model-option-copy"><strong>Claude Opus 4.8</strong><small>Anthropic · Kapasitas analisis mendalam</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="anthropic/claude-opus-4.7" data-provider="Anthropic"><span class="model-option-icon">AN</span><span class="model-option-copy"><strong>Claude Opus 4.7</strong><small>Anthropic · Penalaran kompleks &amp; sintesis</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="anthropic/claude-opus-4.6" data-provider="Anthropic"><span class="model-option-icon">AN</span><span class="model-option-copy"><strong>Claude Opus 4.6</strong><small>Anthropic · Tugas berat &amp; dokumen panjang</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="anthropic/claude-opus-4.5" data-provider="Anthropic"><span class="model-option-icon">AN</span><span class="model-option-copy"><strong>Claude Opus 4.5</strong><small>Anthropic · Seri Opus untuk riset mendalam</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="google/gemini-3.1-pro-preview" data-provider="Google"><span class="model-option-icon">GG</span><span class="model-option-copy"><strong>Gemini 3.1 Pro</strong><small>Google · Penalaran teknis &amp; pemecahan masalah</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="google/gemini-3-pro-preview" data-provider="Google"><span class="model-option-icon">GG</span><span class="model-option-copy"><strong>Gemini 3 Pro</strong><small>Google · Model Pro serbaguna</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="google/gemini-3.1-flash-lite" data-provider="Google"><span class="model-option-icon">GG</span><span class="model-option-copy"><strong>Gemini 3.1 Flash Lite</strong><small>Google · Efisien dan berkecepatan tinggi</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="deepseek/deepseek-v4-pro" data-provider="DeepSeek"><span class="model-option-icon">DS</span><span class="model-option-copy"><strong>DeepSeek V4 Pro</strong><small>DeepSeek · Spesialis algoritma, matematika &amp; kode</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="deepseek/deepseek-v4-flash" data-provider="DeepSeek"><span class="model-option-icon">DS</span><span class="model-option-copy"><strong>DeepSeek V4 Flash</strong><small>DeepSeek · Eksekusi cepat &amp; ringan</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="deepseek/deepseek-v3.2-thinking" data-provider="DeepSeek"><span class="model-option-icon">DS</span><span class="model-option-copy"><strong>DeepSeek V3.2 Thinking</strong><small>DeepSeek · Mode rantai penalaran bertahap</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="xai/grok-4.1-fast-non-reasoning" data-provider="other"><span class="model-option-icon">XA</span><span class="model-option-copy"><strong>Grok 4.1 Fast</strong><small>xAI · Respons langsung tanpa jeda penalaran</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="alibaba/qwen3-max" data-provider="other"><span class="model-option-icon">QW</span><span class="model-option-copy"><strong>Qwen3 Max</strong><small>Alibaba · Model unggulan multibahasa &amp; koding</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="meta/llama-4-maverick" data-provider="other"><span class="model-option-icon">MT</span><span class="model-option-copy"><strong>Llama 4 Maverick</strong><small>Meta · Arsitektur terbuka generasi keempat</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="moonshotai/kimi-k2.6" data-provider="other"><span class="model-option-icon">KM</span><span class="model-option-copy"><strong>Kimi K2.6</strong><small>Moonshot AI · Pemahaman konteks panjang</small></span><span class="model-check">✓</span></button>
+        <button type="button" class="model-option" data-model="chatday/ai-chat" data-provider="other"><span class="model-option-icon">CD</span><span class="model-option-copy"><strong>Chatday AI</strong><small>Chatday · Asisten percakapan umum</small></span><span class="model-check">✓</span></button>
       </div>
-      <div class="model-dialog-footer">Ketersediaan model mengikuti layanan API.</div>
     </div>
   </section>
 
-  <section class="settings-backdrop" id="settingsModal" hidden>
-    <div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-      <div class="settings-header">
-        <div><span class="eyebrow">PREFERENSI</span><h2 id="settingsTitle">Pengaturan</h2><p>Atur pengalaman HAOMI sesuai caramu bekerja.</p></div>
-        <button type="button" class="icon-button" id="closeSettings" aria-label="Tutup pengaturan">×</button>
+  <!-- MODAL 2: FUNCTIONAL SETTINGS -->
+  <section class="dialog-backdrop" id="settingsModal" hidden>
+    <div class="modal-card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">KONFIGURASI RUANG KERJA</span>
+          <h2 id="settingsTitle">Pengaturan</h2>
+        </div>
+        <button type="button" class="icon-button" id="closeSettings" aria-label="Tutup pengaturan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
       </div>
-      <div class="settings-group-label">PENAMPILAN</div>
-      <div class="settings-row"><div><strong>Tema aplikasi</strong><p>Pilih tampilan yang nyaman untukmu.</p></div>
-        <select id="themeSelect" aria-label="Tema aplikasi"><option value="light">Terang</option><option value="dark">Gelap</option><option value="system">Ikuti perangkat</option></select>
+
+      <div class="settings-body">
+        <!-- 1. Tema Tampilan (Working!) -->
+        <div class="settings-row">
+          <div class="settings-copy">
+            <strong>Tema Tampilan</strong>
+            <p>Pilih skema warna ruang kerja yang nyaman di mata Anda.</p>
+          </div>
+          <div class="segmented-control" role="group" aria-label="Tema tampilan">
+            <button type="button" class="segment-btn active" data-theme-choice="dark">Gelap</button>
+            <button type="button" class="segment-btn" data-theme-choice="light">Terang</button>
+            <button type="button" class="segment-btn" data-theme-choice="system">Sistem</button>
+          </div>
+        </div>
+
+        <!-- 2. Ukuran & Kerapatan Teks (Working!) -->
+        <div class="settings-row">
+          <div class="settings-copy">
+            <strong>Kerapatan &amp; Ukuran Teks</strong>
+            <p>Sesuaikan ukuran huruf dan jarak antar pesan di ruang baca.</p>
+          </div>
+          <div class="segmented-control" role="group" aria-label="Kerapatan tampilan">
+            <button type="button" class="segment-btn" data-density-choice="compact">Ringkas</button>
+            <button type="button" class="segment-btn active" data-density-choice="standard">Standar</button>
+            <button type="button" class="segment-btn" data-density-choice="comfortable">Nyaman</button>
+          </div>
+        </div>
+
+        <!-- 3. Model Default (Working!) -->
+        <div class="settings-row">
+          <div class="settings-copy">
+            <label for="defaultModelSelect"><strong>Model AI Default</strong></label>
+            <p>Model utama yang otomatis dipilih saat membuka obrolan baru.</p>
+          </div>
+          <select id="defaultModelSelect" class="settings-select">
+            <option value="openai/gpt-4o">GPT-4o (OpenAI)</option>
+            <option value="openai/gpt-4o-mini">GPT-4o mini (OpenAI)</option>
+            <option value="openai/gpt-5.6-terra">GPT-5.6 Terra (OpenAI)</option>
+            <option value="openai/gpt-5.5">GPT-5.5 (OpenAI)</option>
+            <option value="openai/gpt-5.4">GPT-5.4 (OpenAI)</option>
+            <option value="openai/gpt-5.3-chat">GPT-5.3 Chat (OpenAI)</option>
+            <option value="openai/gpt-5.1-instant">GPT-5.1 Instant (OpenAI)</option>
+            <option value="openai/gpt-5">GPT-5 (OpenAI)</option>
+            <option value="anthropic/claude-sonnet-5">Claude Sonnet 5 (Anthropic)</option>
+            <option value="anthropic/claude-sonnet-4.6">Claude Sonnet 4.6 (Anthropic)</option>
+            <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5 (Anthropic)</option>
+            <option value="anthropic/claude-opus-4.8">Claude Opus 4.8 (Anthropic)</option>
+            <option value="anthropic/claude-opus-4.7">Claude Opus 4.7 (Anthropic)</option>
+            <option value="anthropic/claude-opus-4.6">Claude Opus 4.6 (Anthropic)</option>
+            <option value="anthropic/claude-opus-4.5">Claude Opus 4.5 (Anthropic)</option>
+            <option value="google/gemini-3.1-pro-preview">Gemini 3.1 Pro (Google)</option>
+            <option value="google/gemini-3-pro-preview">Gemini 3 Pro (Google)</option>
+            <option value="google/gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Google)</option>
+            <option value="deepseek/deepseek-v4-pro">DeepSeek V4 Pro (DeepSeek)</option>
+            <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash (DeepSeek)</option>
+            <option value="deepseek/deepseek-v3.2-thinking">DeepSeek V3.2 Thinking</option>
+            <option value="xai/grok-4.1-fast-non-reasoning">Grok 4.1 Fast (xAI)</option>
+            <option value="alibaba/qwen3-max">Qwen3 Max (Alibaba)</option>
+            <option value="meta/llama-4-maverick">Llama 4 Maverick (Meta)</option>
+            <option value="moonshotai/kimi-k2.6">Kimi K2.6 (Moonshot AI)</option>
+            <option value="chatday/ai-chat">Chatday AI</option>
+          </select>
+        </div>
+
+        <!-- 4. Gaya Respons Chat AI (Working!) -->
+        <div class="settings-row">
+          <div class="settings-copy">
+            <label for="responseStyleSelect"><strong>Gaya Respons AI</strong></label>
+            <p>Atur karakter jawaban AI pada saat mengirim pesan.</p>
+          </div>
+          <select id="responseStyleSelect" class="settings-select">
+            <option value="standard">Standar (Seimbang)</option>
+            <option value="concise">Ringkas &amp; Langsung ke Inti</option>
+            <option value="technical">Teknis &amp; Terstruktur</option>
+            <option value="casual">Santai &amp; Mudah Dipahami</option>
+          </select>
+        </div>
+
+        <!-- 5. Perilaku Tombol Enter (Working!) -->
+        <div class="settings-row">
+          <div class="settings-copy">
+            <label for="enterToSendToggle"><strong>Kirim Pesan dengan Enter</strong></label>
+            <p>Jika aktif, tekan Enter untuk mengirim (Shift+Enter untuk baris baru). Jika nonaktif, gunakan Ctrl+Enter untuk mengirim.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enterToSendToggle" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- 6. Penyimpanan Riwayat Lokal (Working!) -->
+        <div class="settings-row">
+          <div class="settings-copy">
+            <label for="saveHistoryToggle"><strong>Simpan Riwayat di Browser</strong></label>
+            <p>Simpan daftar percakapan secara otomatis pada penyimpanan lokal perangkat ini.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="saveHistoryToggle" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- 7. Default Emoji Reaksi WhatsApp (Working!) -->
+        <div class="settings-row">
+          <div class="settings-copy">
+            <label for="defaultWaEmojiInput"><strong>Emoji Default Reaksi WhatsApp</strong></label>
+            <p>Daftar emoji bawaan yang langsung terisi pada modul Reaksi WhatsApp.</p>
+          </div>
+          <div class="settings-inline-input">
+            <input type="text" id="defaultWaEmojiInput" value="🙄,💦,🥰,😋" placeholder="❤️,🔥,👍">
+          </div>
+        </div>
+
+        <!-- 8. Manajemen Data Lokal -->
+        <div class="settings-actions-box">
+          <div class="settings-actions-copy">
+            <strong>Manajemen Data Lokal</strong>
+            <p>Cadangkan seluruh percakapan Anda ke berkas JSON atau bersihkan penyimpanan lokal browser.</p>
+          </div>
+          <div class="settings-actions-buttons">
+            <button type="button" class="secondary-settings-btn" id="exportAllDataBtn">Ekspor Cadangan (.json)</button>
+            <button type="button" class="danger-button" id="clearAllHistory">Hapus Semua Riwayat</button>
+          </div>
+        </div>
       </div>
-      <div class="settings-row"><div><strong>Kepadatan tampilan</strong><p>Atur jarak antar elemen.</p></div>
-        <select id="densitySelect" aria-label="Kepadatan tampilan"><option value="comfortable">Nyaman</option><option value="compact">Ringkas</option></select>
-      </div>
-      <div class="settings-group-label">OBROLAN</div>
-      <div class="settings-row"><div><strong>Model default</strong><p>Dipakai saat membuat obrolan baru.</p></div>
-                <select id="defaultModelSelect">
-          <option value="openai/gpt-4o">GPT-4o — OpenAI</option>
-          <option value="openai/gpt-4o-mini">GPT-4o mini</option>
-          <option value="openai/gpt-5.6-terra">GPT-5.6 Terra</option>
-          <option value="openai/gpt-5.5">GPT-5.5</option>
-          <option value="openai/gpt-5.4">GPT-5.4</option>
-          <option value="openai/gpt-5.3-chat">GPT-5.3 Chat</option>
-          <option value="openai/gpt-5.1-instant">GPT-5.1 Instant</option>
-          <option value="openai/gpt-5">GPT-5</option>
-          <option value="chatday/ai-chat">Chatday AI</option>
-          <option value="xai/grok-4.1-fast-non-reasoning">Grok 4.1 Fast</option>
-          <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</option>
-          <option value="anthropic/claude-sonnet-5">Claude Sonnet 5</option>
-          <option value="anthropic/claude-sonnet-4.6">Claude Sonnet 4.6</option>
-          <option value="anthropic/claude-opus-4.5">Claude Opus 4.5</option>
-          <option value="anthropic/claude-opus-4.6">Claude Opus 4.6</option>
-          <option value="anthropic/claude-opus-4.7">Claude Opus 4.7</option>
-          <option value="anthropic/claude-opus-4.8">Claude Opus 4.8</option>
-          <option value="deepseek/deepseek-v4-pro">DeepSeek V4 Pro</option>
-          <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash</option>
-          <option value="deepseek/deepseek-v3.2-thinking">DeepSeek V3.2 Thinking</option>
-          <option value="google/gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
-          <option value="google/gemini-3-pro-preview">Gemini 3 Pro</option>
-          <option value="google/gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-          <option value="alibaba/qwen3-max">Qwen3 Max</option>
-          <option value="meta/llama-4-maverick">Llama 4 Maverick</option>
-          <option value="moonshotai/kimi-k2.6">Kimi K2.6</option>
-        </select>
-      </div>
-      <div class="settings-row setting-toggle-row"><div><strong>Enter untuk mengirim</strong><p>Matikan untuk menulis baris baru dengan Enter.</p></div><label class="switch"><input id="enterToSendToggle" type="checkbox"><span></span></label></div>
-      <div class="settings-row setting-toggle-row"><div><strong>Kurangi animasi</strong><p>Kurangi gerakan antarmuka.</p></div><label class="switch"><input id="reduceMotionToggle" type="checkbox"><span></span></label></div>
-      <div class="settings-group-label">DATA & PRIVASI</div>
-      <div class="privacy-note"><strong>Riwayat tersimpan di perangkat ini</strong><p>Percakapan dan preferensi disimpan secara lokal di browser. Menghapus data situs atau berganti perangkat dapat menghilangkannya.</p></div>
-      <button type="button" class="danger-button" id="clearAllHistory">Hapus semua riwayat</button>
     </div>
   </section>
 
