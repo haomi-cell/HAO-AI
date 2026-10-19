@@ -2,485 +2,259 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    >
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d1110">
+  <meta name="description" content="Smart-AI adalah asisten AI untuk membantu pertanyaan, ide, dan pekerjaanmu.">
 
-    <meta name="theme-color" content="#0d1110">
-    <meta
-        name="description"
-        content="Smart-AI — asisten kecerdasan buatan untuk membantu pertanyaan, coding, dan berbagai kebutuhan."
-    >
+  <title>Smart-AI</title>
 
-    <title>Smart-AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css">
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap"
-        rel="stylesheet"
-    >
-
-    <link
-        href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
-        rel="stylesheet"
-    >
+  <link rel="stylesheet" href="/style.css">
+  <script src="/script.js" defer></script>
 </head>
 
 <body>
+  <div class="app-shell">
 
-    <!-- ==================================
-         LANDING PAGE
-         ================================== -->
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a class="brand" href="/" aria-label="Smart-AI Home">
+          <span class="brand-mark">S</span>
+          <span>Smart-AI</span>
+        </a>
 
-    <section id="landing-page" class="landing-container">
+        <button
+          class="icon-button"
+          id="close-sidebar"
+          type="button"
+          aria-label="Tutup sidebar"
+        >×</button>
+      </div>
 
-        <header class="landing-header">
-            <div class="logo-area">
-                <span class="material-icons-round logo-icon">
-                    ac_unit
-                </span>
+      <button class="new-chat-button" id="new-chat" type="button">
+        <span aria-hidden="true">＋</span>
+        <span>Obrolan Baru</span>
+      </button>
 
-                <span class="logo-text">SmartAI</span>
-            </div>
+      <div class="sidebar-content">
+        <div class="sidebar-section-title">RIWAYAT CHAT</div>
+        <div id="conversation-list"></div>
+      </div>
 
-            <span class="skip-btn">v2.0</span>
-        </header>
-
-        <div class="landing-hero">
-            <h1>
-                Explore
-                <br>
-                <i>infinite</i>
-                <br>
-                <span class="highlight-text">capabilities</span>
-                <br>
-                of searching
-            </h1>
+      <div class="sidebar-footer">
+        <div class="profile-mark">S</div>
+        <div class="profile-info">
+          <strong>Smart-AI</strong>
+          <span>AI Assistant</span>
         </div>
+      </div>
+    </aside>
 
-        <div class="feature-stack">
+    <div id="sidebar-overlay"></div>
 
-            <div class="feature-card">
-                <div class="icon-circle">
-                    <span class="material-icons-round">
-                        memory
-                    </span>
-                </div>
+    <!-- MAIN -->
+    <main class="main-content" id="main-content">
 
-                <div class="feature-text">
-                    <p>
-                        Powered by Hao AI models for accurate answers
-                    </p>
-                </div>
-            </div>
+      <header class="topbar">
+        <button
+          class="icon-button menu-button"
+          id="open-sidebar"
+          type="button"
+          aria-label="Buka riwayat chat"
+        >☰</button>
 
-            <div class="feature-card">
-                <div class="icon-circle">
-                    <span class="material-icons-round">
-                        history_edu
-                    </span>
-                </div>
+        <a class="mobile-brand" href="/">Smart-AI</a>
 
-                <div class="feature-text">
-                    <p>
-                        Remembers context from your search session
-                    </p>
-                </div>
-            </div>
-
-            <div class="feature-card">
-                <div class="icon-circle">
-                    <span class="material-icons-round">
-                        security
-                    </span>
-                </div>
-
-                <div class="feature-text">
-                    <p>
-                        Secure and private data processing
-                    </p>
-                </div>
-            </div>
-
+        <div class="topbar-actions">
+          <button
+            class="icon-button"
+            id="header-new-chat"
+            type="button"
+            title="Obrolan baru"
+            aria-label="Obrolan baru"
+          >＋</button>
         </div>
+      </header>
 
-        <div class="landing-footer-actions">
+      <!-- WELCOME SCREEN -->
+      <section class="welcome-screen" id="welcome-screen">
+        <div class="welcome-content">
+          <div class="welcome-symbol">S</div>
 
+          <p class="eyebrow">YOUR PERSONAL AI ASSISTANT</p>
+
+          <h1>Ada yang bisa <span>Smart-AI</span> bantu?</h1>
+
+          <p class="welcome-description">
+            Tanyakan apa saja, kembangkan ide, dan temukan solusi bersama AI.
+          </p>
+
+          <div class="suggestion-grid">
             <button
-                id="enter-app-btn"
-                class="primary-btn-lg"
-                type="button"
+              class="suggestion-card"
+              type="button"
+              data-prompt="Bantu aku membuat strategi marketing yang efektif."
             >
-                Start Exploring
+              <span class="suggestion-icon">✦</span>
+              <span class="suggestion-text">
+                <strong>Marketing Strategy</strong>
+                <small>Ide dan strategi pemasaran</small>
+              </span>
+              <span class="suggestion-arrow">↗</span>
             </button>
 
-            <div class="professional-credits">
-                <p>
-                    DEVELOPED BY
-                    <strong>𝐱𝙈𝙎𝙃𝙖𝙤𝙢𝙞</strong>
-                </p>
-
-                <p class="sub-credit">
-                    Emile &amp; Co. Enterprise | Jombang, ID
-                </p>
-
-                <p class="contact-credit">
-                    contact@presethaomi@gmail.com
-                </p>
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- ==================================
-         MAIN APPLICATION
-         ================================== -->
-
-    <div id="main-app" class="app-container hidden-section">
-
-        <!-- HEADER -->
-
-        <header class="app-header">
-
-            <div class="header-left">
-                <button
-                    id="menu-toggle"
-                    type="button"
-                    aria-label="Buka riwayat obrolan"
-                >
-                    <span class="material-icons-round">
-                        grid_view
-                    </span>
-                </button>
-            </div>
-
-            <div class="header-center">
-                <span class="app-title">Smart-AI</span>
-            </div>
-
-            <div class="header-right">
-                <div class="user-avatar">
-                    <img
-                        src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix"
-                        alt="User"
-                    >
-                </div>
-            </div>
-
-        </header>
-
-
-        <!-- ==================================
-             SIDEBAR HISTORY
-             Tombol Obrolan Baru ditambahkan
-             oleh script.js
-             ================================== -->
-
-        <aside
-            id="sidebar-overlay"
-            class="sidebar-hidden"
-            aria-label="Riwayat obrolan"
-        >
-
-            <div class="sidebar-content">
-
-                <div class="sidebar-top">
-                    <h2>History</h2>
-
-                    <button
-                        id="close-sidebar"
-                        type="button"
-                        aria-label="Tutup riwayat"
-                    >
-                        <span class="material-icons-round">
-                            close
-                        </span>
-                    </button>
-                </div>
-
-                <div class="history-list-container">
-                    <ul id="history-list">
-                        <!-- Diisi oleh script.js -->
-                    </ul>
-                </div>
-
-                <button
-                    id="clear-history"
-                    class="clear-btn"
-                    type="button"
-                >
-                    <span class="material-icons-round">
-                        delete
-                    </span>
-
-                    Clear History
-                </button>
-
-                <div class="sidebar-footer">
-                    <small>𝐱𝙈𝙎𝙃𝙖𝙤𝙢𝙞 © 2026</small>
-                </div>
-
-            </div>
-
-        </aside>
-
-
-        <!-- ==================================
-             AREA CHAT
-             ================================== -->
-
-        <main class="chat-area">
-
-            <!-- WELCOME SCREEN -->
-
-            <section
-                id="welcome-screen"
-                class="welcome-container"
+            <button
+              class="suggestion-card"
+              type="button"
+              data-prompt="Bantu aku memahami dan memperbaiki kode program."
             >
+              <span class="suggestion-icon">⌘</span>
+              <span class="suggestion-text">
+                <strong>Coding Assistant</strong>
+                <small>Memahami dan membuat kode</small>
+              </span>
+              <span class="suggestion-arrow">↗</span>
+            </button>
 
-                <h2 class="greeting">
-                    Welcome Sir,
-                    <br>
-                    <span class="user-name">User</span>
-                </h2>
+            <button
+              class="suggestion-card"
+              type="button"
+              data-prompt="Bantu aku menyusun rencana belajar yang teratur."
+            >
+              <span class="suggestion-icon">◇</span>
+              <span class="suggestion-text">
+                <strong>Study Planner</strong>
+                <small>Rencana belajar yang terarah</small>
+              </span>
+              <span class="suggestion-arrow">↗</span>
+            </button>
 
-                <div class="quick-actions">
+            <button
+              class="suggestion-card"
+              type="button"
+              data-prompt="Bantu aku menemukan ide kreatif untuk proyek baru."
+            >
+              <span class="suggestion-icon">✧</span>
+              <span class="suggestion-text">
+                <strong>Creative Ideas</strong>
+                <small>Eksplorasi ide baru</small>
+              </span>
+              <span class="suggestion-arrow">↗</span>
+            </button>
+          </div>
+        </div>
+      </section>
 
-                    <div class="action-pill">
-                        <span class="material-icons-round">
-                            work_outline
-                        </span>
+      <!-- CHAT AREA -->
+      <section class="chat-area" id="chat-area" aria-live="polite">
+        <div class="chat-messages" id="chat-messages"></div>
+      </section>
 
-                        <span>Job Finder UX</span>
-                    </div>
+      <!-- INPUT -->
+      <footer class="composer-area">
+        <form class="composer" id="chat-form">
+          <textarea
+            id="chat-input"
+            name="question"
+            rows="1"
+            maxlength="12000"
+            placeholder="Tanya apa pun..."
+            aria-label="Tulis pertanyaan"
+            required
+          ></textarea>
 
-                    <div class="action-pill">
-                        <span class="material-icons-round">
-                            campaign
-                        </span>
+          <div class="composer-toolbar">
+            <div class="composer-left">
+              <button
+                class="composer-icon"
+                id="attach-button"
+                type="button"
+                title="Lampiran belum tersedia"
+                aria-label="Lampiran"
+              >＋</button>
 
-                        <span>Marketing Strategy</span>
-                    </div>
-
-                </div>
-
-                <div class="explore-grid">
-
-                    <div class="explore-card">
-
-                        <div class="card-icon">
-                            <span class="material-icons-round">
-                                business_center
-                            </span>
-                        </div>
-
-                        <h3>Business</h3>
-
-                        <p>
-                            Analyze market trends and business strategies.
-                        </p>
-
-                        <span class="arrow-btn">
-                            <span class="material-icons-round">
-                                arrow_forward
-                            </span>
-                        </span>
-
-                    </div>
-
-                    <div class="explore-card">
-
-                        <div class="card-icon">
-                            <span class="material-icons-round">
-                                code
-                            </span>
-                        </div>
-
-                        <h3>Coding</h3>
-
-                        <p>
-                            Generate code snippets and debug issues.
-                        </p>
-
-                        <span class="arrow-btn">
-                            <span class="material-icons-round">
-                                arrow_forward
-                            </span>
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- LEGACY LOADING ELEMENT -->
-
-            <div id="loading" class="hidden">
-                <div class="loader-pulse"></div>
-                <p>Generating response...</p>
+              <!-- Pemilih model dibuat oleh script.js di sini -->
+              <div id="chat-tools" class="input-tools"></div>
             </div>
 
+            <div class="composer-right">
+              <span class="keyboard-hint">Enter untuk mengirim</span>
 
-            <!-- ==================================
-                 TEMPLATE HASIL AI
-                 Dipakai script.js untuk setiap jawaban
-                 ================================== -->
+              <button
+                class="send-button"
+                id="send-button"
+                type="submit"
+                aria-label="Kirim pesan"
+                title="Kirim pesan"
+              >
+                <span aria-hidden="true">↑</span>
+              </button>
+            </div>
+          </div>
+        </form>
 
-            <section id="result-container" class="hidden">
+        <p class="composer-disclaimer">
+          Smart-AI dapat membuat kesalahan. Periksa kembali informasi penting.
+        </p>
+      </footer>
 
-                <div class="chat-bubble user-bubble">
-                    <p id="user-query-display"></p>
-                </div>
+    </main>
+  </div>
 
-                <article class="chat-bubble ai-bubble">
+  <script>
+    // Penyesuaian input dan navigasi sidebar.
+    document.addEventListener("DOMContentLoaded", function () {
+      const input = document.getElementById("chat-input");
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.getElementById("sidebar-overlay");
 
-                    <div class="bubble-header">
+      function closeSidebar() {
+        if (sidebar) sidebar.classList.remove("sidebar-open");
+        if (overlay) overlay.classList.remove("sidebar-visible");
+      }
 
-                        <span class="material-icons-round ai-icon">
-                            auto_awesome
-                        </span>
+      document.getElementById("open-sidebar")?.addEventListener("click", function () {
+        sidebar?.classList.add("sidebar-open");
+        overlay?.classList.add("sidebar-visible");
+      });
 
-                        <span>SmartAI Analysis</span>
+      document.getElementById("close-sidebar")?.addEventListener("click", closeSidebar);
+      overlay?.addEventListener("click", closeSidebar);
 
-                    </div>
+      document.getElementById("header-new-chat")?.addEventListener("click", function () {
+        document.getElementById("new-chat")?.click();
+      });
 
-                    <div
-                        class="bubble-content"
-                        id="answer-text"
-                    ></div>
+      document.querySelectorAll("[data-prompt]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          if (!input) return;
 
-                    <div class="bubble-footer">
+          input.value = button.dataset.prompt || "";
+          input.focus();
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+      });
 
-                        <div class="action-icons">
+      if (input) {
+        const resizeInput = function () {
+          input.style.height = "auto";
+          input.style.height = Math.min(input.scrollHeight, 180) + "px";
+        };
 
-                            <span
-                                class="material-icons-round"
-                                role="button"
-                                tabindex="0"
-                                aria-label="Salin jawaban"
-                                title="Salin jawaban"
-                            >
-                                content_copy
-                            </span>
+        input.addEventListener("input", resizeInput);
+      }
 
-                            <span
-                                class="material-icons-round"
-                                role="button"
-                                tabindex="0"
-                                aria-label="Jawaban membantu"
-                                title="Suka"
-                            >
-                                thumb_up
-                            </span>
-
-                            <span
-                                class="material-icons-round"
-                                role="button"
-                                tabindex="0"
-                                aria-label="Jawaban tidak membantu"
-                                title="Tidak suka"
-                            >
-                                thumb_down
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </article>
-
-
-                <!-- SOURCES -->
-
-                <section class="info-card">
-
-                    <h4>
-                        <span class="material-icons-round">
-                            link
-                        </span>
-
-                        Sources
-                    </h4>
-
-                    <ul
-                        class="source-list"
-                        id="sources-list"
-                    ></ul>
-
-                </section>
-
-
-                <!-- RELATED QUESTIONS -->
-
-                <section class="info-card">
-
-                    <h4>
-                        <span class="material-icons-round">
-                            manage_search
-                        </span>
-
-                        Related
-                    </h4>
-
-                    <ul
-                        class="similar-list"
-                        id="similar-list"
-                    ></ul>
-
-                </section>
-
-            </section>
-
-        </main>
-
-
-        <!-- ==================================
-             INPUT CHAT
-             ================================== -->
-
-        <div class="input-area-fixed">
-
-            <form
-                id="search-form"
-                class="search-bar-wrapper"
-            >
-
-                <input
-                    type="text"
-                    id="question-input"
-                    placeholder="Type your question..."
-                    autocomplete="off"
-                    aria-label="Tulis pertanyaan"
-                    required
-                >
-
-                <button
-                    type="submit"
-                    id="submit-btn"
-                    aria-label="Kirim pertanyaan"
-                >
-                    <span class="material-icons-round">
-                        arrow_upward
-                    </span>
-                </button>
-
-            </form>
-
-        </div>
-
-    </div>
-
-
-    <!-- SCRIPT UTAMA -->
-
-    <script src="script.js" defer></script>
-
+      document.addEventListener("click", function (event) {
+        if (event.target.closest("#conversation-list button")) {
+          closeSidebar();
+        }
+      });
+    });
+  </script>
 </body>
 </html>
