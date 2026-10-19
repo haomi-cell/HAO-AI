@@ -3,258 +3,111 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0d1110">
-  <meta name="description" content="Smart-AI adalah asisten AI untuk membantu pertanyaan, ide, dan pekerjaanmu.">
-
-  <title>Smart-AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0e0c">
+  <meta name="description" content="HAO AI — teman AI untuk ide, belajar, coding, dan pekerjaan.">
+  <title>HAO AI</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/style.css">
   <script src="/script.js" defer></script>
 </head>
-
 <body>
   <div class="app-shell">
-
-    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <a class="brand" href="/" aria-label="Smart-AI Home">
-          <span class="brand-mark">S</span>
-          <span>Smart-AI</span>
+      <div class="brand-row">
+        <a class="brand" href="/" aria-label="HAO AI">
+          <span class="brand-logo">H</span>
+          <span>HAO <b>AI</b></span>
         </a>
-
-        <button
-          class="icon-button"
-          id="close-sidebar"
-          type="button"
-          aria-label="Tutup sidebar"
-        >×</button>
+        <button class="icon-btn mobile-close" id="close-sidebar" type="button" aria-label="Tutup menu">×</button>
       </div>
 
-      <button class="new-chat-button" id="new-chat" type="button">
-        <span aria-hidden="true">＋</span>
-        <span>Obrolan Baru</span>
+      <button class="new-chat-btn" id="new-chat" type="button">
+        <span class="plus-symbol">＋</span>
+        <span>Obrolan baru</span>
       </button>
 
-      <div class="sidebar-content">
-        <div class="sidebar-section-title">RIWAYAT CHAT</div>
-        <div id="conversation-list"></div>
-      </div>
+      <div class="history-heading">RIWAYAT</div>
+      <div id="conversation-list" class="conversation-list"></div>
 
-      <div class="sidebar-footer">
-        <div class="profile-mark">S</div>
-        <div class="profile-info">
-          <strong>Smart-AI</strong>
-          <span>AI Assistant</span>
+      <div class="sidebar-bottom">
+        <div class="avatar-small">H</div>
+        <div>
+          <strong>HAO AI</strong>
+          <small>AI Assistant</small>
         </div>
       </div>
     </aside>
 
-    <div id="sidebar-overlay"></div>
+    <button id="sidebar-overlay" aria-label="Tutup menu" type="button"></button>
 
-    <!-- MAIN -->
-    <main class="main-content" id="main-content">
-
+    <main class="main-panel">
       <header class="topbar">
-        <button
-          class="icon-button menu-button"
-          id="open-sidebar"
-          type="button"
-          aria-label="Buka riwayat chat"
-        >☰</button>
-
-        <a class="mobile-brand" href="/">Smart-AI</a>
-
-        <div class="topbar-actions">
-          <button
-            class="icon-button"
-            id="header-new-chat"
-            type="button"
-            title="Obrolan baru"
-            aria-label="Obrolan baru"
-          >＋</button>
+        <button class="icon-btn menu-toggle" id="open-sidebar" type="button" aria-label="Buka riwayat">☰</button>
+        <div class="topbar-title">
+          <span class="topbar-logo">H</span>
+          <span>HAO AI</span>
         </div>
+        <button class="icon-btn top-new-chat" id="header-new-chat" type="button" aria-label="Obrolan baru" title="Obrolan baru">＋</button>
       </header>
 
-      <!-- WELCOME SCREEN -->
-      <section class="welcome-screen" id="welcome-screen">
-        <div class="welcome-content">
-          <div class="welcome-symbol">S</div>
+      <section id="welcome-screen" class="welcome-screen">
+        <div class="welcome-orb"><span>H</span></div>
+        <div class="welcome-tag">YOUR AI COMPANION</div>
+        <h1>Halo, ada yang bisa<br><span>HAO bantu?</span></h1>
+        <p class="welcome-subtitle">Tempat buat ide, pertanyaan, dan hal-hal yang ingin kamu selesaikan.</p>
 
-          <p class="eyebrow">YOUR PERSONAL AI ASSISTANT</p>
-
-          <h1>Ada yang bisa <span>Smart-AI</span> bantu?</h1>
-
-          <p class="welcome-description">
-            Tanyakan apa saja, kembangkan ide, dan temukan solusi bersama AI.
-          </p>
-
-          <div class="suggestion-grid">
-            <button
-              class="suggestion-card"
-              type="button"
-              data-prompt="Bantu aku membuat strategi marketing yang efektif."
-            >
-              <span class="suggestion-icon">✦</span>
-              <span class="suggestion-text">
-                <strong>Marketing Strategy</strong>
-                <small>Ide dan strategi pemasaran</small>
-              </span>
-              <span class="suggestion-arrow">↗</span>
-            </button>
-
-            <button
-              class="suggestion-card"
-              type="button"
-              data-prompt="Bantu aku memahami dan memperbaiki kode program."
-            >
-              <span class="suggestion-icon">⌘</span>
-              <span class="suggestion-text">
-                <strong>Coding Assistant</strong>
-                <small>Memahami dan membuat kode</small>
-              </span>
-              <span class="suggestion-arrow">↗</span>
-            </button>
-
-            <button
-              class="suggestion-card"
-              type="button"
-              data-prompt="Bantu aku menyusun rencana belajar yang teratur."
-            >
-              <span class="suggestion-icon">◇</span>
-              <span class="suggestion-text">
-                <strong>Study Planner</strong>
-                <small>Rencana belajar yang terarah</small>
-              </span>
-              <span class="suggestion-arrow">↗</span>
-            </button>
-
-            <button
-              class="suggestion-card"
-              type="button"
-              data-prompt="Bantu aku menemukan ide kreatif untuk proyek baru."
-            >
-              <span class="suggestion-icon">✧</span>
-              <span class="suggestion-text">
-                <strong>Creative Ideas</strong>
-                <small>Eksplorasi ide baru</small>
-              </span>
-              <span class="suggestion-arrow">↗</span>
-            </button>
-          </div>
+        <div class="prompt-grid">
+          <button class="prompt-card" type="button" data-prompt="Bantu aku memahami materi yang sulit dengan bahasa sederhana.">
+            <span class="prompt-icon">✳</span>
+            <span><strong>Belajar sesuatu</strong><small>Jelaskan dengan mudah</small></span>
+            <span class="prompt-arrow">↗</span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="Bantu aku membuat ide kreatif untuk proyek baru.">
+            <span class="prompt-icon">✧</span>
+            <span><strong>Cari ide</strong><small>Mulai dari ide sederhana</small></span>
+            <span class="prompt-arrow">↗</span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="Bantu aku menulis atau memperbaiki kode program.">
+            <span class="prompt-icon">⌘</span>
+            <span><strong>Bantu coding</strong><small>Tulis dan perbaiki kode</small></span>
+            <span class="prompt-arrow">↗</span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="Bantu aku menyusun rencana kerja yang praktis dan teratur.">
+            <span class="prompt-icon">◷</span>
+            <span><strong>Susun rencana</strong><small>Buat langkah yang jelas</small></span>
+            <span class="prompt-arrow">↗</span>
+          </button>
         </div>
       </section>
 
-      <!-- CHAT AREA -->
-      <section class="chat-area" id="chat-area" aria-live="polite">
-        <div class="chat-messages" id="chat-messages"></div>
+      <section class="chat-area" id="chat-area" aria-label="Percakapan">
+        <div class="messages" id="chat-messages" aria-live="polite"></div>
       </section>
 
-      <!-- INPUT -->
       <footer class="composer-area">
         <form class="composer" id="chat-form">
-          <textarea
-            id="chat-input"
-            name="question"
-            rows="1"
-            maxlength="12000"
-            placeholder="Tanya apa pun..."
-            aria-label="Tulis pertanyaan"
-            required
-          ></textarea>
-
-          <div class="composer-toolbar">
-            <div class="composer-left">
-              <button
-                class="composer-icon"
-                id="attach-button"
-                type="button"
-                title="Lampiran belum tersedia"
-                aria-label="Lampiran"
-              >＋</button>
-
-              <!-- Pemilih model dibuat oleh script.js di sini -->
-              <div id="chat-tools" class="input-tools"></div>
+          <textarea id="chat-input" name="question" rows="1" maxlength="12000" placeholder="Tanya apa pun ke HAO..." aria-label="Tulis pesan" required></textarea>
+          <div class="composer-bottom">
+            <div class="composer-tools">
+              <button type="button" class="tool-btn" id="attach-button" aria-label="Lampiran" title="Lampiran belum tersedia">＋</button>
+              <div id="chat-tools"></div>
             </div>
-
-            <div class="composer-right">
-              <span class="keyboard-hint">Enter untuk mengirim</span>
-
-              <button
-                class="send-button"
-                id="send-button"
-                type="submit"
-                aria-label="Kirim pesan"
-                title="Kirim pesan"
-              >
-                <span aria-hidden="true">↑</span>
+            <div class="composer-actions">
+              <span class="enter-hint">Enter untuk kirim · Shift+Enter untuk baris baru</span>
+              <button class="send-btn" id="send-button" type="submit" aria-label="Kirim pesan" title="Kirim pesan">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
               </button>
             </div>
           </div>
         </form>
-
-        <p class="composer-disclaimer">
-          Smart-AI dapat membuat kesalahan. Periksa kembali informasi penting.
-        </p>
+        <p class="disclaimer">HAO AI bisa membuat kesalahan. Periksa kembali informasi penting.</p>
       </footer>
-
     </main>
   </div>
-
-  <script>
-    // Penyesuaian input dan navigasi sidebar.
-    document.addEventListener("DOMContentLoaded", function () {
-      const input = document.getElementById("chat-input");
-      const sidebar = document.getElementById("sidebar");
-      const overlay = document.getElementById("sidebar-overlay");
-
-      function closeSidebar() {
-        if (sidebar) sidebar.classList.remove("sidebar-open");
-        if (overlay) overlay.classList.remove("sidebar-visible");
-      }
-
-      document.getElementById("open-sidebar")?.addEventListener("click", function () {
-        sidebar?.classList.add("sidebar-open");
-        overlay?.classList.add("sidebar-visible");
-      });
-
-      document.getElementById("close-sidebar")?.addEventListener("click", closeSidebar);
-      overlay?.addEventListener("click", closeSidebar);
-
-      document.getElementById("header-new-chat")?.addEventListener("click", function () {
-        document.getElementById("new-chat")?.click();
-      });
-
-      document.querySelectorAll("[data-prompt]").forEach(function (button) {
-        button.addEventListener("click", function () {
-          if (!input) return;
-
-          input.value = button.dataset.prompt || "";
-          input.focus();
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-        });
-      });
-
-      if (input) {
-        const resizeInput = function () {
-          input.style.height = "auto";
-          input.style.height = Math.min(input.scrollHeight, 180) + "px";
-        };
-
-        input.addEventListener("input", resizeInput);
-      }
-
-      document.addEventListener("click", function (event) {
-        if (event.target.closest("#conversation-list button")) {
-          closeSidebar();
-        }
-      });
-    });
-  </script>
 </body>
 </html>
