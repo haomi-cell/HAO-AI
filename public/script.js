@@ -9,6 +9,9 @@
 
   // Endpoint utama tetap /api sesuai arsitektur backend
   const API_URL = "/api";
+  // Pengaturan nama Creator & Prefix Order ID (ubah di sini kalau mau ganti nama selain @haomi)
+  const BRAND_CREATOR = "@haomi";
+  const BRAND_ORDER_PREFIX = "haomi";
   const STORAGE_KEY = "haomi_workspace_v2";
   const SETTINGS_KEY = "haomi_settings_v1";
   const TELEMETRY_KEY = "haomi_telemetry_v1";
@@ -1387,7 +1390,35 @@
 
   function closeMobileSidebar() {
     document.body.classList.remove("sidebar-open");
-    $("#appShell")?.classList.remove("sidebar-open"); els.sidebar?.classList.remove("open"); }    const viewIds = { chat: "chatView", alight: "alightView", urlscan: "urlscanView", whatsapp: "whatsappView" };    const viewTitles = { chat: "Chat AI", alight: "Alight Motion", urlscan: "Cek Keamanan Link", whatsapp: "Reaksi Saluran WA" };    function showView(name) { if (!viewIds[name]) return;      Object.entries(viewIds).forEach(([key, elementId]) => { const view = document.getElementById(elementId); if (!view) return; view.hidden = key !== name; view.classList.toggle("active", key === name); });      $$(".nav-item[data-view], .mob-nav-item[data-view]").forEach(button => {
+    $("#appShell")?.classList.remove("sidebar-open");
+    els.sidebar?.classList.remove("open");
+  }
+
+  const viewIds = {
+    chat: "chatView",
+    alight: "alightView",
+    urlscan: "urlscanView",
+    whatsapp: "whatsappView"
+  };
+
+  const viewTitles = {
+    chat: "Chat AI",
+    alight: "Alight Motion",
+    urlscan: "Cek Keamanan Link",
+    whatsapp: "Reaksi Saluran WA"
+  };
+
+  function showView(name) {
+    if (!viewIds[name]) return;
+
+    Object.entries(viewIds).forEach(([key, elementId]) => {
+      const view = document.getElementById(elementId);
+      if (!view) return;
+      view.hidden = key !== name;
+      view.classList.toggle("active", key === name);
+    });
+
+    $$(".nav-item[data-view], .mob-nav-item[data-view]").forEach(button => {
       button.classList.toggle("active", button.dataset.view === name);
     });
 
@@ -1647,12 +1678,45 @@
       }
     }
 
-    renderStructuredSummary(summaryEl, rawObj);
-    element.textContent = text;
+    renderStructuredSummary(summaryEl, sanitizeBrandData(rawObj));
+    element.textContent = sanitizeBrandText(text);
+  }
+
+  // Bersihkan otomatis nama @jerexd6677 / jerexd666 dari hasil API menjadi nama brand HAOMI
+  function sanitizeBrandText(str) {
+    return String(str ?? "")
+      .replace(/@?jerexd\d*/gi, match => (match.startsWith("@") ? BRAND_CREATOR : BRAND_ORDER_PREFIX))
+      .replace(/@?jere\d+/gi, match => (match.startsWith("@") ? BRAND_CREATOR : BRAND_ORDER_PREFIX))
+      .replace(/jerexd/gi, BRAND_ORDER_PREFIX);
+  }
+
+  function sanitizeBrandData(input) {
+    if (input === null || input === undefined) return input;
+    if (typeof input === "string") {
+      return sanitizeBrandText(input);
+    }
+    if (Array.isArray(input)) {
+      return input.map(item => sanitizeBrandData(item));
+    }
+    if (typeof input === "object") {
+      const cleaned = {};
+      for (const [k, v] of Object.entries(input)) {
+        if (/^(creator|author|owner)$/i.test(k) && typeof v === "string") {
+          cleaned[k] = BRAND_CREATOR;
+        } else if (/^orderid$/i.test(k) && typeof v === "string") {
+          cleaned[k] = v.replace(/^[a-z0-9_]+(?=-)/i, BRAND_ORDER_PREFIX).replace(/jerexd\d*/gi, BRAND_ORDER_PREFIX);
+        } else {
+          cleaned[k] = sanitizeBrandData(v);
+        }
+      }
+      return cleaned;
+    }
+    return input;
   }
 
   function stringifyResult(value) {
-    return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    const cleanVal = sanitizeBrandData(value);
+    return typeof cleanVal === "string" ? cleanVal : JSON.stringify(cleanVal, null, 2);
   }
 
   async function runTool(config) {
