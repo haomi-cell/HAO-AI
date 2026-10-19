@@ -85,6 +85,26 @@
     return models[saved] ? saved : "openai/gpt-4o";
   }
 
+  function applySettings() {
+    const settings = loadSettings();
+    const theme = ["light", "dark", "system"].includes(settings.theme) ? settings.theme : "light";
+    const resolvedTheme = theme === "system"
+      ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : theme;
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.dataset.density = settings.density === "compact" ? "compact" : "comfortable";
+    document.documentElement.classList.toggle("reduce-motion", Boolean(settings.reduceMotion));
+
+    const themeSelect = $("#themeSelect");
+    const densitySelect = $("#densitySelect");
+    const enterToggle = $("#enterToSendToggle");
+    const motionToggle = $("#reduceMotionToggle");
+    if (themeSelect) themeSelect.value = theme;
+    if (densitySelect) densitySelect.value = settings.density === "compact" ? "compact" : "comfortable";
+    if (enterToggle) enterToggle.checked = settings.enterToSend !== false;
+    if (motionToggle) motionToggle.checked = Boolean(settings.reduceMotion);
+  }
+
   function newConversation() {
     return {
       id: id(),
@@ -742,6 +762,7 @@
 
   function openSettings() {
     els.defaultModel.value = getDefaultModel();
+    applySettings();
     els.settings.hidden = false;
     document.body.style.overflow = "hidden";
   }
@@ -815,7 +836,8 @@
 
     els.input.addEventListener("input", resizeInput);
     els.input.addEventListener("keydown", event => {
-      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+      const enterToSend = loadSettings().enterToSend !== false;
+      if (enterToSend && event.key === "Enter" && !event.shiftKey && !event.isComposing) {
         event.preventDefault();
         if (!busy) els.chatForm.requestSubmit();
       }
@@ -855,6 +877,29 @@
     els.defaultModel.addEventListener("change", () => {
       saveSettings({ ...loadSettings(), defaultModel: els.defaultModel.value });
       toast("Model default diperbarui.");
+    });
+
+    $("#themeSelect").addEventListener("change", () => {
+      saveSettings({ ...loadSettings(), theme: $("#themeSelect").value });
+      applySettings();
+      toast("Tema tampilan diperbarui.");
+    });
+
+    $("#densitySelect").addEventListener("change", () => {
+      saveSettings({ ...loadSettings(), density: $("#densitySelect").value });
+      applySettings();
+      toast("Kepadatan tampilan diperbarui.");
+    });
+
+    $("#enterToSendToggle").addEventListener("change", event => {
+      saveSettings({ ...loadSettings(), enterToSend: event.target.checked });
+      toast(event.target.checked ? "Enter akan mengirim pesan." : "Enter akan membuat baris baru.");
+    });
+
+    $("#reduceMotionToggle").addEventListener("change", event => {
+      saveSettings({ ...loadSettings(), reduceMotion: event.target.checked });
+      applySettings();
+      toast(event.target.checked ? "Animasi dikurangi." : "Animasi normal diaktifkan.");
     });
 
     $("#clearAllHistory").addEventListener("click", () => {
@@ -959,12 +1004,18 @@
     els.modelLabel.textContent = modelName(conversation?.model || getDefaultModel());
     els.defaultModel.value = getDefaultModel();
 
+    applySettings();
     bindEvents();
     updateAlightFields();
     renderHistory();
     renderMessages();
     updateModelOptions();
     saveState();
+    if (window.matchMedia) {
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => {
+        if (loadSettings().theme === "system") applySettings();
+      });
+    }
   }
 
   initialize();
