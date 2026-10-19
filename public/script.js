@@ -39,9 +39,13 @@
     "deepseek/deepseek-v4-pro": ["DeepSeek V4 Pro", "DeepSeek"],
     "deepseek/deepseek-v4-flash": ["DeepSeek V4 Flash", "DeepSeek"],
     "deepseek/deepseek-v3.2-thinking": ["DeepSeek V3.2 Thinking", "DeepSeek"],
+    "gemini-2.0-pro": ["Gemini 2.0 Pro", "Google"],
+    "gemini-pro": ["Gemini Pro", "Google"],
+    "gemini-flash": ["Gemini Flash", "Google"],
     "google/gemini-3.1-pro-preview": ["Gemini 3.1 Pro", "Google"],
     "google/gemini-3-pro-preview": ["Gemini 3 Pro", "Google"],
     "google/gemini-3.1-flash-lite": ["Gemini 3.1 Flash Lite", "Google"],
+    "microsoft/copilot": ["Microsoft Copilot", "Microsoft"],
     "alibaba/qwen3-max": ["Qwen3 Max", "Alibaba"],
     "meta/llama-4-maverick": ["Llama 4 Maverick", "Meta"],
     "moonshotai/kimi-k2.6": ["Kimi K2.6", "Moonshot AI"]
@@ -589,7 +593,7 @@
       id: id(),
       title: "Obrolan baru",
       model: getDefaultModel(),
-      sessionId: `haomi-${id()}`,
+      sessionId: `HAOMI_XML_${id().toUpperCase()}`,
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -1100,16 +1104,214 @@
     if (els.input) els.input.disabled = value;
   }
 
+  const GEMINI_DIRECT_MODELS = [
+    "gemini-2.0-pro",
+    "gemini-pro",
+    "gemini-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-pro",
+    "gemini-1.5-flash"
+  ];
+
+  function isGeminiDirectModel(model) {
+    const m = String(model || "");
+    return GEMINI_DIRECT_MODELS.includes(m) || m.startsWith("gemini-");
+  }
+
+  function isCopilotModel(model) {
+    const m = String(model || "").toLowerCase();
+    return m === "microsoft/copilot" || m === "copilot";
+  }
+
+  function extractAiAnswer(data) {
+    if (typeof data === "string") return data.trim();
+    if (!data || typeof data !== "object") return "";
+
+    const candidates = [
+      data.answer,
+      data.result,
+      data.response,
+      data.reply,
+      data.output,
+      data.text,
+      data.content,
+      data.data,
+      data.message
+    ];
+
+    for (const item of candidates) {
+      if (typeof item === "string" && item.trim()) {
+        return item.trim();
+      }
+      if (item && typeof item === "object" && !Array.isArray(item)) {
+        const nested =
+          item.result ??
+          item.answer ??
+          item.response ??
+          item.reply ??
+          item.output ??
+          item.text ??
+          item.content ??
+          item.message;
+        if (typeof nested === "string" && nested.trim()) {
+          return nested.trim();
+        }
+      }
+    }
+
+    return "";
+  }
+
+  function extractSessionId(data, fallbackId) {
+    if (!data || typeof data !== "object") return fallbackId;
+    const candidates = [
+      data.session_id,
+      data.chatId,
+      data.chat_id,
+      data.sessionId,
+      data.result?.chatId,
+      data.result?.chat_id,
+      data.result?.session_id,
+      data.result?.sessionId,
+      data.data?.chatId,
+      data.data?.chat_id,
+      data.data?.session_id,
+      data.data?.sessionId
+    ];
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim();
+      }
+    }
+    return fallbackId;
+  }
+
+  function resolveBestGeminiModel(requestedModel, availableModels = []) {
+    if (!Array.isArray(availableModels) || !availableModels.length) {
+      return requestedModel || "gemini-2.0-pro";
+    }
+    const cleanReq = String(requestedModel || "").toLowerCase();
+    if (availableModels.includes(cleanReq)) return cleanReq;
+    if (cleanReq.includes("flash")) {
+      const flashMatch = availableModels.find(m => String(m).toLowerCase().includes("flash"));
+      if (flashMatch) return flashMatch;
+    }
+    if (cleanReq.includes("2.0")) {
+      const v2Match = availableModels.find(m => String(m).toLowerCase().includes("2.0"));
+      if (v2Match) return v2Match;
+    }
+    if (cleanReq.includes("pro")) {
+      const proMatch = availableModels.find(m => String(m).toLowerCase().includes("pro"));
+      if (proMatch) return proMatch;
+    }
+    return availableModels[0];
+  }
+
+  function buildStatelessContextPrompt(priorMessages, currentPrompt, stylePrefix = "") {
+    const recent = (priorMessages || [])
+      .filter(m => m && !m.error && typeof m.content === "string" && m.content.trim())
+      .slice(-4);
+    if (!recent.length) {
+      return stylePrefix ? `${stylePrefix}${currentPrompt}` : currentPrompt;
+    }
+    const transcript = recent
+      .map(m => {
+        const roleLabel = m.role === "user" ? "User" : "AI";
+        const snippet = m.content.replace(/\s+/g, " ").trim().slice(0, 180);
+        return `${roleLabel}: ${snippet}`;
+      })
+      .join("\n");
+    return `${stylePrefix}[Konteks obrolan sebelumnya:\n${transcript}]\n\nPertanyaan sekarang: ${currentPrompt}`;
+  }
+
   async function directJerexdFallback(action, payload = {}) {
     const API_KEY = "jere_sTl9OLzPIyMn";
     let endpoint = "/api/ai/aichat";
     const params = new URLSearchParams({ apikey: API_KEY });
+    const targetModel = payload.model || "openai/gpt-4o";
+    const sessionId = payload.chatId || payload.session_id || `HAOMI_XML_${Date.now()}`;
 
     if (action === "chat") {
+      if (isCopilotModel(targetModel)) {
+        endpoint = "/api/ai/copilot";
+        const primaryQuery = payload.reset !== "true" && payload.context_prompt
+          ? payload.context_prompt
+          : (payload.prompt || "");
+        params.set("query", primaryQuery);
+
+        let res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+          method: "GET",
+          headers: { Accept: "application/json" }
+        });
+        let data = await res.json();
+
+        if (data?.status === false && primaryQuery !== (payload.raw_prompt || payload.prompt)) {
+          params.set("query", payload.raw_prompt || payload.prompt || "");
+          res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+            method: "GET",
+            headers: { Accept: "application/json" }
+          });
+          data = await res.json();
+        }
+
+        if (data?.status === false) {
+          throw new Error(data.message || "Copilot AI belum berhasil memproses pesan.");
+        }
+
+        return {
+          success: true,
+          session_id: sessionId,
+          model: "microsoft/copilot",
+          answer: extractAiAnswer(data) || data
+        };
+      }
+
+      if (isGeminiDirectModel(targetModel)) {
+        endpoint = "/api/ai/gemini";
+        params.set("prompt", payload.prompt || "");
+        params.set("model", targetModel);
+        params.set("chatId", sessionId);
+        if (payload.url) params.set("url", payload.url);
+
+        let res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+          method: "GET",
+          headers: { Accept: "application/json" }
+        });
+        let data = await res.json();
+
+        if (
+          data?.status === false &&
+          Array.isArray(data?.models) &&
+          data.models.length > 0 &&
+          targetModel.toLowerCase() !== "list"
+        ) {
+          const resolvedModel = resolveBestGeminiModel(targetModel, data.models);
+          params.set("model", resolvedModel);
+          res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+            method: "GET",
+            headers: { Accept: "application/json" }
+          });
+          data = await res.json();
+        }
+
+        if (data?.status === false) {
+          throw new Error(data.message || "Gemini AI belum berhasil memproses pesan.");
+        }
+
+        const resolvedSession = extractSessionId(data, sessionId);
+        return {
+          success: true,
+          session_id: resolvedSession,
+          chatId: resolvedSession,
+          model: data?.model || targetModel,
+          answer: extractAiAnswer(data) || data
+        };
+      }
+
       endpoint = "/api/ai/aichat";
       params.set("prompt", payload.prompt || "");
-      params.set("model", payload.model || "openai/gpt-4o");
-      params.set("session_id", payload.session_id || `haomi-${Date.now()}`);
+      params.set("model", targetModel);
+      params.set("session_id", sessionId);
       if (payload.reset === "true") params.set("reset", "true");
     } else if (action === "am-send") {
       endpoint = "/api/am/send";
@@ -1136,11 +1338,12 @@
       throw new Error(data.message || "Permintaan belum berhasil diproses.");
     }
     if (action === "chat") {
+      const resolvedSession = extractSessionId(data, sessionId);
       return {
         success: true,
-        session_id: data?.session_id || payload.session_id,
-        model: data?.model || payload.model,
-        answer: data?.result ?? data?.answer ?? data?.response ?? data?.message ?? data?.data ?? data
+        session_id: resolvedSession,
+        model: data?.model || targetModel,
+        answer: extractAiAnswer(data) || data
       };
     }
     return {
@@ -1296,10 +1499,21 @@
 
     let succeeded = false;
     try {
+      const priorMessages = conversation.messages
+        .slice(0, -1)
+        .filter(msg => !msg.error && typeof msg.content === "string" && msg.content.trim());
+
+      const copilotContextPrompt = isCopilotModel(model) && !pendingResetSession
+        ? buildStatelessContextPrompt(priorMessages, prompt, stylePrefix)
+        : effectivePrompt;
+
       const requestPayload = {
         prompt: effectivePrompt,
+        raw_prompt: prompt,
+        context_prompt: copilotContextPrompt,
         model,
-        session_id: conversation.sessionId
+        session_id: conversation.sessionId,
+        chatId: conversation.sessionId
       };
 
       if (pendingResetSession) {
@@ -1309,7 +1523,8 @@
 
       const data = await apiRequest("chat", requestPayload);
 
-      const rawAnswer = data.answer ?? data.result ?? data.response ?? data.message;
+      const extracted = extractAiAnswer(data);
+      const rawAnswer = extracted || (data.answer ?? data.result ?? data.response ?? data.message);
       const answer = typeof rawAnswer === "string"
         ? rawAnswer
         : rawAnswer == null ? "" : JSON.stringify(rawAnswer, null, 2);
@@ -1318,7 +1533,7 @@
         throw new Error("Belum ada teks balasan yang diterima, coba kirim ulang ya.");
       }
 
-      conversation.sessionId = data.session_id || conversation.sessionId;
+      conversation.sessionId = data.session_id || data.chatId || conversation.sessionId;
       conversation.messages.push({
         role: "assistant",
         content: answer,
@@ -1463,7 +1678,7 @@
 
   function resetCurrentSessionContext() {
     const conversation = ensureConversation();
-    conversation.sessionId = `haomi-${id()}`;
+    conversation.sessionId = `HAOMI_XML_${id().toUpperCase()}`;
     conversation.messages = [];
     pendingResetSession = true;
     forceShowHud = false;
@@ -1565,7 +1780,10 @@
       const name = models[button.dataset.model]?.join(" ") || button.dataset.model;
       const provider = button.dataset.provider || "other";
       const matchesQuery = name.toLowerCase().includes(query) || button.dataset.model.toLowerCase().includes(query);
-      const matchesProvider = activeProviderFilter === "all" || provider === activeProviderFilter;
+      const matchesProvider =
+        activeProviderFilter === "all" ||
+        provider === activeProviderFilter ||
+        (activeProviderFilter === "other" && provider === "Copilot");
       button.hidden = !(matchesQuery && matchesProvider);
       const isSel = button.dataset.model === selected;
       button.classList.toggle("selected", isSel);
@@ -1600,7 +1818,9 @@
   }
 
   function setAlightMode(mode) {
-    const select = $("#alightAction"); if (select) select.value = mode; $$(".mode-tab[data-am-mode]").forEach(tab => {
+    const select = $("#alightAction");
+    if (select) select.value = mode;
+    $$(".mode-tab[data-am-mode]").forEach(tab => {
       tab.classList.toggle("active", tab.dataset.amMode === mode);
     });
     updateAlightFields();
@@ -1613,7 +1833,13 @@
     const needsLink = mode === "am-verify";
     const linkGroup = $("#verificationLinkGroup");
     const linkInput = $("#alightLink");
-    const submitSpan = $("#alightSubmit span"); if (linkGroup) linkGroup.hidden = !needsLink; if (linkInput) linkInput.required = needsLink; if (submitSpan) { submitSpan.textContent = needsLink ? "Verifikasi Tautan Akun" : "Kirim Email Verifikasi"; } $$(".mode-tab[data-am-mode]").forEach(tab => {
+    const submitSpan = $("#alightSubmit span");
+    if (linkGroup) linkGroup.hidden = !needsLink;
+    if (linkInput) linkInput.required = needsLink;
+    if (submitSpan) {
+      submitSpan.textContent = needsLink ? "Verifikasi Tautan Akun" : "Kirim Email Verifikasi";
+    }
+    $$(".mode-tab[data-am-mode]").forEach(tab => {
       tab.classList.toggle("active", tab.dataset.amMode === mode);
     });
   }
@@ -1768,7 +1994,14 @@
   }
 
   function syncWaEmojiChips() {
-    const input = $("#whatsappReaction"); if (!input) return; const currentList = input.value .split(",") .map(item => item.trim()) .filter(Boolean);      $$(".emoji-chip[data-emoji]").forEach(chip => {
+    const input = $("#whatsappReaction");
+    if (!input) return;
+    const currentList = input.value
+      .split(",")
+      .map(item => item.trim())
+      .filter(Boolean);
+
+    $$(".emoji-chip[data-emoji]").forEach(chip => {
       chip.classList.toggle("active", currentList.includes(chip.dataset.emoji));
     });
   }
@@ -1812,6 +2045,14 @@
     if (els.slashCmdMenu) els.slashCmdMenu.hidden = true;
     if (cmd === "/model" || cmd === "/models") {
       openModelDialog();
+      return true;
+    }
+    if (cmd === "/copilot") {
+      selectModel("microsoft/copilot");
+      return true;
+    }
+    if (cmd === "/gemini") {
+      selectModel("gemini-2.0-pro");
       return true;
     }
     if (cmd === "/gaya" || cmd === "/style") {
@@ -1931,15 +2172,50 @@
     $("#popoverResetChat")?.addEventListener("click", resetCurrentSessionContext);
     $("#exportChatButton")?.addEventListener("click", exportCurrentChat);
 
-    $$("[data-view]").forEach(button => { button.addEventListener("click", event => { event.preventDefault(); showView(button.dataset.view); }); });      // Chip perintah cepat & menu slash command di keyboard composer $$
-(".cmd-chip[data-cmd]").forEach(chip => {
+    $$("[data-view]").forEach(button => {
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        showView(button.dataset.view);
+      });
+    });
+
+    // Chip perintah cepat & menu slash command di keyboard composer
+    $$(".cmd-chip[data-cmd]").forEach(chip => {
       chip.addEventListener("click", () => {
         executeSlashShortcut(chip.dataset.cmd);
       });
     });
 
-    $$(".slash-cmd-item[data-slash]").forEach(item => { item.addEventListener("click", () => { if (els.input && item.dataset.slash !== "/kode" && item.dataset.slash !== "/ringkas") { els.input.value = ""; resizeInput(); } executeSlashShortcut(item.dataset.slash); }); });      els.terminalInput?.addEventListener("input", handleTerminalFilter); els.terminalInput?.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); handleTerminalExecute(els.terminalInput.value); } });      els.chatForm?.addEventListener("submit", event => { event.preventDefault(); if (!busy && els.input) sendMessage(els.input.value); });      els.input?.addEventListener("input", () => { resizeInput(); const val = (els.input.value \vert{}\vert{} "").trim(); if (els.slashCmdMenu) { if (val.startsWith("/") && !val.includes(" ")) { let anyVisible = false; $$
-(".slash-cmd-item", els.slashCmdMenu).forEach(item => {
+    $$(".slash-cmd-item[data-slash]").forEach(item => {
+      item.addEventListener("click", () => {
+        if (els.input && item.dataset.slash !== "/kode" && item.dataset.slash !== "/ringkas") {
+          els.input.value = "";
+          resizeInput();
+        }
+        executeSlashShortcut(item.dataset.slash);
+      });
+    });
+
+    els.terminalInput?.addEventListener("input", handleTerminalFilter);
+    els.terminalInput?.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleTerminalExecute(els.terminalInput.value);
+      }
+    });
+
+    els.chatForm?.addEventListener("submit", event => {
+      event.preventDefault();
+      if (!busy && els.input) sendMessage(els.input.value);
+    });
+
+    els.input?.addEventListener("input", () => {
+      resizeInput();
+      const val = (els.input.value || "").trim();
+      if (els.slashCmdMenu) {
+        if (val.startsWith("/") && !val.includes(" ")) {
+          let anyVisible = false;
+          $$(".slash-cmd-item", els.slashCmdMenu).forEach(item => {
             const cmd = item.dataset.slash || "";
             const match = cmd.startsWith(val.toLowerCase());
             item.hidden = !match;
@@ -1967,12 +2243,58 @@
       }
     });
 
-    $$(".prompt-card[data-prompt]").forEach(button => { button.addEventListener("click", () => { showView("chat"); if (els.input) { els.input.value = button.dataset.prompt \vert{}\vert{} ""; resizeInput(); els.input.focus(); toast("Ide obrolan siap dikirim"); } }); });      els.welcomeModelBadge?.addEventListener("click", openModelDialog); els.welcomeStyleBadge?.addEventListener("click", openSettings);      els.messages?.addEventListener("click", event => { const codeBtn = event.target.closest("[data-copy-code]"); if (codeBtn) { copyText(codeBtn.dataset.copyCode); } });      els.composerToolsBtn?.addEventListener("click", event => { event.stopPropagation(); toggleComposerMenu(); });      document.addEventListener("click", event => { if (els.composerToolsMenu && !els.composerToolsMenu.hidden && !els.composerToolsMenu.contains(event.target) && !els.composerToolsBtn?.contains(event.target)) { closeComposerMenu(); } });      els.modelTrigger?.addEventListener("click", openModelDialog); els.closeModel?.addEventListener("click", closeModelDialog); els.modelSearch?.addEventListener("input", updateModelOptions);      $$
-(".provider-filter").forEach(btn => {
+    $$(".prompt-card[data-prompt]").forEach(button => {
+      button.addEventListener("click", () => {
+        showView("chat");
+        if (els.input) {
+          els.input.value = button.dataset.prompt || "";
+          resizeInput();
+          els.input.focus();
+          toast("Ide obrolan siap dikirim");
+        }
+      });
+    });
+
+    els.welcomeModelBadge?.addEventListener("click", openModelDialog);
+    els.welcomeStyleBadge?.addEventListener("click", openSettings);
+
+    els.messages?.addEventListener("click", event => {
+      const codeBtn = event.target.closest("[data-copy-code]");
+      if (codeBtn) {
+        copyText(codeBtn.dataset.copyCode);
+      }
+    });
+
+    els.composerToolsBtn?.addEventListener("click", event => {
+      event.stopPropagation();
+      toggleComposerMenu();
+    });
+
+    document.addEventListener("click", event => {
+      if (els.composerToolsMenu && !els.composerToolsMenu.hidden &&
+          !els.composerToolsMenu.contains(event.target) &&
+          !els.composerToolsBtn?.contains(event.target)) {
+        closeComposerMenu();
+      }
+    });
+
+    els.modelTrigger?.addEventListener("click", openModelDialog);
+    els.closeModel?.addEventListener("click", closeModelDialog);
+    els.modelSearch?.addEventListener("input", updateModelOptions);
+
+    $$(".provider-filter").forEach(btn => {
       btn.addEventListener("click", () => {
         activeProviderFilter = btn.dataset.provider || "all";
-        $$(".provider-filter").forEach(b => b.classList.toggle("active", b === btn)); updateModelOptions(); }); });      els.modelDialog?.addEventListener("click", event => { if (event.target === els.modelDialog) closeModelDialog(); });      $$
-(".model-option").forEach(button => {
+        $$(".provider-filter").forEach(b => b.classList.toggle("active", b === btn));
+        updateModelOptions();
+      });
+    });
+
+    els.modelDialog?.addEventListener("click", event => {
+      if (event.target === els.modelDialog) closeModelDialog();
+    });
+
+    $$(".model-option").forEach(button => {
       button.addEventListener("click", () => selectModel(button.dataset.model));
     });
 
@@ -1986,8 +2308,14 @@
       if (event.target === els.settings) closeSettings();
     });
 
-    $$("[data-stream-choice]").forEach(btn => { btn.addEventListener("click", () => { saveSettings({ streamSpeed: btn.dataset.streamChoice }); toast("Kecepatan ketikan AI diperbarui"); }); });      $$
-("[data-theme-choice]").forEach(btn => {
+    $$("[data-stream-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        saveSettings({ streamSpeed: btn.dataset.streamChoice });
+        toast("Kecepatan ketikan AI diperbarui");
+      });
+    });
+
+    $$("[data-theme-choice]").forEach(btn => {
       btn.addEventListener("click", () => {
         saveSettings({ theme: btn.dataset.themeChoice });
         const actual = getResolvedTheme(btn.dataset.themeChoice);
@@ -2067,7 +2395,49 @@
 
     $("#exportAllDataBtn")?.addEventListener("click", exportAllBackup);
 
-    const clearBtn = $("#clearAllHistory"); clearBtn?.addEventListener("click", () => { if (busy) { toast("Tunggu jawaban selesai sebelum menghapus riwayat."); return; }        if (!clearBtn.classList.contains("confirming")) { clearBtn.classList.add("confirming"); clearBtn.textContent = "Ketuk sekali lagi buat hapus"; clearTimeout(clearHistoryConfirmTimer); clearHistoryConfirmTimer = window.setTimeout(() => { clearBtn.classList.remove("confirming"); clearBtn.textContent = "Hapus Semua Riwayat"; }, 3500); return; }        clearTimeout(clearHistoryConfirmTimer); clearBtn.classList.remove("confirming"); clearBtn.textContent = "Hapus Semua Riwayat";        const conversation = newConversation(); state = { conversations: [conversation], activeId: conversation.id }; telemetry = { totalRequests: 0, successCount: 0, totalLatencyMs: 0 };        try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(TELEMETRY_KEY); } catch {} saveState(); renderTelemetryStats(); renderHistory(); renderMessages(false); closeSettings(); toast("Semua riwayat obrolan berhasil dihapus"); });      // Alight Motion $$(".mode-tab[data-am-mode]").forEach(tab => {
+    const clearBtn = $("#clearAllHistory");
+    clearBtn?.addEventListener("click", () => {
+      if (busy) {
+        toast("Tunggu jawaban selesai sebelum menghapus riwayat.");
+        return;
+      }
+
+      if (!clearBtn.classList.contains("confirming")) {
+        clearBtn.classList.add("confirming");
+        clearBtn.textContent = "Ketuk sekali lagi buat hapus";
+        clearTimeout(clearHistoryConfirmTimer);
+        clearHistoryConfirmTimer = window.setTimeout(() => {
+          clearBtn.classList.remove("confirming");
+          clearBtn.textContent = "Hapus Semua Riwayat";
+        }, 3500);
+        return;
+      }
+
+      clearTimeout(clearHistoryConfirmTimer);
+      clearBtn.classList.remove("confirming");
+      clearBtn.textContent = "Hapus Semua Riwayat";
+
+      const conversation = newConversation();
+      state = {
+        conversations: [conversation],
+        activeId: conversation.id
+      };
+      telemetry = { totalRequests: 0, successCount: 0, totalLatencyMs: 0 };
+
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(TELEMETRY_KEY);
+      } catch {}
+      saveState();
+      renderTelemetryStats();
+      renderHistory();
+      renderMessages(false);
+      closeSettings();
+      toast("Semua riwayat obrolan berhasil dihapus");
+    });
+
+    // Alight Motion
+    $$(".mode-tab[data-am-mode]").forEach(tab => {
       tab.addEventListener("click", () => setAlightMode(tab.dataset.amMode));
     });
 
@@ -2121,7 +2491,13 @@
         timeBadge: $("#urlscanTimeBadge"),
         summaryEl: $("#urlscanSummary"),
         action: "urlscan",
-        payload: { url: $("#scanUrl").value.trim() }, loadingText: "Memeriksa..." }); });      // Reaksi WhatsApp $$(".emoji-chip[data-emoji]").forEach(chip => {
+        payload: { url: $("#scanUrl").value.trim() },
+        loadingText: "Memeriksa..."
+      });
+    });
+
+    // Reaksi WhatsApp
+    $$(".emoji-chip[data-emoji]").forEach(chip => {
       chip.addEventListener("click", () => toggleWaEmoji(chip.dataset.emoji));
     });
 
@@ -2152,8 +2528,14 @@
       });
     });
 
-    $$("[data-copy-result]").forEach(button => { button.addEventListener("click", () => { const target = document.getElementById(button.dataset.copyResult); if (target) copyText(target.textContent); }); });      $$
-("[data-clear-result]").forEach(button => {
+    $$("[data-copy-result]").forEach(button => {
+      button.addEventListener("click", () => {
+        const target = document.getElementById(button.dataset.copyResult);
+        if (target) copyText(target.textContent);
+      });
+    });
+
+    $$("[data-clear-result]").forEach(button => {
       button.addEventListener("click", () => {
         const targetId = button.dataset.clearResult;
         const target = document.getElementById(targetId);
@@ -2249,4 +2631,3 @@
     initialize();
   }
 })();
-
