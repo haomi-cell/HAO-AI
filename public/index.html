@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="id" data-theme="dark" data-density="standard">
 <head>
@@ -162,11 +163,12 @@
       left: -100px;
     }
     .glow-2 {
-      width: 360px;
-      height: 360px;
+      width: 320px;
+      height: 320px;
       background: #0ea5e9;
-      bottom: -120px;
-      right: -80px;
+      top: 22%;
+      right: -120px;
+      opacity: calc(var(--glow-opacity) * 0.65);
     }
     .cyber-grid-overlay {
       position: absolute;
@@ -182,10 +184,10 @@
        ================================================================= */
     .dynamic-island-wrap {
       position: fixed;
-      top: 8px;
+      top: calc(10px + env(safe-area-inset-top, 0px));
       left: 50%;
       transform: translateX(-50%);
-      z-index: 150;
+      z-index: 220;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -195,47 +197,42 @@
     }
 
     .dynamic-island {
-      pointer-events: auto;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-26px) scale(0.86);
       background: var(--island-bg);
       color: var(--island-text);
       border: 1px solid var(--island-border);
       border-radius: 999px;
-      padding: 5px 13px;
-      min-width: 156px;
+      padding: 8px 16px;
+      min-width: 190px;
       max-width: min(92vw, 420px);
       box-shadow:
-        0 10px 30px rgba(0, 0, 0, 0.55),
-        0 0 0 1px rgba(0, 229, 153, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+        0 14px 36px rgba(0, 0, 0, 0.7),
+        0 0 22px rgba(0, 229, 153, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
       transition:
-        all 0.38s cubic-bezier(0.22, 1.2, 0.36, 1),
-        border-radius 0.32s var(--ease-spring);
+        opacity 0.26s var(--ease-spring),
+        transform 0.34s cubic-bezier(0.22, 1.25, 0.36, 1),
+        visibility 0.26s linear;
       overflow: hidden;
       cursor: pointer;
       user-select: none;
     }
 
-    .dynamic-island:hover {
-      border-color: #00e599;
-      box-shadow:
-        0 12px 34px rgba(0, 0, 0, 0.65),
-        0 0 16px rgba(0, 229, 153, 0.22);
-    }
-
-    .dynamic-island:active {
-      transform: scale(0.96);
-    }
-
     .dynamic-island.is-notifying {
-      padding: 8px 16px;
-      min-width: 230px;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
       border-color: #00e599;
-      box-shadow:
-        0 14px 36px rgba(0, 0, 0, 0.7),
-        0 0 22px rgba(0, 229, 153, 0.32);
-      transform: translateY(2px) scale(1.02);
+      transform: translateY(0) scale(1);
+    }
+
+    .dynamic-island.is-notifying:active {
+      transform: scale(0.96);
     }
 
     .dynamic-island.is-expanded {
@@ -1373,14 +1370,17 @@
       gap: 6px;
     }
 
-    /* Composer Dock — Integrated Cyber Terminal & Keyboard Input */
+    /* Composer Dock — Rapat dan Menyatu Tanpa Celah Bawah */
     .composer-dock {
       position: relative;
-      padding: 8px 14px 14px;
+      padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
       max-width: 948px;
       width: 100%;
-      margin: 0 auto;
+      margin: 0 auto !important;
       flex-shrink: 0;
+      background: var(--bg-base) !important;
+      border: none !important;
+      box-shadow: none !important;
     }
 
     .composer {
@@ -2492,44 +2492,16 @@
     <div class="cyber-grid-overlay"></div>
   </div>
 
-  <!-- CYBER DYNAMIC ISLAND (Notifikasi Atas & Mini Pod Interaktif) -->
+  <!-- CYBER DYNAMIC ISLAND (Hanya Muncul Saat Notifikasi / On-Off Fitur) -->
   <div class="dynamic-island-wrap" id="dynamicIslandWrap">
-    <div class="dynamic-island" id="dynamicIsland" role="status" aria-live="polite" title="Ketuk untuk buka kapsul pintar">
+    <div class="dynamic-island" id="dynamicIsland" role="status" aria-live="polite" aria-hidden="true" title="Ketuk untuk tutup notifikasi">
       <div class="island-compact-row" id="islandCompactRow">
         <div class="island-left">
           <span class="island-orb" id="islandOrb"></span>
-          <span class="island-text" id="islandText">HAOMI · Siap</span>
+          <span class="island-text" id="islandText">Notifikasi</span>
         </div>
         <div class="island-wave" aria-hidden="true">
           <span></span><span></span><span></span><span></span>
-        </div>
-      </div>
-
-      <div class="island-pod-body" id="islandPodBody" hidden>
-        <div class="island-pod-metrics">
-          <div class="island-mini-stat">
-            <small>WAKTU</small>
-            <strong id="islandClock">AKTIF</strong>
-          </div>
-          <div class="island-mini-stat">
-            <small>PING</small>
-            <strong id="islandPing">12 ms</strong>
-          </div>
-          <div class="island-mini-stat">
-            <small>GERAK</small>
-            <strong id="islandFps">60 FPS</strong>
-          </div>
-        </div>
-        <div class="island-pod-actions">
-          <button type="button" class="island-pod-btn" id="islandSoundBtn" title="Efek suara sentuhan halus">
-            <span id="islandSoundLabel">Suara: Mati</span>
-          </button>
-          <button type="button" class="island-pod-btn" id="islandFocusBtn" title="Sembunyikan/tampilkan dasbor">
-            <span>Mode Fokus</span>
-          </button>
-          <button type="button" class="island-pod-btn" id="islandThemeBtn" title="Ganti tema Gelap / Terang">
-            <span id="islandThemeLabel">Tema</span>
-          </button>
         </div>
       </div>
     </div>
@@ -3367,6 +3339,17 @@
 
         <div class="settings-row">
           <div class="settings-copy">
+            <label for="soundFxToggle"><strong>Suara Sentuhan Tombol</strong></label>
+            <p>Bunyi klik halus waktu kamu menekan tombol atau perintah cepat.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="soundFxToggle">
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-copy">
             <label for="defaultWaEmojiInput"><strong>Emoji Bawaan Reaksi WA</strong></label>
             <p>Susunan emoji awal waktu kamu membuka fitur Reaksi Saluran WA.</p>
           </div>
@@ -3392,16 +3375,6 @@
   <!-- Hidden legacy toast container (intercepted into Dynamic Island at top) -->
   <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
-  <script>
-    (function () {
-      if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-        var linkEl = document.createElement('link');
-        linkEl.rel = 'stylesheet';
-        linkEl.href = '/style.css';
-        document.head.insertBefore(linkEl, document.head.firstChild);
-      }
-    })();
-  </script>
   <script>
 (() => {
   "use strict";
@@ -3473,40 +3446,124 @@
     responseStyle: "standard",
     enterToSend: true,
     saveHistory: true,
+    soundFx: false,
     defaultWaEmoji: "🙄,💦,🥰,😋"
   };
 
-  // Pastikan kapsul Dynamic Island tersedia di bagian atas layar
+  // Pastikan kapsul Dynamic Island (khusus notifikasi on/off) & pengaturan suara tersedia
   function ensureDynamicIslandDOM() {
-    if ($("#dynamicIsland")) return;
-    const wrap = document.createElement("div");
-    wrap.className = "dynamic-island-wrap";
-    wrap.id = "dynamicIslandWrap";
-    wrap.innerHTML =
-      `<div class="dynamic-island" id="dynamicIsland" role="status" aria-live="polite" title="Ketuk untuk buka kapsul pintar">` +
-        `<div class="island-compact-row" id="islandCompactRow">` +
-          `<div class="island-left">` +
-            `<span class="island-orb" id="islandOrb"></span>` +
-            `<span class="island-text" id="islandText">HAOMI · Siap</span>` +
+    if (!$("#haomiIslandAndBottomFix")) {
+      const style = document.createElement("style");
+      style.id = "haomiIslandAndBottomFix";
+      style.textContent = `
+        .dynamic-island-wrap {
+          position: fixed !important;
+          top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          z-index: 220 !important;
+          pointer-events: none !important;
+        }
+        .dynamic-island {
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+          transform: translateY(-26px) scale(0.86) !important;
+          transition:
+            opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+            transform 0.34s cubic-bezier(0.22, 1.25, 0.36, 1),
+            visibility 0.26s linear !important;
+        }
+        .dynamic-island.is-notifying {
+          opacity: 1 !important;
+          visibility: visible !important;
+          pointer-events: auto !important;
+          transform: translateY(0) scale(1) !important;
+        }
+        .island-pod-body { display: none !important; }
+        html, body {
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          min-height: 100dvh !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          background-color: var(--bg-base) !important;
+        }
+        .app-shell, .main-panel, .view, .chat-view {
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          padding-bottom: 0 !important;
+          margin-bottom: 0 !important;
+          border-bottom: none !important;
+        }
+        .view, .chat-view {
+          height: auto !important;
+          flex: 1 1 0% !important;
+          min-height: 0 !important;
+        }
+        .composer-dock {
+          margin: 0 auto !important;
+          padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+          background: var(--bg-base) !important;
+          border-top: none !important;
+          border-bottom: none !important;
+          box-shadow: none !important;
+        }
+        .composer-dock::after, .main-panel::after, .app-shell::after {
+          display: none !important;
+          content: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const existingIsland = $("#dynamicIsland");
+    if (existingIsland) {
+      existingIsland.classList.remove("is-expanded", "is-notifying");
+      existingIsland.setAttribute("aria-hidden", "true");
+      const pod = $("#islandPodBody", existingIsland);
+      if (pod) pod.remove();
+    } else {
+      const wrap = document.createElement("div");
+      wrap.className = "dynamic-island-wrap";
+      wrap.id = "dynamicIslandWrap";
+      wrap.innerHTML =
+        `<div class="dynamic-island" id="dynamicIsland" role="status" aria-live="polite" aria-hidden="true">` +
+          `<div class="island-compact-row" id="islandCompactRow">` +
+            `<div class="island-left">` +
+              `<span class="island-orb" id="islandOrb"></span>` +
+              `<span class="island-text" id="islandText">Notifikasi</span>` +
+            `</div>` +
+            `<div class="island-wave" aria-hidden="true">` +
+              `<span></span><span></span><span></span><span></span>` +
+            `</div>` +
           `</div>` +
-          `<div class="island-wave" aria-hidden="true">` +
-            `<span></span><span></span><span></span><span></span>` +
-          `</div>` +
+        `</div>`;
+      document.body.prepend(wrap);
+    }
+
+    // Pastikan tombol Suara Sentuhan ada di dalam Pengaturan
+    const settingsBody = $(".settings-body");
+    if (settingsBody && !$("#soundFxToggle")) {
+      const row = document.createElement("div");
+      row.className = "settings-row";
+      row.innerHTML =
+        `<div class="settings-copy">` +
+          `<label for="soundFxToggle"><strong>Suara Sentuhan Tombol</strong></label>` +
+          `<p>Bunyi klik halus waktu kamu menekan tombol atau perintah cepat.</p>` +
         `</div>` +
-        `<div class="island-pod-body" id="islandPodBody" hidden>` +
-          `<div class="island-pod-metrics">` +
-            `<div class="island-mini-stat"><small>WAKTU</small><strong id="islandClock">AKTIF</strong></div>` +
-            `<div class="island-mini-stat"><small>PING</small><strong id="islandPing">12 ms</strong></div>` +
-            `<div class="island-mini-stat"><small>GERAK</small><strong id="islandFps">60 FPS</strong></div>` +
-          `</div>` +
-          `<div class="island-pod-actions">` +
-            `<button type="button" class="island-pod-btn" id="islandSoundBtn"><span id="islandSoundLabel">Suara: Mati</span></button>` +
-            `<button type="button" class="island-pod-btn" id="islandFocusBtn"><span>Mode Fokus</span></button>` +
-            `<button type="button" class="island-pod-btn" id="islandThemeBtn"><span id="islandThemeLabel">Tema</span></button>` +
-          `</div>` +
-        `</div>` +
-      `</div>`;
-    document.body.prepend(wrap);
+        `<label class="switch">` +
+          `<input type="checkbox" id="soundFxToggle">` +
+          `<span class="switch-slider"></span>` +
+        `</label>`;
+      const actionsBox = $(".settings-actions-box", settingsBody);
+      if (actionsBox) {
+        settingsBody.insertBefore(row, actionsBox);
+      } else {
+        settingsBody.appendChild(row);
+      }
+    }
   }
 
   ensureDynamicIslandDOM();
@@ -3539,6 +3596,7 @@
     responseStyle: $("#responseStyleSelect"),
     enterToSend: $("#enterToSendToggle"),
     saveHistory: $("#saveHistoryToggle"),
+    soundFx: $("#soundFxToggle"),
     defaultWaEmoji: $("#defaultWaEmojiInput"),
     enterHintBadge: $("#enterHintBadge"),
     welcomeModelBadge: $("#welcomeModelBadge"),
@@ -3596,8 +3654,11 @@
   let audioCtx = null;
 
   try {
-    soundEnabled = localStorage.getItem(SOUND_KEY) === "1";
-  } catch {}
+    const savedSound = localStorage.getItem(SOUND_KEY);
+    soundEnabled = savedSound !== null ? savedSound === "1" : Boolean(settings.soundFx);
+  } catch {
+    soundEnabled = Boolean(settings.soundFx);
+  }
 
   function id() {
     return window.crypto?.randomUUID?.() ||
@@ -3869,6 +3930,7 @@
     if (els.responseStyle) els.responseStyle.value = settings.responseStyle || "standard";
     if (els.enterToSend) els.enterToSend.checked = Boolean(settings.enterToSend);
     if (els.saveHistory) els.saveHistory.checked = Boolean(settings.saveHistory);
+    if (els.soundFx) els.soundFx.checked = Boolean(soundEnabled);
     if (els.defaultWaEmoji) els.defaultWaEmoji.value = settings.defaultWaEmoji || defaultSettings.defaultWaEmoji;
 
     if (els.enterHintBadge) {
@@ -4087,7 +4149,7 @@
     return result.join("");
   }
 
-  // Notifikasi langsung tampil di Dynamic Island bagian atas tengah
+  // Dynamic Island hanya muncul saat ada notifikasi / perubahan on-off, lalu sembunyi otomatis
   function toast(message, error = false) {
     const cleanMsg = String(message || "")
       .replace(/\/api\/[a-z0-9\/_-]+/gi, "")
@@ -4099,25 +4161,18 @@
     const textEl = els.islandText || $("#islandText");
 
     if (island && textEl) {
-      island.classList.add("is-notifying");
-      island.classList.toggle("is-error", Boolean(error));
       textEl.textContent = cleanMsg;
+      island.classList.toggle("is-error", Boolean(error));
+      island.classList.add("is-notifying");
+      island.setAttribute("aria-hidden", "false");
       playCyberTick(error ? 320 : 780, 0.06);
 
       if (islandTimer) window.clearTimeout(islandTimer);
       islandTimer = window.setTimeout(() => {
         island.classList.remove("is-notifying", "is-error");
-        textEl.textContent = getIdleIslandLabel();
-      }, 2800);
+        island.setAttribute("aria-hidden", "true");
+      }, 2200);
       return;
-    }
-
-    if (els.toast) {
-      const item = document.createElement("div");
-      item.className = `toast${error ? " error" : ""}`;
-      item.textContent = cleanMsg;
-      els.toast.appendChild(item);
-      window.setTimeout(() => item.remove(), 2800);
     }
   }
 
@@ -5189,48 +5244,11 @@
     $("#newChatButton")?.addEventListener("click", newChat);
     els.historySearch?.addEventListener("input", renderHistory);
 
-    // Interaksi kapsul Dynamic Island di bagian atas
-    if (els.dynamicIsland && els.islandPodBody) {
-      els.dynamicIsland.addEventListener("click", event => {
-        if (event.target.closest(".island-pod-btn")) return;
-        const expanded = !els.islandPodBody.hidden;
-        els.islandPodBody.hidden = expanded;
-        els.dynamicIsland.classList.toggle("is-expanded", !expanded);
-        playCyberTick(520, 0.04);
-      });
-
-      document.addEventListener("click", event => {
-        if (!els.dynamicIsland.contains(event.target) && !els.islandPodBody.hidden) {
-          els.islandPodBody.hidden = true;
-          els.dynamicIsland.classList.remove("is-expanded");
-        }
-      });
-    }
-
-    els.islandSoundBtn?.addEventListener("click", event => {
-      event.stopPropagation();
-      soundEnabled = !soundEnabled;
-      try {
-        localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
-      } catch {}
-      if (els.islandSoundLabel) {
-        els.islandSoundLabel.textContent = soundEnabled ? "Suara: Aktif" : "Suara: Mati";
-      }
-      toast(soundEnabled ? "Efek suara sentuhan aktif" : "Efek suara dimatikan");
-    });
-
-    els.islandFocusBtn?.addEventListener("click", event => {
-      event.stopPropagation();
-      if (els.welcome) {
-        forceShowHud = els.welcome.hidden;
-        els.welcome.hidden = !els.welcome.hidden;
-        toast(els.welcome.hidden ? "Mode Fokus: Dasbor disembunyikan" : "Panel dasbor ditampilkan");
-      }
-    });
-
-    els.islandThemeBtn?.addEventListener("click", event => {
-      event.stopPropagation();
-      toggleQuickTheme();
+    // Ketuk Dynamic Island saat muncul untuk langsung menutup notifikasi
+    els.dynamicIsland?.addEventListener("click", () => {
+      if (islandTimer) window.clearTimeout(islandTimer);
+      els.dynamicIsland.classList.remove("is-notifying", "is-error");
+      els.dynamicIsland.setAttribute("aria-hidden", "true");
     });
 
     document.addEventListener("pointerdown", event => {
@@ -5469,6 +5487,15 @@
         } catch {}
         toast("Penyimpanan riwayat dimatikan");
       }
+    });
+
+    els.soundFx?.addEventListener("change", () => {
+      soundEnabled = Boolean(els.soundFx.checked);
+      try {
+        localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
+      } catch {}
+      saveSettings({ soundFx: soundEnabled });
+      toast(soundEnabled ? "Suara sentuhan: Aktif" : "Suara sentuhan: Mati");
     });
 
     els.defaultWaEmoji?.addEventListener("change", () => {
@@ -5720,7 +5747,6 @@
     initialize();
   }
 })();
-
   </script>
 </body>
 </html>
