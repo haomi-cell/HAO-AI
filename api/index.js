@@ -1,7 +1,34 @@
 // api/index.js
 const axios = require('axios');
 
+// Deteksi pertanyaan seputar pembuat / pencipta / developer AI
+function isAskingCreator(text) {
+    const q = text.toLowerCase().trim();
+    const patterns = [
+        /siapa.*(buat|bikin|cipta|kembang|develop|rancang|bangun|pemilik|owner)/i,
+        /(pembuat|pencipta|pengembang|developer|owner|pemilik).*(kamu|mu|anda|ai\s*ini|smart\s*ai|siapa)/i,
+        /(buatan|ciptaan|bikinan|karya)\s+siapa/i,
+        /yang\s+(buat|bikin|menciptakan|mengembangkan)\s+(kamu|anda|ai\s*ini|smart\s*ai)/i,
+        /who\s+(made|created|built|developed|owns)\s+you/i,
+        /who\s+is\s+your\s+(creator|developer|maker|owner)/i
+    ];
+    return patterns.some(regex => regex.test(q));
+}
+
 async function turboseekLogic(question) {
+    // 1. Jika pengguna bertanya siapa pembuat AI ini, langsung berikan jawaban resmi
+    if (isAskingCreator(question)) {
+        return {
+            answer: 'Saya adalah SmartAI, asisten kecerdasan buatan yang dibuat dan dikembangkan oleh Mas Haomi_Xml. Ada hal yang bisa saya bantu hari ini?',
+            sources: ['https://hao-ai-kappa.vercel.app'],
+            similarQuestions: [
+                'Apa saja fitur unggulan SmartAI buatan Mas Haomi_Xml?',
+                'Bagaimana cara menggunakan SmartAI untuk membantu pekerjaan?',
+                'Siapa itu Mas Haomi_Xml?'
+            ]
+        };
+    }
+
     const inst = axios.create({
         baseURL: 'https://www.turboseek.io/api',
         timeout: 8000,
@@ -16,7 +43,7 @@ async function turboseekLogic(question) {
     let similarQuestions = [];
     let cleanAnswer = '';
 
-    // 1. Get Sources dari TurboSeek
+    // 2. Get Sources dari TurboSeek
     try {
         const resSources = await inst.post('/getSources', { question });
         if (Array.isArray(resSources.data)) {
@@ -26,7 +53,7 @@ async function turboseekLogic(question) {
         console.error('Gagal mengambil sources:', e.message);
     }
 
-    // 2. Get Similar Questions dari TurboSeek
+    // 3. Get Similar Questions dari TurboSeek
     try {
         const resSimilar = await inst.post('/getSimilarQuestions', { question, sources });
         if (Array.isArray(resSimilar.data)) {
@@ -36,7 +63,7 @@ async function turboseekLogic(question) {
         console.error('Gagal mengambil similar questions:', e.message);
     }
 
-    // 3. Get Answer dari TurboSeek
+    // 4. Get Answer dari TurboSeek
     try {
         const { data: answer } = await inst.post('/getAnswer', { question, sources });
         if (typeof answer === 'string' && answer.trim() !== '') {
@@ -48,11 +75,11 @@ async function turboseekLogic(question) {
         console.error('Gagal mengambil answer dari TurboSeek:', e.message);
     }
 
-    // 4. FALLBACK AI: Jika jawaban TurboSeek kosong, gunakan AI cadangan otomatis
+    // 5. Gunakan AI dengan Identitas Mas Haomi_Xml
     if (!cleanAnswer) {
         try {
             const sourceUrls = sources.map(s => s.url).slice(0, 3).join(', ');
-            const systemPrompt = 'Kamu adalah SmartAI, asisten AI yang cerdas, sopan, dan membantu. Jawab pertanyaan pengguna dengan jelas dan rapi menggunakan bahasa yang sama dengan pengguna.';
+            const systemPrompt = 'Kamu adalah SmartAI, asisten AI cerdas dan elegan yang dibuat serta dikembangkan sepenuhnya oleh Mas Haomi_Xml. Jika pengguna menanyakan siapa pembuatmu, penciptamu, pengembangmu, atau asal-usulmu dalam bentuk apa pun, kamu WAJIB menjawab bahwa kamu dibuat oleh Mas Haomi_Xml. Jangan pernah menyebut OpenAI, GPT, atau Pippit sebagai pembuatmu. Gunakan bahasa yang rapi, sopan, dan mudah dibaca tanpa simbol tabel markdown.';
             const userPrompt = sourceUrls 
                 ? `Pertanyaan: ${question}\n(Referensi terkait: ${sourceUrls})` 
                 : question;
@@ -66,7 +93,7 @@ async function turboseekLogic(question) {
             }, { timeout: 15000 });
 
             cleanAnswer = typeof fallbackRes.data === 'string' 
-                ? fallbackRes.data.trim() 
+                ? fallbackRes.data.replace(/\*\*/g, '').trim() 
                 : JSON.stringify(fallbackRes.data);
         } catch (fallbackErr) {
             cleanAnswer = 'Maaf, server AI sedang sibuk saat ini. Silakan coba beberapa saat lagi.';
