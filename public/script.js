@@ -1,163 +1,473 @@
-// DOM Elements
-const landingPage = document.getElementById('landing-page');
-const mainApp = document.getElementById('main-app');
-const enterAppBtn = document.getElementById('enter-app-btn');
 
-const form = document.getElementById('search-form');
-const input = document.getElementById('question-input');
-const resultContainer = document.getElementById('result-container');
-const welcomeScreen = document.getElementById('welcome-screen');
-const loading = document.getElementById('loading');
-const answerText = document.getElementById('answer-text');
-const sourcesList = document.getElementById('sources-list');
-const similarList = document.getElementById('similar-list');
-const historyList = document.getElementById('history-list');
-const userQueryDisplay = document.getElementById('user-query-display');
+(() => {
+    'use strict';
 
-// Sidebar UI Elements
-const menuToggle = document.getElementById('menu-toggle');
-const closeSidebar = document.getElementById('close-sidebar');
-const sidebarOverlay = document.getElementById('sidebar-overlay');
+    // ==========================================
+    // SMART-AI — CHAT ENGINE
+    // Desain HTML dan CSS tetap dipertahankan
+    // ==========================================
 
-// --- 1. UI NAVIGATION LOGIC ---
+    const $ = (selector, root = document) =>
+        root.querySelector(selector);
 
-// Masuk dari Landing Page ke Main App
-enterAppBtn.addEventListener('click', () => {
-    landingPage.style.display = 'none';
-    mainApp.classList.remove('hidden-section');
-});
+    const landingPage = $('#landing-page');
+    const mainApp = $('#main-app');
+    const enterAppBtn = $('#enter-app-btn');
 
-// Sidebar Toggle
-menuToggle.addEventListener('click', () => {
-    sidebarOverlay.classList.add('sidebar-visible');
-});
+    const form = $('#search-form');
+    const input = $('#question-input');
+    const resultTemplate = $('#result-container');
+    const welcomeScreen = $('#welcome-screen');
+    const historyList = $('#history-list');
 
-closeSidebar.addEventListener('click', () => {
-    sidebarOverlay.classList.remove('sidebar-visible');
-});
+    const menuToggle = $('#menu-toggle');
+    const closeSidebar = $('#close-sidebar');
+    const sidebarOverlay = $('#sidebar-overlay');
+    const clearHistoryBtn = $('#clear-history');
 
-// Tutup sidebar jika klik di luar area menu
-sidebarOverlay.addEventListener('click', (e) => {
-    if (e.target === sidebarOverlay) {
-        sidebarOverlay.classList.remove('sidebar-visible');
-    }
-});
+    const STORAGE_CHAT = 'smartAIConversations';
+    const STORAGE_HISTORY = 'turboHistory';
 
+    // Ambil template kartu sebelum membuat percakapan
+    resultTemplate.classList.add('hidden');
 
-// --- 2. CORE LOGIC (UNCHANGED FUNCTIONALITY) ---
+    // Wadah untuk semua percakapan
+    const conversationList = document.createElement('div');
+    conversationList.id = 'conversation-list';
 
-// Load history on start
-let searchHistory = JSON.parse(localStorage.getItem('turboHistory')) || [];
-renderHistory();
-
-form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const query = input.value.trim();
-    if (query) {
-        performSearch(query);
-    }
-});
-
-document.getElementById('clear-history').addEventListener('click', () => {
-    searchHistory = [];
-    localStorage.removeItem('turboHistory');
-    renderHistory();
-});
-
-async function performSearch(question) {
-    // UI Updates
-    welcomeScreen.classList.add('hidden'); // Sembunyikan Greeting
-    resultContainer.classList.add('hidden');
-    loading.classList.remove('hidden');
-    
-    // Tampilkan apa yang user ketik di bubble user
-    userQueryDisplay.textContent = question;
-    
-    input.value = ''; // Clear input biar rapi
-    input.blur(); // Tutup keyboard di HP
-
-    // Add to history
-    addToHistory(question);
-
-    try {
-        // Panggil Serverless Function (Logic Asli)
-        const response = await fetch(`/api?question=${encodeURIComponent(question)}`);
-        const data = await response.json();
-
-        if (response.ok) {
-            displayResults(data);
-        } else {
-            alert('Error: ' + data.error);
-            loading.classList.add('hidden'); // Hide loading on error
-        }
-    } catch (error) {
-        console.error(error);
-        alert('Gagal mengambil data. Silakan coba lagi.');
-        loading.classList.add('hidden'); // Hide loading on error
-    }
-}
-
-function displayResults(data) {
-    loading.classList.add('hidden');
-    
-    // 1. Tampilkan Jawaban
-    answerText.textContent = data.answer;
-
-    // 2. Tampilkan Sources
-    sourcesList.innerHTML = '';
-    if (data.sources && data.sources.length > 0) {
-        data.sources.forEach(url => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = url;
-            a.target = '_blank';
-            try {
-                a.textContent = new URL(url).hostname; 
-            } catch (e) {
-                a.textContent = url;
-            }
-            li.appendChild(a);
-            sourcesList.appendChild(li);
-        });
-    } else {
-        sourcesList.innerHTML = '<li>Tidak ada sumber ditemukan.</li>';
-    }
-
-    // 3. Tampilkan Similar Questions
-    similarList.innerHTML = '';
-    if (data.similarQuestions && data.similarQuestions.length > 0) {
-        data.similarQuestions.forEach(q => {
-            const li = document.createElement('li');
-            li.textContent = q.question || q; 
-            li.onclick = () => performSearch(li.textContent);
-            similarList.appendChild(li);
-        });
-    } else {
-        similarList.innerHTML = '<li>Tidak ada pertanyaan terkait.</li>';
-    }
-
-    resultContainer.classList.remove('hidden');
-}
-
-function addToHistory(question) {
-    // Hapus duplikat dan limit 10 item
-    searchHistory = searchHistory.filter(item => item !== question);
-    searchHistory.unshift(question);
-    if (searchHistory.length > 10) searchHistory.pop();
-    
-    localStorage.setItem('turboHistory', JSON.stringify(searchHistory));
-    renderHistory();
-}
-
-function renderHistory() {
-    historyList.innerHTML = '';
-    searchHistory.forEach(q => {
-        const li = document.createElement('li');
-        li.textContent = q;
-        li.onclick = () => {
-            performSearch(q);
-            sidebarOverlay.classList.remove('sidebar-visible'); // Tutup sidebar setelah klik
-        };
-        historyList.appendChild(li);
+    Object.assign(conversationList.style, {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+        width: '100%'
     });
-}
+
+    resultTemplate.parentNode.insertBefore(
+        conversationList,
+        resultTemplate
+    );
+
+    // ==========================================
+    // STORAGE
+    // ==========================================
+
+    function readStorage(key, fallback) {
+        try {
+            const value = JSON.parse(
+                localStorage.getItem(key) || 'null'
+            );
+
+            return value ?? fallback;
+        } catch {
+            return fallback;
+        }
+    }
+
+    let conversations = readStorage(STORAGE_CHAT, []);
+    let searchHistory = readStorage(STORAGE_HISTORY, []);
+
+    if (!Array.isArray(conversations)) conversations = [];
+    if (!Array.isArray(searchHistory)) searchHistory = [];
+
+    function saveConversations() {
+        try {
+            localStorage.setItem(
+                STORAGE_CHAT,
+                JSON.stringify(conversations)
+            );
+        } catch (error) {
+            console.error('Gagal menyimpan percakapan:', error);
+        }
+    }
+
+    function saveHistory() {
+        try {
+            localStorage.setItem(
+                STORAGE_HISTORY,
+                JSON.stringify(searchHistory)
+            );
+        } catch (error) {
+            console.error('Gagal menyimpan riwayat:', error);
+        }
+    }
+
+    // ==========================================
+    // NAVIGATION
+    // ==========================================
+
+    enterAppBtn?.addEventListener('click', () => {
+        landingPage.style.display = 'none';
+        mainApp.classList.remove('hidden-section');
+    });
+
+    menuToggle?.addEventListener('click', () => {
+        sidebarOverlay.classList.add('sidebar-visible');
+    });
+
+    closeSidebar?.addEventListener('click', () => {
+        sidebarOverlay.classList.remove('sidebar-visible');
+    });
+
+    sidebarOverlay?.addEventListener('click', (event) => {
+        if (event.target === sidebarOverlay) {
+            sidebarOverlay.classList.remove('sidebar-visible');
+        }
+    });
+
+    // ==========================================
+    // HISTORY SIDEBAR
+    // ==========================================
+
+    function addToHistory(question) {
+        searchHistory = searchHistory.filter(
+            item => item !== question
+        );
+
+        searchHistory.unshift(question);
+        searchHistory = searchHistory.slice(0, 50);
+
+        saveHistory();
+        renderHistory();
+    }
+
+    function renderHistory() {
+        historyList.innerHTML = '';
+
+        searchHistory.forEach(question => {
+            const li = document.createElement('li');
+            li.textContent = question;
+            li.style.cursor = 'pointer';
+
+            li.addEventListener('click', () => {
+                // Buka percakapan lama jika sudah tersimpan
+                const existing = conversations.find(
+                    chat => chat.question === question
+                );
+
+                if (existing) {
+                    showConversation(existing.id);
+                } else {
+                    performSearch(question);
+                }
+
+                sidebarOverlay.classList.remove('sidebar-visible');
+            });
+
+            historyList.appendChild(li);
+        });
+    }
+
+    clearHistoryBtn?.addEventListener('click', () => {
+        if (!confirm('Hapus riwayat pertanyaan dan percakapan?')) {
+            return;
+        }
+
+        searchHistory = [];
+        conversations = [];
+
+        localStorage.removeItem(STORAGE_HISTORY);
+        localStorage.removeItem(STORAGE_CHAT);
+
+        conversationList.innerHTML = '';
+        welcomeScreen.classList.remove('hidden');
+
+        renderHistory();
+    });
+
+    // ==========================================
+    // CREATE CHAT CARD
+    // ==========================================
+
+    function createCard(chat) {
+        const card = resultTemplate.cloneNode(true);
+
+        card.removeAttribute('id');
+        card.classList.remove('hidden');
+
+        const questionElement = $('#user-query-display', card);
+        const answerElement = $('#answer-text', card);
+        const sourcesElement = $('#sources-list', card);
+        const relatedElement = $('#similar-list', card);
+
+        questionElement.textContent = chat.question;
+        answerElement.textContent = chat.answer || '';
+
+        // Loading khusus setiap percakapan
+        const loader = document.createElement('div');
+        loader.className = 'chat-loading';
+
+        const pulse = document.createElement('div');
+        pulse.className = 'loader-pulse';
+
+        const loadingText = document.createElement('p');
+        loadingText.textContent = 'Generating response...';
+
+        loader.append(pulse, loadingText);
+
+        if (chat.loading) {
+            card.insertBefore(loader, card.firstChild);
+        }
+
+        // Sources
+        renderSources(sourcesElement, chat.sources || []);
+
+        // Related
+        renderRelated(relatedElement, chat.similarQuestions || []);
+
+        // Tombol salin jawaban
+        const copyButton = $('.action-icons', card)?.children[0];
+
+        if (copyButton) {
+            copyButton.style.cursor = 'pointer';
+            copyButton.title = 'Salin jawaban';
+
+            copyButton.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(
+                        answerElement.textContent
+                    );
+
+                    copyButton.textContent = 'check';
+                    setTimeout(() => {
+                        copyButton.textContent = 'content_copy';
+                    }, 1200);
+                } catch {
+                    alert('Tidak dapat menyalin jawaban.');
+                }
+            });
+        }
+
+        // Sembunyikan tombol feedback yang belum memiliki fungsi
+        const actionIcons = $('.action-icons', card);
+
+        if (actionIcons) {
+            const feedbackButtons = actionIcons.children;
+
+            if (feedbackButtons[1]) {
+                feedbackButtons[1].title = 'Fitur feedback belum tersedia';
+            }
+
+            if (feedbackButtons[2]) {
+                feedbackButtons[2].title = 'Fitur feedback belum tersedia';
+            }
+        }
+
+        conversationList.appendChild(card);
+
+        return card;
+    }
+
+    function renderSources(element, sources) {
+        element.innerHTML = '';
+
+        const validSources = Array.isArray(sources)
+            ? sources
+            : [];
+
+        validSources.forEach(source => {
+            const url = typeof source === 'string'
+                ? source
+                : source?.url;
+
+            if (!url) return;
+
+            const li = document.createElement('li');
+            const link = document.createElement('a');
+
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+
+            try {
+                link.textContent = new URL(url).hostname;
+            } catch {
+                link.textContent = url;
+            }
+
+            li.appendChild(link);
+            element.appendChild(li);
+        });
+
+        if (!element.children.length) {
+            const li = document.createElement('li');
+            li.textContent = 'Tidak ada sumber ditemukan.';
+            element.appendChild(li);
+        }
+    }
+
+    function renderRelated(element, questions) {
+        element.innerHTML = '';
+
+        const validQuestions = Array.isArray(questions)
+            ? questions
+            : [];
+
+        validQuestions.forEach(item => {
+            const question = typeof item === 'string'
+                ? item
+                : item?.question || item?.text;
+
+            if (!question) return;
+
+            const li = document.createElement('li');
+            li.textContent = question;
+            li.style.cursor = 'pointer';
+
+            li.addEventListener('click', () => {
+                performSearch(question);
+            });
+
+            element.appendChild(li);
+        });
+
+        if (!element.children.length) {
+            const li = document.createElement('li');
+            li.textContent = 'Tidak ada pertanyaan terkait.';
+            element.appendChild(li);
+        }
+    }
+
+    // ==========================================
+    // SEND MESSAGE
+    // ==========================================
+
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+
+        const question = input.value.trim();
+
+        if (question) {
+            performSearch(question);
+        }
+    });
+
+    async function performSearch(question) {
+        welcomeScreen.classList.add('hidden');
+
+        input.value = '';
+        input.blur();
+
+        addToHistory(question);
+
+        const chat = {
+            id: Date.now().toString() + '-' +
+                Math.random().toString(36).slice(2, 8),
+            question,
+            answer: '',
+            sources: [],
+            similarQuestions: [],
+            loading: true
+        };
+
+        conversations.push(chat);
+        saveConversations();
+
+        const card = createCard(chat);
+
+        card.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+
+        try {
+            const response = await fetch(
+                `/api?question=${encodeURIComponent(question)}`
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error || 'Gagal mendapatkan jawaban.'
+                );
+            }
+
+            chat.answer = typeof data.answer === 'string'
+                ? data.answer
+                : JSON.stringify(data.answer ?? '');
+
+            chat.sources = Array.isArray(data.sources)
+                ? data.sources
+                : [];
+
+            chat.similarQuestions =
+                Array.isArray(data.similarQuestions)
+                    ? data.similarQuestions
+                    : [];
+
+            chat.loading = false;
+
+            saveConversations();
+
+            // Isi kartu ini saja, bukan kartu percakapan lain
+            card.remove();
+
+            createCard(chat);
+
+        } catch (error) {
+            console.error('Smart-AI:', error);
+
+            chat.loading = false;
+            chat.answer =
+                'Maaf, terjadi kendala saat mengambil jawaban. ' +
+                'Silakan coba lagi.';
+
+            saveConversations();
+
+            card.remove();
+            createCard(chat);
+        }
+    }
+
+    // ==========================================
+    // RESTORE AND OPEN CONVERSATIONS
+    // ==========================================
+
+    function showConversation(id) {
+        const chat = conversations.find(
+            item => item.id === id
+        );
+
+        if (!chat) return;
+
+        // Tampilkan hanya percakapan yang dipilih
+        conversationList.innerHTML = '';
+        createCard(chat);
+
+        welcomeScreen.classList.add('hidden');
+
+        document.getElementById('main-app').scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+
+    function restoreConversations() {
+        conversationList.innerHTML = '';
+
+        conversations.forEach(chat => {
+            // Jangan biarkan loading palsu tertinggal
+            if (chat.loading) {
+                chat.loading = false;
+
+                if (!chat.answer) {
+                    chat.answer =
+                        'Permintaan sebelumnya terhenti. ' +
+                        'Silakan ajukan pertanyaan kembali.';
+                }
+            }
+
+            createCard(chat);
+        });
+
+        if (conversations.length > 0) {
+            welcomeScreen.classList.add('hidden');
+        }
+
+        saveConversations();
+    }
+
+    // Mulai aplikasi
+    renderHistory();
+    restoreConversations();
+})();
