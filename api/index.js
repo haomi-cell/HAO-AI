@@ -4,10 +4,13 @@ const axios = require("axios");
 const BASE_URL = "https://api.jerexd.my.id";
 const API_ENDPOINT = `${BASE_URL}/api/ai/aichat`;
 
+// Menggunakan Environment Variable jika tersedia.
+const API_KEY =
+  process.env.JEREXD_API_KEY || "jere_sTl9OLzPIyMn";
+
 const DEFAULT_MODEL = "openai/gpt-4o";
 const MAX_PROMPT_LENGTH = 12000;
 
-// Daftar model dari dokumentasi JERE-API yang kamu kirim.
 const AVAILABLE_MODELS = [
   "chatday/ai-chat",
   "openai/gpt-5.6-terra",
@@ -102,46 +105,43 @@ module.exports = async (req, res) => {
     });
   }
 
-  const API_KEY = process.env.JEREXD_API_KEY;
-
-  if (!API_KEY) {
-    return res.status(500).json({
-      success: false,
-      error: "JEREXD_API_KEY belum diatur di Environment Variables Vercel.",
-    });
-  }
-
   try {
     const body = getBody(req);
     const query = req.query || {};
 
-    const question = getString(
-      body.prompt || body.question || query.prompt || query.question
-    );
+    const action = getString(body.action || query.action);
 
-    const requestedModel = getString(
-      body.model || query.model,
-      DEFAULT_MODEL
-    );
-
-    const sessionId = getString(
-      body.session_id || body.sessionId ||
-      query.session_id || query.sessionId
-    );
-
-    const resetValue = body.reset ?? query.reset;
-    const reset =
-      resetValue === true ||
-      String(resetValue).toLowerCase() === "true";
-
-    // Endpoint daftar model.
-    if (getString(body.action || query.action) === "models") {
+    // Mengembalikan daftar model untuk frontend.
+    if (action === "models") {
       return res.status(200).json({
         success: true,
         defaultModel: DEFAULT_MODEL,
         models: AVAILABLE_MODELS,
       });
     }
+
+    const question = getString(
+      body.question ||
+      body.prompt ||
+      query.question ||
+      query.prompt
+    );
+
+    const model = getString(
+      body.model || query.model,
+      DEFAULT_MODEL
+    );
+
+    const sessionId = getString(
+      body.session_id ||
+      body.sessionId ||
+      query.session_id ||
+      query.sessionId
+    );
+
+    const resetValue = body.reset ?? query.reset;
+    const reset = resetValue === true ||
+      String(resetValue).toLowerCase() === "true";
 
     if (!question) {
       return res.status(400).json({
@@ -157,11 +157,10 @@ module.exports = async (req, res) => {
       });
     }
 
-    if (!AVAILABLE_MODELS.includes(requestedModel)) {
+    if (!AVAILABLE_MODELS.includes(model)) {
       return res.status(400).json({
         success: false,
-        error: "Model tidak tersedia dalam daftar Smart-AI.",
-        defaultModel: DEFAULT_MODEL,
+        error: "Model tidak tersedia.",
         models: AVAILABLE_MODELS,
       });
     }
@@ -169,7 +168,7 @@ module.exports = async (req, res) => {
     if (!sessionId) {
       return res.status(400).json({
         success: false,
-        error: "session_id wajib diisi. Buat ID unik untuk setiap obrolan.",
+        error: "session_id wajib diisi.",
       });
     }
 
@@ -183,7 +182,7 @@ module.exports = async (req, res) => {
     const params = {
       apikey: API_KEY,
       prompt: question,
-      model: requestedModel,
+      model,
       session_id: sessionId,
     };
 
@@ -191,7 +190,7 @@ module.exports = async (req, res) => {
       params.reset = "true";
     }
 
-    const response = await axios.post(API_ENDPOINT, null, {
+    const response = await axios.get(API_ENDPOINT, {
       params,
       timeout: 60000,
       headers: {
@@ -212,7 +211,9 @@ module.exports = async (req, res) => {
     const answer = extractAnswer(data);
 
     if (!answer) {
-      console.error("JERE-API tidak mengembalikan jawaban yang terbaca.");
+      console.error(
+        "JERE-API tidak mengembalikan jawaban yang terbaca."
+      );
 
       return res.status(502).json({
         success: false,
@@ -223,7 +224,7 @@ module.exports = async (req, res) => {
     return res.status(200).json({
       success: true,
       answer,
-      model: data?.model || requestedModel,
+      model: data?.model || model,
       session_id: data?.session_id || sessionId,
       history_count: data?.history_count ?? null,
       sources: Array.isArray(data?.sources) ? data.sources : [],
@@ -235,6 +236,7 @@ module.exports = async (req, res) => {
     console.error("Smart-AI API error:", {
       status: error.response?.status,
       message: error.message,
+      code: error.code,
     });
 
     const status = error.response?.status;
