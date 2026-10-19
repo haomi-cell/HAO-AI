@@ -2,179 +2,140 @@
 (() => {
   "use strict";
 
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
   const API_URL = "/api";
-  const STORAGE_KEY = "haomi_workspace_v1";
+  const STORAGE_KEY = "haomi_workspace_v2";
   const SETTINGS_KEY = "haomi_settings_v1";
 
-  const $ = (selector, root = document) => root.querySelector(selector);
-  const $$ = (selector, root = document) =>
-    Array.from(root.querySelectorAll(selector));
+  const models = {
+    "openai/gpt-4o": ["GPT-4o", "OpenAI"],
+    "openai/gpt-4o-mini": ["GPT-4o mini", "OpenAI"],
+    "openai/gpt-5.6-terra": ["GPT-5.6 Terra", "OpenAI"],
+    "openai/gpt-5.5": ["GPT-5.5", "OpenAI"],
+    "openai/gpt-5.4": ["GPT-5.4", "OpenAI"],
+    "openai/gpt-5.3-chat": ["GPT-5.3 Chat", "OpenAI"],
+    "openai/gpt-5.1-instant": ["GPT-5.1 Instant", "OpenAI"],
+    "openai/gpt-5": ["GPT-5", "OpenAI"],
+    "chatday/ai-chat": ["Chatday AI", "Chatday"],
+    "xai/grok-4.1-fast-non-reasoning": ["Grok 4.1 Fast", "xAI"],
+    "anthropic/claude-haiku-4.5": ["Claude Haiku 4.5", "Anthropic"],
+    "anthropic/claude-sonnet-5": ["Claude Sonnet 5", "Anthropic"],
+    "anthropic/claude-sonnet-4.6": ["Claude Sonnet 4.6", "Anthropic"],
+    "anthropic/claude-opus-4.5": ["Claude Opus 4.5", "Anthropic"],
+    "anthropic/claude-opus-4.6": ["Claude Opus 4.6", "Anthropic"],
+    "anthropic/claude-opus-4.7": ["Claude Opus 4.7", "Anthropic"],
+    "anthropic/claude-opus-4.8": ["Claude Opus 4.8", "Anthropic"],
+    "deepseek/deepseek-v4-pro": ["DeepSeek V4 Pro", "DeepSeek"],
+    "deepseek/deepseek-v4-flash": ["DeepSeek V4 Flash", "DeepSeek"],
+    "deepseek/deepseek-v3.2-thinking": ["DeepSeek V3.2 Thinking", "DeepSeek"],
+    "google/gemini-3.1-pro-preview": ["Gemini 3.1 Pro", "Google"],
+    "google/gemini-3-pro-preview": ["Gemini 3 Pro", "Google"],
+    "google/gemini-3.1-flash-lite": ["Gemini 3.1 Flash Lite", "Google"],
+    "alibaba/qwen3-max": ["Qwen3 Max", "Alibaba"],
+    "meta/llama-4-maverick": ["Llama 4 Maverick", "Meta"],
+    "moonshotai/kimi-k2.6": ["Kimi K2.6", "Moonshot AI"]
+  };
 
-  const elements = {
+  const els = {
     sidebar: $("#sidebar"),
-    sidebarOverlay: $("#sidebarOverlay"),
-    openSidebar: $("#openSidebar"),
-    closeSidebar: $("#closeSidebar"),
-    newChatButton: $("#newChatButton"),
+    overlay: $("#sidebarOverlay"),
     conversationList: $("#conversationList"),
     historyCount: $("#historyCount"),
     historySearch: $("#historySearch"),
-    chatView: $("#chatView"),
     messages: $("#messages"),
-    welcomeScreen: $("#welcomeScreen"),
+    welcome: $("#welcomeScreen"),
     chatScroll: $("#chatScroll"),
     chatForm: $("#chatForm"),
-    chatInput: $("#chatInput"),
-    sendButton: $("#sendButton"),
-    modelSelect: $("#modelSelect"),
-    composerToolsButton: $("#composerToolsButton"),
-    breadcrumbTitle: $("#breadcrumbTitle"),
-    settingsModal: $("#settingsModal"),
-    openSettings: $("#openSettings"),
-    openSettingsTop: $("#openSettingsTop"),
-    closeSettings: $("#closeSettings"),
-    defaultModelSelect: $("#defaultModelSelect"),
-    clearAllHistory: $("#clearAllHistory"),
-    alightForm: $("#alightForm"),
-    alightAction: $("#alightAction"),
-    alightEmail: $("#alightEmail"),
-    alightLink: $("#alightLink"),
-    verificationLinkGroup: $("#verificationLinkGroup"),
-    alightResult: $("#alightResult"),
-    alightSubmit: $("#alightSubmit"),
-    urlscanForm: $("#urlscanForm"),
-    scanUrl: $("#scanUrl"),
-    urlscanResult: $("#urlscanResult"),
-    urlscanSubmit: $("#urlscanSubmit"),
-    whatsappForm: $("#whatsappForm"),
-    whatsappUrl: $("#whatsappUrl"),
-    whatsappReaction: $("#whatsappReaction"),
-    whatsappResult: $("#whatsappResult"),
-    whatsappSubmit: $("#whatsappSubmit"),
-    toastContainer: $("#toastContainer")
+    input: $("#chatInput"),
+    send: $("#sendButton"),
+    modelTrigger: $("#modelPickerTrigger"),
+    modelLabel: $("#selectedModelLabel"),
+    modelDialog: $("#modelDialog"),
+    modelList: $("#modelList"),
+    modelSearch: $("#modelSearch"),
+    closeModel: $("#closeModelDialog"),
+    breadcrumb: $("#breadcrumbTitle"),
+    settings: $("#settingsModal"),
+    defaultModel: $("#defaultModelSelect"),
+    toast: $("#toastContainer")
   };
 
-  const pageMap = {
-    chat: {
-      element: elements.chatView,
-      title: "Chat AI"
-    },
-    alight: {
-      element: $("#alightView"),
-      title: "Alight Motion"
-    },
-    urlscan: {
-      element: $("#urlscanView"),
-      title: "Scan URL"
-    },
-    whatsapp: {
-      element: $("#whatsappView"),
-      title: "Reaksi WhatsApp"
-    }
-  };
+  let state = loadState();
+  let busy = false;
+  let requestId = 0;
+  let lastFocusedElement = null;
 
-  const validModels = new Set(
-    elements.modelSelect
-      ? Array.from(elements.modelSelect.options).map(option => option.value)
-      : []
-  );
-
-  let activeView = "chat";
-  let isSending = false;
-  let requestSequence = 0;
-  let toastSequence = 0;
-
-  function makeId() {
-    if (window.crypto && typeof window.crypto.randomUUID === "function") {
-      return window.crypto.randomUUID();
-    }
-
-    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  function id() {
+    return window.crypto?.randomUUID?.() ||
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 
-  function createConversation() {
+  function loadSettings() {
+    try {
+      return JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  function getDefaultModel() {
+    const saved = loadSettings().defaultModel;
+    return models[saved] ? saved : "openai/gpt-4o";
+  }
+
+  function newConversation() {
     return {
-      id: makeId(),
+      id: id(),
       title: "Obrolan baru",
       model: getDefaultModel(),
-      sessionId: `haomi-${makeId()}`,
+      sessionId: `haomi-${id()}`,
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
   }
 
-  function readStorage() {
+  function loadState() {
     try {
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
 
-      if (
-        stored &&
-        Array.isArray(stored.conversations) &&
-        typeof stored.activeId === "string"
-      ) {
-        return stored;
+      if (saved && Array.isArray(saved.conversations)) {
+        return saved;
       }
     } catch (error) {
-      console.warn("Riwayat HAOMI tidak dapat dibaca:", error);
+      console.warn("Riwayat tidak dapat dibaca:", error);
     }
 
-    return null;
+    return { conversations: [], activeId: "" };
   }
-
-  function getDefaultModel() {
-    try {
-      const settings = JSON.parse(
-        localStorage.getItem(SETTINGS_KEY) || "{}"
-      );
-
-      if (settings.defaultModel && validModels.has(settings.defaultModel)) {
-        return settings.defaultModel;
-      }
-    } catch (_) {
-      // Gunakan model bawaan.
-    }
-
-    return "openai/gpt-4o";
-  }
-
-  const storedState = readStorage();
-
-  let state = storedState || {
-    conversations: [],
-    activeId: ""
-  };
 
   function saveState() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (error) {
-      showToast(
-        "Riwayat tidak dapat disimpan. Penyimpanan browser mungkin penuh.",
-        true
-      );
+    } catch {
+      toast("Penyimpanan browser penuh. Riwayat belum tersimpan.", true);
     }
   }
 
-  function saveSettings(settings) {
+  function saveSettings(value) {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    } catch (_) {
-      showToast("Pengaturan tidak dapat disimpan.", true);
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(value));
+    } catch {
+      toast("Pengaturan tidak dapat disimpan.", true);
     }
   }
 
-  function getActiveConversation() {
-    return state.conversations.find(
-      conversation => conversation.id === state.activeId
-    ) || null;
+  function activeConversation() {
+    return state.conversations.find(item => item.id === state.activeId) || null;
   }
 
   function ensureConversation() {
-    let conversation = getActiveConversation();
+    let conversation = activeConversation();
 
     if (!conversation) {
-      conversation = createConversation();
+      conversation = newConversation();
       state.conversations.unshift(conversation);
       state.activeId = conversation.id;
       saveState();
@@ -183,228 +144,168 @@
     return conversation;
   }
 
-  function formatModel(model) {
-    const names = {
-      "openai/gpt-4o": "GPT-4o",
-      "openai/gpt-4o-mini": "GPT-4o mini",
-      "openai/gpt-5.6-terra": "GPT-5.6 Terra",
-      "openai/gpt-5.5": "GPT-5.5",
-      "openai/gpt-5.4": "GPT-5.4",
-      "openai/gpt-5.3-chat": "GPT-5.3 Chat",
-      "openai/gpt-5.1-instant": "GPT-5.1 Instant",
-      "openai/gpt-5": "GPT-5",
-      "chatday/ai-chat": "Chatday AI",
-      "xai/grok-4.1-fast-non-reasoning": "Grok 4.1 Fast",
-      "anthropic/claude-haiku-4.5": "Claude Haiku 4.5",
-      "anthropic/claude-sonnet-5": "Claude Sonnet 5",
-      "anthropic/claude-sonnet-4.6": "Claude Sonnet 4.6",
-      "anthropic/claude-opus-4.5": "Claude Opus 4.5",
-      "anthropic/claude-opus-4.6": "Claude Opus 4.6",
-      "anthropic/claude-opus-4.7": "Claude Opus 4.7",
-      "anthropic/claude-opus-4.8": "Claude Opus 4.8",
-      "deepseek/deepseek-v4-pro": "DeepSeek V4 Pro",
-      "deepseek/deepseek-v4-flash": "DeepSeek V4 Flash",
-      "deepseek/deepseek-v3.2-thinking": "DeepSeek V3.2 Thinking",
-      "google/gemini-3.1-pro-preview": "Gemini 3.1 Pro",
-      "google/gemini-3-pro-preview": "Gemini 3 Pro",
-      "google/gemini-3.1-flash-lite": "Gemini 3.1 Flash Lite",
-      "alibaba/qwen3-max": "Qwen3 Max",
-      "meta/llama-4-maverick": "Llama 4 Maverick",
-      "moonshotai/kimi-k2.6": "Kimi K2.6"
-    };
-
-    return names[model] || model || "AI";
+  function modelName(model) {
+    return models[model]?.[0] || model || "AI";
   }
 
-  function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>"']/g, character => ({
+  function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
       "&": "&amp;",
       "<": "&lt;",
       ">": "&gt;",
       '"': "&quot;",
       "'": "&#39;"
-    })[character]);
+    })[char]);
   }
 
-  function renderInlineMarkdown(text) {
-    let result = escapeHtml(text);
+  function inlineMarkdown(text) {
+    let html = escapeHTML(text);
 
-    result = result.replace(
-      /`([^`\n]+)`/g,
-      "<code>$1</code>"
-    );
+    html = html.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+    html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
 
-    result = result.replace(
-      /\*\*(.+?)\*\*/g,
-      "<strong>$1</strong>"
-    );
-
-    result = result.replace(
-      /(^|[^*])\*([^*\n]+)\*/g,
-      "$1<em>$2</em>"
-    );
-
-    result = result.replace(
+    html = html.replace(
       /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
       (_, label, url) => {
         try {
           const parsed = new URL(url);
+          if (!["http:", "https:"].includes(parsed.protocol)) return label;
 
-          if (!["https:", "http:"].includes(parsed.protocol)) {
-            return label;
-          }
-
-          return `<a href="${escapeHtml(parsed.href)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-        } catch (_) {
+          return `<a href="${escapeHTML(parsed.href)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        } catch {
           return label;
         }
       }
     );
 
-    return result;
+    return html;
   }
 
-  function renderMarkdown(content) {
-    const source = String(content ?? "").replace(/\r\n/g, "\n");
-    const blocks = source.split(/```/);
-    const output = [];
+  function markdown(source) {
+    const blocks = String(source ?? "").replace(/\r\n/g, "\n").split("```");
+    const result = [];
 
-    for (let index = 0; index < blocks.length; index++) {
-      const block = blocks[index];
-
+    blocks.forEach((block, index) => {
       if (index % 2 === 1) {
-        const newline = block.indexOf("\n");
-        const code = newline >= 0
-          ? block.slice(newline + 1)
-          : block;
-
-        output.push(
-          `<pre><code>${escapeHtml(code.trimEnd())}</code></pre>`
-        );
-        continue;
+        const split = block.indexOf("\n");
+        const code = split >= 0 ? block.slice(split + 1) : block;
+        result.push(`<pre><code>${escapeHTML(code.trimEnd())}</code></pre>`);
+        return;
       }
 
-      const lines = block.split("\n");
       let paragraph = [];
+      let list = [];
       let listType = "";
-      let listItems = [];
 
-      function flushParagraph() {
+      const flushParagraph = () => {
         if (!paragraph.length) return;
-
-        output.push(
-          `<p>${paragraph.map(renderInlineMarkdown).join("<br>")}</p>`
-        );
-
+        result.push(`<p>${paragraph.map(inlineMarkdown).join("<br>")}</p>`);
         paragraph = [];
-      }
+      };
 
-      function flushList() {
-        if (!listItems.length) return;
-
-        const tag = listType === "ol" ? "ol" : "ul";
-
-        output.push(
-          `<${tag}>${listItems.map(item =>
-            `<li>${renderInlineMarkdown(item)}</li>`
-          ).join("")}</${tag}>`
+      const flushList = () => {
+        if (!list.length) return;
+        result.push(
+          `<${listType}>${list.map(item => `<li>${inlineMarkdown(item)}</li>`).join("")}</${listType}>`
         );
-
-        listItems = [];
+        list = [];
         listType = "";
-      }
+      };
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
-        const unordered = trimmed.match(/^[-*]\s+(.+)$/);
-        const ordered = trimmed.match(/^\d+[.)]\s+(.+)$/);
-
-        if (!trimmed) {
+      block.split("\n").forEach(line => {
+        const text = line.trim();
+        if (!text) {
           flushParagraph();
           flushList();
-          continue;
+          return;
         }
+
+        const heading = text.match(/^(#{1,3})\s+(.+)$/);
+        const unordered = text.match(/^[-*]\s+(.+)$/);
+        const ordered = text.match(/^\d+[.)]\s+(.+)$/);
 
         if (heading) {
           flushParagraph();
           flushList();
-
           const level = Math.min(heading[1].length + 1, 4);
-
-          output.push(
-            `<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`
-          );
-          continue;
+          result.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+          return;
         }
 
         if (unordered || ordered) {
           flushParagraph();
-
           const nextType = unordered ? "ul" : "ol";
-
-          if (listType && listType !== nextType) {
-            flushList();
-          }
-
+          if (listType && listType !== nextType) flushList();
           listType = nextType;
-          listItems.push((unordered || ordered)[1]);
-          continue;
+          list.push((unordered || ordered)[1]);
+          return;
         }
 
-        if (trimmed.startsWith(">")) {
+        if (text.startsWith(">")) {
           flushParagraph();
           flushList();
-
-          output.push(
-            `<blockquote>${renderInlineMarkdown(trimmed.slice(1).trim())}</blockquote>`
-          );
-          continue;
+          result.push(`<blockquote>${inlineMarkdown(text.slice(1).trim())}</blockquote>`);
+          return;
         }
 
         flushList();
-        paragraph.push(trimmed);
-      }
+        paragraph.push(text);
+      });
 
       flushParagraph();
       flushList();
-    }
+    });
 
-    return output.join("");
+    return result.join("");
   }
 
-  function scrollToBottom() {
-    requestAnimationFrame(() => {
-      if (elements.chatScroll) {
-        elements.chatScroll.scrollTop =
-          elements.chatScroll.scrollHeight;
+  function toast(message, error = false) {
+    const item = document.createElement("div");
+    item.className = `toast${error ? " error" : ""}`;
+    item.textContent = message;
+    els.toast.appendChild(item);
+    window.setTimeout(() => item.remove(), 3300);
+  }
+
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(String(text));
+      } else {
+        const area = document.createElement("textarea");
+        area.value = String(text);
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand("copy");
+        area.remove();
+        if (!ok) throw new Error("Gagal menyalin");
       }
+      toast("Berhasil disalin.");
+    } catch {
+      toast("Tidak dapat menyalin teks.", true);
+    }
+  }
+
+  function scrollBottom() {
+    requestAnimationFrame(() => {
+      els.chatScroll.scrollTop = els.chatScroll.scrollHeight;
     });
   }
 
-  function updateWelcome() {
-    const conversation = getActiveConversation();
-    const hasMessages = Boolean(
-      conversation && conversation.messages.length
-    );
-
-    elements.welcomeScreen.hidden = hasMessages;
-  }
-
-  function addMessageElement(message, index) {
-    const wrapper = document.createElement("article");
-    wrapper.className = `message ${message.role}`;
-
-    if (message.error) {
-      wrapper.classList.add("message-error");
-    }
+  function addMessage(message, index) {
+    const article = document.createElement("article");
+    article.className = `message ${message.role}`;
+    if (message.error) article.classList.add("message-error");
 
     if (message.role === "user") {
       const bubble = document.createElement("div");
       bubble.className = "message-bubble";
       bubble.textContent = message.content;
-      wrapper.appendChild(bubble);
-      elements.messages.appendChild(wrapper);
+      article.appendChild(bubble);
+      els.messages.appendChild(article);
       return;
     }
 
@@ -421,71 +322,61 @@
 
     const badge = document.createElement("span");
     badge.className = "model-badge";
-    badge.textContent = formatModel(message.model);
+    badge.textContent = modelName(message.model);
 
     heading.append(avatar, name, badge);
 
     const bubble = document.createElement("div");
     bubble.className = "message-bubble";
-    bubble.innerHTML = renderMarkdown(message.content);
+    bubble.innerHTML = markdown(message.content);
 
     const actions = document.createElement("div");
     actions.className = "message-actions";
 
-    const copyButton = document.createElement("button");
-    copyButton.className = "message-action";
-    copyButton.type = "button";
-    copyButton.textContent = "Salin";
-    copyButton.addEventListener("click", () => {
-      copyText(message.content);
-    });
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "message-action";
+    copy.textContent = "Salin";
+    copy.addEventListener("click", () => copyText(message.content));
+    actions.appendChild(copy);
 
-    actions.appendChild(copyButton);
-
-    if (!message.error) {
-      const retryButton = document.createElement("button");
-      retryButton.className = "message-action";
-      retryButton.type = "button";
-      retryButton.textContent = "Coba lagi";
-      retryButton.addEventListener("click", () => retryMessage(index));
-      actions.appendChild(retryButton);
+    if (message.error) {
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "message-action";
+      retry.textContent = "Coba lagi";
+      retry.addEventListener("click", () => retryLastQuestion(index));
+      actions.appendChild(retry);
     }
 
-    wrapper.append(heading, bubble, actions);
-    elements.messages.appendChild(wrapper);
+    article.append(heading, bubble, actions);
+    els.messages.appendChild(article);
   }
 
   function renderMessages() {
-    const conversation = getActiveConversation();
+    const conversation = activeConversation();
+    els.messages.replaceChildren();
 
-    elements.messages.replaceChildren();
+    const hasMessages = Boolean(conversation?.messages?.length);
+    els.welcome.hidden = hasMessages;
 
-    if (!conversation) {
-      updateWelcome();
-      return;
+    if (conversation) {
+      conversation.messages.forEach((message, index) => addMessage(message, index));
     }
 
-    conversation.messages.forEach((message, index) => {
-      addMessageElement(message, index);
-    });
-
-    updateWelcome();
-    scrollToBottom();
+    if (hasMessages) scrollBottom();
   }
 
   function renderHistory() {
-    const query = (elements.historySearch?.value || "")
-      .trim()
-      .toLowerCase();
-
+    const query = (els.historySearch.value || "").trim().toLowerCase();
     const conversations = [...state.conversations]
       .sort((a, b) => b.updatedAt - a.updatedAt);
 
-    elements.conversationList.replaceChildren();
-    elements.historyCount.textContent = String(conversations.length);
+    els.conversationList.replaceChildren();
+    els.historyCount.textContent = String(conversations.length);
 
-    const filtered = conversations.filter(conversation =>
-      conversation.title.toLowerCase().includes(query)
+    const filtered = conversations.filter(item =>
+      item.title.toLowerCase().includes(query)
     );
 
     if (!filtered.length) {
@@ -494,28 +385,24 @@
       empty.textContent = query
         ? "Tidak ada percakapan yang cocok."
         : "Percakapanmu akan muncul di sini.";
-
-      elements.conversationList.appendChild(empty);
+      els.conversationList.appendChild(empty);
       return;
     }
 
-    for (const conversation of filtered) {
+    filtered.forEach(conversation => {
       const row = document.createElement("div");
       row.className = "history-item";
 
-      const openButton = document.createElement("button");
-      openButton.type = "button";
-      openButton.className = "history-open";
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "history-open";
+      open.textContent = conversation.title;
+      open.title = conversation.title;
+      open.classList.toggle("selected", conversation.id === state.activeId);
 
-      if (conversation.id === state.activeId) {
-        openButton.classList.add("selected");
-      }
-
-      openButton.textContent = conversation.title;
-      openButton.title = conversation.title;
-      openButton.addEventListener("click", () => {
-        if (isSending) {
-          showToast("Tunggu jawaban selesai sebelum berpindah obrolan.");
+      open.addEventListener("click", () => {
+        if (busy) {
+          toast("Tunggu jawaban selesai sebelum berpindah obrolan.");
           return;
         }
 
@@ -527,31 +414,24 @@
         closeSidebar();
       });
 
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "history-delete";
-      deleteButton.textContent = "×";
-      deleteButton.title = "Hapus percakapan";
-      deleteButton.setAttribute("aria-label", "Hapus percakapan");
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "history-delete";
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", "Hapus percakapan");
 
-      deleteButton.addEventListener("click", () => {
-        if (isSending && conversation.id === state.activeId) {
-          showToast("Tunggu jawaban selesai sebelum menghapus obrolan.");
+      remove.addEventListener("click", () => {
+        if (busy && conversation.id === state.activeId) {
+          toast("Tunggu jawaban selesai sebelum menghapus obrolan.");
           return;
         }
 
-        const confirmed = window.confirm(
-          `Hapus percakapan "${conversation.title}" dari riwayat lokal?`
-        );
+        if (!confirm(`Hapus "${conversation.title}" dari riwayat?`)) return;
 
-        if (!confirmed) return;
-
-        state.conversations = state.conversations.filter(
-          item => item.id !== conversation.id
-        );
+        state.conversations = state.conversations.filter(item => item.id !== conversation.id);
 
         if (state.activeId === conversation.id) {
-          const replacement = createConversation();
+          const replacement = newConversation();
           state.conversations.unshift(replacement);
           state.activeId = replacement.id;
         }
@@ -561,145 +441,55 @@
         renderMessages();
       });
 
-      row.append(openButton, deleteButton);
-      elements.conversationList.appendChild(row);
-    }
+      row.append(open, remove);
+      els.conversationList.appendChild(row);
+    });
   }
 
-  function setBusy(busy) {
-    isSending = busy;
-    elements.sendButton.disabled = busy;
-    elements.sendButton.classList.toggle("is-loading", busy);
-    elements.chatInput.disabled = busy;
-    elements.modelSelect.disabled = busy;
-
-    if (busy) {
-      elements.sendButton.setAttribute("aria-label", "Sedang memproses");
-    } else {
-      elements.sendButton.setAttribute("aria-label", "Kirim pesan");
-    }
+  function setBusy(value) {
+    busy = value;
+    els.send.disabled = value;
+    els.input.disabled = value;
+    els.send.classList.toggle("is-loading", value);
+    els.send.setAttribute("aria-label", value ? "Sedang memproses" : "Kirim pesan");
   }
 
-  function showToast(message, isError = false) {
-    const toast = document.createElement("div");
-    toast.className = `toast${isError ? " error" : ""}`;
-    toast.textContent = message;
-
-    elements.toastContainer.appendChild(toast);
-
-    const id = ++toastSequence;
-
-    window.setTimeout(() => {
-      if (id <= toastSequence) {
-        toast.remove();
-      }
-    }, 3500);
-  }
-
-  async function copyText(text) {
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(String(text));
-      } else {
-        const temporary = document.createElement("textarea");
-        temporary.value = String(text);
-        temporary.style.position = "fixed";
-        temporary.style.opacity = "0";
-
-        document.body.appendChild(temporary);
-        temporary.select();
-
-        const success = document.execCommand("copy");
-        temporary.remove();
-
-        if (!success) throw new Error("Salin gagal");
-      }
-
-      showToast("Berhasil disalin.");
-    } catch (_) {
-      showToast("Tidak dapat menyalin otomatis.", true);
-    }
-  }
-
-  async function requestApi(action, data = {}) {
+  async function apiRequest(action, payload = {}) {
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json"
       },
-      body: JSON.stringify({
-        action,
-        ...data
-      })
+      body: JSON.stringify({ action, ...payload })
     });
 
-    let result;
-
+    let data;
     try {
-      result = await response.json();
-    } catch (_) {
-      throw new Error(
-        `Server mengembalikan respons yang tidak valid (HTTP ${response.status}).`
-      );
+      data = await response.json();
+    } catch {
+      throw new Error(`Respons server tidak valid (HTTP ${response.status}).`);
     }
 
-    if (!response.ok || result.success === false) {
-      throw new Error(
-        result.message ||
-        `Permintaan gagal (HTTP ${response.status}).`
-      );
+    if (!response.ok || data.success === false) {
+      throw new Error(data.message || `Permintaan gagal (HTTP ${response.status}).`);
     }
 
-    return result;
+    return data;
   }
 
-  function updateConversationTitle(conversation) {
-    const firstUserMessage = conversation.messages.find(
-      message => message.role === "user"
-    );
+  function updateTitle(conversation) {
+    const first = conversation.messages.find(message => message.role === "user");
+    if (!first) return;
 
-    if (!firstUserMessage) return;
-
-    const title = firstUserMessage.content
-      .replace(/\s+/g, " ")
-      .trim();
-
-    conversation.title = title.length > 42
-      ? `${title.slice(0, 39)}…`
-      : title || "Obrolan baru";
+    const title = first.content.replace(/\s+/g, " ").trim();
+    conversation.title = title.length > 42 ? `${title.slice(0, 39)}…` : title || "Obrolan baru";
   }
 
-  async function sendMessage(text) {
-    const prompt = String(text || "").trim();
-
-    if (!prompt || isSending) return;
-
-    const conversation = ensureConversation();
-    const sequence = ++requestSequence;
-
-    conversation.model = elements.modelSelect.value;
-    conversation.messages.push({
-      role: "user",
-      content: prompt,
-      createdAt: Date.now()
-    });
-
-    updateConversationTitle(conversation);
-    conversation.updatedAt = Date.now();
-
-    // Kosongkan input langsung agar pesan tidak terlihat terkirim dua kali.
-    elements.chatInput.value = "";
-    autoResizeInput();
-    setBusy(true);
-
-    saveState();
-    renderHistory();
-    renderMessages();
-
-    const loading = document.createElement("article");
-    loading.className = "message assistant";
-    loading.id = `loading-${sequence}`;
+  function createLoading(sequence, model) {
+    const article = document.createElement("article");
+    article.className = "message assistant";
+    article.dataset.loadingId = String(sequence);
 
     const heading = document.createElement("div");
     heading.className = "assistant-heading";
@@ -714,168 +504,190 @@
 
     const badge = document.createElement("span");
     badge.className = "model-badge";
-    badge.textContent = formatModel(conversation.model);
-
-    heading.append(avatar, name, badge);
+    badge.textContent = modelName(model);
 
     const bubble = document.createElement("div");
     bubble.className = "message-bubble";
 
-    const typing = document.createElement("div");
-    typing.className = "typing-row";
-    typing.setAttribute("aria-label", "HAOMI sedang berpikir");
+    const dots = document.createElement("div");
+    dots.className = "typing-row";
+    dots.setAttribute("aria-label", "HAOMI sedang berpikir");
 
-    for (let index = 0; index < 3; index++) {
+    for (let i = 0; i < 3; i++) {
       const dot = document.createElement("span");
       dot.className = "typing-dot";
-      typing.appendChild(dot);
+      dots.appendChild(dot);
     }
 
-    bubble.appendChild(typing);
-    loading.append(heading, bubble);
-    elements.messages.appendChild(loading);
+    bubble.appendChild(dots);
+    heading.append(avatar, name, badge);
+    article.append(heading, bubble);
+    els.messages.appendChild(article);
+    scrollBottom();
+    return article;
+  }
 
-    updateWelcome();
-    scrollToBottom();
+  async function sendMessage(rawText) {
+    const prompt = String(rawText || "").trim();
+    if (!prompt || busy) return;
+
+    const conversation = ensureConversation();
+    const sequence = ++requestId;
+    const model = conversation.model || getDefaultModel();
+
+    // Simpan isi sebelum mengosongkan composer agar tidak terkirim ulang.
+    conversation.messages.push({
+      role: "user",
+      content: prompt,
+      createdAt: Date.now()
+    });
+
+    updateTitle(conversation);
+    conversation.updatedAt = Date.now();
+
+    els.input.value = "";
+    resizeInput();
+    setBusy(true);
+    saveState();
+    renderHistory();
+    renderMessages();
+
+    const loading = createLoading(sequence, model);
 
     try {
-      const result = await requestApi("chat", {
+      const data = await apiRequest("chat", {
         prompt,
-        model: conversation.model,
+        model,
         session_id: conversation.sessionId
       });
 
-      const answer = result.answer;
+      const rawAnswer = data.answer ?? data.result ?? data.response ?? data.message;
+      const answer = typeof rawAnswer === "string"
+        ? rawAnswer
+        : rawAnswer == null ? "" : JSON.stringify(rawAnswer, null, 2);
 
-      const answerText =
-        typeof answer === "string"
-          ? answer
-          : answer == null
-            ? ""
-            : JSON.stringify(answer, null, 2);
-
-      if (!answerText.trim()) {
+      if (!answer.trim()) {
         throw new Error("API tidak mengembalikan teks jawaban.");
       }
 
-      conversation.sessionId =
-        result.session_id || conversation.sessionId;
-
+      conversation.sessionId = data.session_id || conversation.sessionId;
       conversation.messages.push({
         role: "assistant",
-        content: answerText,
-        model: result.model || conversation.model,
+        content: answer,
+        model: data.model || model,
         createdAt: Date.now()
       });
-
-      conversation.updatedAt = Date.now();
     } catch (error) {
       conversation.messages.push({
         role: "assistant",
         content: `Maaf, HAOMI belum berhasil mendapatkan jawaban.\n\n${error.message || "Terjadi kesalahan jaringan."}`,
-        model: conversation.model,
+        model,
         error: true,
         createdAt: Date.now()
       });
-
-      conversation.updatedAt = Date.now();
     } finally {
-      // Hapus indikator loading sebelum merender ulang pesan.
+      // Satu-satunya tempat loading dihapus. Tidak ada footer/disclaimer
+      // yang ditambahkan dari JavaScript, sehingga tidak muncul ganda.
       loading.remove();
 
+      conversation.updatedAt = Date.now();
       saveState();
       renderHistory();
       renderMessages();
+      setBusy(false);
 
-      if (sequence === requestSequence) {
-        setBusy(false);
-        elements.chatInput.focus();
-      }
+      // Jangan panggil input.focus() di sini.
+      // Keyboard HP tidak boleh muncul sendiri setelah jawaban selesai.
     }
   }
 
-  async function retryMessage(index) {
-    if (isSending) return;
+  async function retryLastQuestion(index) {
+    if (busy) return;
 
-    const conversation = getActiveConversation();
+    const conversation = activeConversation();
     if (!conversation) return;
 
-    const message = conversation.messages[index];
+    const errorMessage = conversation.messages[index];
+    if (!errorMessage?.error) return;
 
-    if (!message || message.role !== "assistant" || !message.error) {
-      return;
-    }
-
-    const userMessage = conversation.messages
+    const previousUser = conversation.messages
       .slice(0, index)
       .reverse()
-      .find(item => item.role === "user");
+      .find(message => message.role === "user");
 
-    if (!userMessage) {
-      showToast("Pesan sebelumnya tidak ditemukan.", true);
+    if (!previousUser) {
+      toast("Pesan sebelumnya tidak ditemukan.", true);
       return;
     }
 
-    // Hapus jawaban error dan ulangi prompt terakhir.
+    const prompt = previousUser.content;
+
+    // Hilangkan jawaban error. Kirim ulang prompt tanpa menambah
+    // bubble user kedua kalinya.
     conversation.messages.splice(index, 1);
+    conversation.messages.splice(conversation.messages.indexOf(previousUser), 1);
     saveState();
     renderMessages();
 
-    await sendMessage(userMessage.content);
+    await sendMessage(prompt);
   }
 
-  function autoResizeInput() {
-    elements.chatInput.style.height = "auto";
-    elements.chatInput.style.height =
-      `${Math.min(elements.chatInput.scrollHeight, 180)}px`;
-  }
-
-  function closeSidebar() {
-    document.body.classList.remove("sidebar-open");
+  function resizeInput() {
+    els.input.style.height = "auto";
+    els.input.style.height = `${Math.min(els.input.scrollHeight, 160)}px`;
   }
 
   function openSidebar() {
     document.body.classList.add("sidebar-open");
   }
 
-  function showView(viewName) {
-    if (!pageMap[viewName]) return;
+  function closeSidebar() {
+    document.body.classList.remove("sidebar-open");
+  }
 
-    activeView = viewName;
+  const viewIds = {
+    chat: "chatView",
+    alight: "alightView",
+    urlscan: "urlscanView",
+    whatsapp: "whatsappView"
+  };
 
-    Object.entries(pageMap).forEach(([name, page]) => {
-      const isActive = name === viewName;
+  const viewTitles = {
+    chat: "Chat AI",
+    alight: "Alight Motion",
+    urlscan: "Scan URL",
+    whatsapp: "Reaksi WhatsApp"
+  };
 
-      page.element.hidden = !isActive;
-      page.element.classList.toggle("active", isActive);
+  function showView(name) {
+    if (!viewIds[name]) return;
+
+    Object.entries(viewIds).forEach(([key, elementId]) => {
+      const view = document.getElementById(elementId);
+      view.hidden = key !== name;
+      view.classList.toggle("active", key === name);
     });
 
-    $$(".nav-item[data-view]").forEach(button => {
-      button.classList.toggle(
-        "active",
-        button.dataset.view === viewName
-      );
+    $$("[data-view]").forEach(button => {
+      button.classList.toggle("active", button.dataset.view === name);
     });
 
-    elements.breadcrumbTitle.textContent = pageMap[viewName].title;
+    els.breadcrumb.textContent = viewTitles[name];
     closeSidebar();
 
-    if (viewName === "chat") {
-      renderMessages();
-      elements.chatInput.focus({ preventScroll: true });
-    }
-
+    // Sengaja tidak memfokuskan textarea ketika kembali ke chat.
+    // Pengguna menyentuh kolom sendiri jika ingin mengetik.
+    if (name === "chat") renderMessages();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function newChat() {
-    if (isSending) {
-      showToast("Tunggu jawaban selesai sebelum membuat obrolan baru.");
+    if (busy) {
+      toast("Tunggu jawaban selesai sebelum membuat obrolan baru.");
       return;
     }
 
-    const conversation = createConversation();
-
+    const conversation = newConversation();
     state.conversations.unshift(conversation);
     state.activeId = conversation.id;
 
@@ -886,86 +698,98 @@
     closeSidebar();
   }
 
-  function openSettings() {
-    const model = getDefaultModel();
+  function openModelDialog() {
+    lastFocusedElement = document.activeElement;
+    els.modelDialog.hidden = false;
+    els.modelTrigger.setAttribute("aria-expanded", "true");
+    document.body.style.overflow = "hidden";
+    updateModelOptions();
+    // Jangan otomatis membuka keyboard pencarian di HP.
+  }
 
-    elements.defaultModelSelect.value = model;
-    elements.settingsModal.hidden = false;
+  function closeModelDialog() {
+    els.modelDialog.hidden = true;
+    els.modelTrigger.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
+    lastFocusedElement?.focus?.({ preventScroll: true });
+  }
+
+  function updateModelOptions() {
+    const query = (els.modelSearch.value || "").trim().toLowerCase();
+    const selected = activeConversation()?.model || getDefaultModel();
+
+    $$(".model-option", els.modelList).forEach(button => {
+      const name = models[button.dataset.model]?.join(" ") || button.dataset.model;
+      const matches = name.toLowerCase().includes(query);
+      button.hidden = !matches;
+      button.classList.toggle("selected", button.dataset.model === selected);
+    });
+  }
+
+  function selectModel(model) {
+    if (!models[model]) return;
+
+    const conversation = ensureConversation();
+    conversation.model = model;
+    saveState();
+
+    els.modelLabel.textContent = modelName(model);
+    updateModelOptions();
+    closeModelDialog();
+
+    toast(`Model dipilih: ${modelName(model)}`);
+  }
+
+  function openSettings() {
+    els.defaultModel.value = getDefaultModel();
+    els.settings.hidden = false;
     document.body.style.overflow = "hidden";
   }
 
   function closeSettings() {
-    elements.settingsModal.hidden = true;
+    els.settings.hidden = true;
     document.body.style.overflow = "";
   }
 
   function updateAlightFields() {
-    const needsLink = elements.alightAction.value === "am-verify";
-
-    elements.verificationLinkGroup.hidden = !needsLink;
-    elements.alightLink.required = needsLink;
-
-    elements.alightSubmit.firstChild.textContent = needsLink
-      ? "Verifikasi tautan "
-      : "Kirim permintaan ";
+    const needsLink = $("#alightAction").value === "am-verify";
+    $("#verificationLinkGroup").hidden = !needsLink;
+    $("#alightLink").required = needsLink;
+    $("#alightSubmit").innerHTML = `${needsLink ? "Verifikasi tautan" : "Kirim permintaan"} <span>→</span>`;
   }
 
-  function showToolResult(element, content, status = "normal") {
+  function showToolResult(element, text, status = "") {
     element.classList.remove("is-error", "is-success");
-
-    if (status === "error") {
-      element.classList.add("is-error");
-    } else if (status === "success") {
-      element.classList.add("is-success");
-    }
-
-    element.textContent = content;
+    if (status) element.classList.add(status === "error" ? "is-error" : "is-success");
+    element.textContent = text;
   }
 
-  function stringifyResult(result) {
-    if (result == null) return "Tidak ada hasil dari server.";
-
-    if (typeof result === "string") return result;
-
-    return JSON.stringify(result, null, 2);
+  function stringifyResult(value) {
+    return typeof value === "string" ? value : JSON.stringify(value, null, 2);
   }
 
-  async function runTool({
-    form,
-    button,
-    resultElement,
-    action,
-    payload,
-    loadingText
-  }) {
+  async function runTool(form, button, resultElement, action, payload, loadingText) {
     if (form.dataset.busy === "true") return;
 
     form.dataset.busy = "true";
-    button.disabled = true;
-
     const originalText = button.textContent;
+    button.disabled = true;
     button.textContent = loadingText;
 
     showToolResult(resultElement, "Sedang menghubungi layanan API…");
 
     try {
-      const result = await requestApi(action, payload);
-
-      showToolResult(
-        resultElement,
-        stringifyResult(result.result ?? result),
-        "success"
-      );
-
-      showToast("Permintaan selesai.");
+      const data = await apiRequest(action, payload);
+      const result = data.result ?? data.data ?? data;
+      showToolResult(resultElement, stringifyResult(result), "success");
+      toast("Permintaan selesai.");
     } catch (error) {
       showToolResult(
         resultElement,
         `Permintaan gagal: ${error.message || "Terjadi kesalahan."}`,
         "error"
       );
-
-      showToast("Permintaan gagal. Periksa hasil untuk detail.", true);
+      toast("Permintaan gagal. Periksa hasil untuk detail.", true);
     } finally {
       form.dataset.busy = "false";
       button.disabled = false;
@@ -974,243 +798,172 @@
   }
 
   function bindEvents() {
-    elements.openSidebar.addEventListener("click", openSidebar);
-    elements.closeSidebar.addEventListener("click", closeSidebar);
-    elements.sidebarOverlay.addEventListener("click", closeSidebar);
-
-    elements.newChatButton.addEventListener("click", newChat);
+    $("#openSidebar").addEventListener("click", openSidebar);
+    $("#closeSidebar").addEventListener("click", closeSidebar);
+    els.overlay.addEventListener("click", closeSidebar);
+    $("#newChatButton").addEventListener("click", newChat);
+    els.historySearch.addEventListener("input", renderHistory);
 
     $$("[data-view]").forEach(button => {
-      button.addEventListener("click", () => {
-        showView(button.dataset.view);
-      });
+      button.addEventListener("click", () => showView(button.dataset.view));
     });
 
-    elements.historySearch.addEventListener("input", renderHistory);
-
-    elements.chatForm.addEventListener("submit", event => {
+    els.chatForm.addEventListener("submit", event => {
       event.preventDefault();
-
-      if (isSending) return;
-
-      const prompt = elements.chatInput.value.trim();
-      if (!prompt) return;
-
-      sendMessage(prompt);
+      if (!busy) sendMessage(els.input.value);
     });
 
-    elements.chatInput.addEventListener("input", autoResizeInput);
-
-    elements.chatInput.addEventListener("keydown", event => {
-      if (
-        event.key === "Enter" &&
-        !event.shiftKey &&
-        !event.isComposing
-      ) {
+    els.input.addEventListener("input", resizeInput);
+    els.input.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
         event.preventDefault();
-
-        if (!isSending) {
-          elements.chatForm.requestSubmit();
-        }
+        if (!busy) els.chatForm.requestSubmit();
       }
     });
 
     $$(".prompt-card[data-prompt]").forEach(button => {
       button.addEventListener("click", () => {
         showView("chat");
-        elements.chatInput.value = button.dataset.prompt || "";
-        autoResizeInput();
-        elements.chatInput.focus();
+        els.input.value = button.dataset.prompt || "";
+        resizeInput();
+        // Tidak auto-focus supaya keyboard tidak terbuka tanpa tindakan pengguna.
       });
     });
 
-    elements.composerToolsButton.addEventListener("click", () => {
-      showToast("Pilih alat dari menu di kiri atas.");
-      openSidebar();
+    $("#composerToolsButton").addEventListener("click", openSidebar);
+
+    els.modelTrigger.addEventListener("click", openModelDialog);
+    els.closeModel.addEventListener("click", closeModelDialog);
+    els.modelSearch.addEventListener("input", updateModelOptions);
+
+    els.modelDialog.addEventListener("click", event => {
+      if (event.target === els.modelDialog) closeModelDialog();
     });
 
-    elements.openSettings.addEventListener("click", openSettings);
-    elements.openSettingsTop.addEventListener("click", openSettings);
-    elements.closeSettings.addEventListener("click", closeSettings);
-
-    elements.settingsModal.addEventListener("click", event => {
-      if (event.target === elements.settingsModal) {
-        closeSettings();
-      }
+    $$(".model-option").forEach(button => {
+      button.addEventListener("click", () => selectModel(button.dataset.model));
     });
 
-    elements.defaultModelSelect.addEventListener("change", () => {
-      const model = elements.defaultModelSelect.value;
+    $("#openSettings").addEventListener("click", openSettings);
+    $("#openSettingsTop").addEventListener("click", openSettings);
+    $("#closeSettings").addEventListener("click", closeSettings);
 
-      saveSettings({ defaultModel: model });
-
-      const conversation = getActiveConversation();
-
-      if (conversation && conversation.messages.length === 0) {
-        conversation.model = model;
-        elements.modelSelect.value = model;
-        saveState();
-      }
-
-      showToast("Model default diperbarui.");
+    els.settings.addEventListener("click", event => {
+      if (event.target === els.settings) closeSettings();
     });
 
-    elements.modelSelect.addEventListener("change", () => {
-      const conversation = getActiveConversation();
-
-      if (conversation && conversation.messages.length === 0) {
-        conversation.model = elements.modelSelect.value;
-        saveState();
-      }
+    els.defaultModel.addEventListener("change", () => {
+      saveSettings({ ...loadSettings(), defaultModel: els.defaultModel.value });
+      toast("Model default diperbarui.");
     });
 
-    elements.clearAllHistory.addEventListener("click", () => {
-      if (isSending) {
-        showToast("Tunggu jawaban selesai sebelum menghapus riwayat.");
+    $("#clearAllHistory").addEventListener("click", () => {
+      if (busy) {
+        toast("Tunggu jawaban selesai sebelum menghapus riwayat.");
         return;
       }
 
-      const confirmed = window.confirm(
-        "Hapus semua percakapan yang tersimpan di browser ini?"
-      );
+      if (!confirm("Hapus semua riwayat yang tersimpan di browser ini?")) return;
 
-      if (!confirmed) return;
-
+      const conversation = newConversation();
       state = {
-        conversations: [],
-        activeId: ""
+        conversations: [conversation],
+        activeId: conversation.id
       };
-
-      const conversation = createConversation();
-      state.conversations.push(conversation);
-      state.activeId = conversation.id;
 
       saveState();
       renderHistory();
       renderMessages();
       closeSettings();
-      showToast("Riwayat lokal sudah dibersihkan.");
+      toast("Riwayat lokal berhasil dibersihkan.");
     });
 
-    elements.alightAction.addEventListener("change", updateAlightFields);
+    $("#alightAction").addEventListener("change", updateAlightFields);
 
-    elements.alightForm.addEventListener("submit", event => {
+    $("#alightForm").addEventListener("submit", event => {
       event.preventDefault();
 
-      const action = elements.alightAction.value;
-      const payload = {
-        email: elements.alightEmail.value.trim()
-      };
+      const action = $("#alightAction").value;
+      const payload = { email: $("#alightEmail").value.trim() };
 
-      if (action === "am-verify") {
-        payload.link = elements.alightLink.value.trim();
-      }
+      if (action === "am-verify") payload.link = $("#alightLink").value.trim();
 
-      runTool({
-        form: elements.alightForm,
-        button: elements.alightSubmit,
-        resultElement: elements.alightResult,
-        action,
-        payload,
-        loadingText: "Memproses…"
-      });
+      runTool(
+        $("#alightForm"), $("#alightSubmit"), $("#alightResult"),
+        action, payload, "Memproses…"
+      );
     });
 
-    elements.urlscanForm.addEventListener("submit", event => {
+    $("#urlscanForm").addEventListener("submit", event => {
       event.preventDefault();
 
-      runTool({
-        form: elements.urlscanForm,
-        button: elements.urlscanSubmit,
-        resultElement: elements.urlscanResult,
-        action: "urlscan",
-        payload: {
-          url: elements.scanUrl.value.trim()
+      runTool(
+        $("#urlscanForm"), $("#urlscanSubmit"), $("#urlscanResult"),
+        "urlscan", { url: $("#scanUrl").value.trim() }, "Memindai…"
+      );
+    });
+
+    $("#whatsappForm").addEventListener("submit", event => {
+      event.preventDefault();
+
+      runTool(
+        $("#whatsappForm"), $("#whatsappSubmit"), $("#whatsappResult"),
+        "whatsapp-react",
+        {
+          url: $("#whatsappUrl").value.trim(),
+          reaction: $("#whatsappReaction").value.trim()
         },
-        loadingText: "Memindai…"
-      });
-    });
-
-    elements.whatsappForm.addEventListener("submit", event => {
-      event.preventDefault();
-
-      runTool({
-        form: elements.whatsappForm,
-        button: elements.whatsappSubmit,
-        resultElement: elements.whatsappResult,
-        action: "whatsapp-react",
-        payload: {
-          url: elements.whatsappUrl.value.trim(),
-          reaction: elements.whatsappReaction.value.trim()
-        },
-        loadingText: "Mengirim…"
-      });
+        "Mengirim…"
+      );
     });
 
     $$("[data-copy-result]").forEach(button => {
       button.addEventListener("click", () => {
-        const element = document.getElementById(
-          button.dataset.copyResult
-        );
-
-        if (element) copyText(element.textContent);
+        const target = document.getElementById(button.dataset.copyResult);
+        if (target) copyText(target.textContent);
       });
     });
 
     document.addEventListener("keydown", event => {
       if (event.key === "Escape") {
         closeSidebar();
-
-        if (!elements.settingsModal.hidden) {
-          closeSettings();
-        }
+        if (!els.modelDialog.hidden) closeModelDialog();
+        if (!els.settings.hidden) closeSettings();
       }
 
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key.toLowerCase() === "k"
-      ) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-
-        if (isSending) return;
-
         newChat();
+      }
+
+      if (event.key === "/" && !els.modelDialog.hidden &&
+          document.activeElement !== els.modelSearch) {
+        event.preventDefault();
+        els.modelSearch.focus();
       }
     });
   }
 
   function initialize() {
     if (!state.conversations.length) {
-      const conversation = createConversation();
+      const conversation = newConversation();
       state.conversations.push(conversation);
       state.activeId = conversation.id;
     }
 
-    if (
-      !state.conversations.some(
-        conversation => conversation.id === state.activeId
-      )
-    ) {
+    if (!state.conversations.some(item => item.id === state.activeId)) {
       state.activeId = state.conversations[0].id;
     }
 
-    const conversation = getActiveConversation();
-
-    if (conversation) {
-      const model = validModels.has(conversation.model)
-        ? conversation.model
-        : getDefaultModel();
-
-      conversation.model = model;
-      elements.modelSelect.value = model;
-    }
-
-    elements.defaultModelSelect.value = getDefaultModel();
+    const conversation = activeConversation();
+    els.modelLabel.textContent = modelName(conversation?.model || getDefaultModel());
+    els.defaultModel.value = getDefaultModel();
 
     bindEvents();
     updateAlightFields();
     renderHistory();
     renderMessages();
+    updateModelOptions();
     saveState();
   }
 
