@@ -1,4 +1,3 @@
-
 const axios = require("axios");
 
 const BASE_URL = "https://api.jerexd.my.id";
@@ -7,6 +6,20 @@ const BASE_URL = "https://api.jerexd.my.id";
 // Setelah tes selesai, sebaiknya pindahkan ke Environment Variables Vercel.
 const API_KEY =
   process.env.JEREXD_API_KEY || "jere_sTl9OLzPIyMn";
+
+const GEMINI_DIRECT_MODELS = [
+  "gemini-2.0-pro",
+  "gemini-pro",
+  "gemini-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-pro",
+  "gemini-1.5-flash",
+];
+
+const COPILOT_MODELS = [
+  "microsoft/copilot",
+  "copilot",
+];
 
 const ALLOWED_MODELS = [
   "chatday/ai-chat",
@@ -32,6 +45,10 @@ const ALLOWED_MODELS = [
   "google/gemini-3.1-pro-preview",
   "google/gemini-3-pro-preview",
   "google/gemini-3.1-flash-lite",
+  "gemini-2.0-pro",
+  "gemini-pro",
+  "gemini-flash",
+  "microsoft/copilot",
   "alibaba/qwen3-max",
   "meta/llama-4-maverick",
   "moonshotai/kimi-k2.6",
@@ -130,6 +147,102 @@ function getApiError(error) {
   return error?.message || "Terjadi kesalahan pada layanan API.";
 }
 
+function extractAiAnswer(data) {
+  if (typeof data === "string") return data.trim();
+  if (!data || typeof data !== "object") return "";
+
+  const candidates = [
+    data.result,
+    data.answer,
+    data.response,
+    data.reply,
+    data.output,
+    data.text,
+    data.content,
+    data.data,
+    data.message,
+  ];
+
+  for (const item of candidates) {
+    if (typeof item === "string" && item.trim()) {
+      return item.trim();
+    }
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      const nested =
+        item.result ??
+        item.answer ??
+        item.response ??
+        item.reply ??
+        item.output ??
+        item.text ??
+        item.content ??
+        item.message;
+      if (typeof nested === "string" && nested.trim()) {
+        return nested.trim();
+      }
+    }
+  }
+
+  return "";
+}
+
+function extractSessionId(data, fallbackId) {
+  if (!data || typeof data !== "object") return fallbackId;
+  const candidates = [
+    data.session_id,
+    data.chatId,
+    data.chat_id,
+    data.sessionId,
+    data.result?.chatId,
+    data.result?.chat_id,
+    data.result?.session_id,
+    data.result?.sessionId,
+    data.data?.chatId,
+    data.data?.chat_id,
+    data.data?.session_id,
+    data.data?.sessionId,
+  ];
+
+  for (const id of candidates) {
+    if (typeof id === "string" && id.trim()) {
+      return id.trim();
+    }
+  }
+
+  return fallbackId;
+}
+
+function resolveBestGeminiModel(requestedModel, availableModels = []) {
+  if (!Array.isArray(availableModels) || !availableModels.length) {
+    return requestedModel || "gemini-2.0-pro";
+  }
+  const cleanReq = String(requestedModel || "").toLowerCase();
+  if (availableModels.includes(cleanReq)) return cleanReq;
+
+  if (cleanReq.includes("flash")) {
+    const flashMatch = availableModels.find((m) =>
+      String(m).toLowerCase().includes("flash")
+    );
+    if (flashMatch) return flashMatch;
+  }
+
+  if (cleanReq.includes("2.0")) {
+    const v2Match = availableModels.find((m) =>
+      String(m).toLowerCase().includes("2.0")
+    );
+    if (v2Match) return v2Match;
+  }
+
+  if (cleanReq.includes("pro")) {
+    const proMatch = availableModels.find((m) =>
+      String(m).toLowerCase().includes("pro")
+    );
+    if (proMatch) return proMatch;
+  }
+
+  return availableModels[0];
+}
+
 async function callJerexd(endpoint, params) {
   const response = await http.get(endpoint, {
     params: {
@@ -141,11 +254,33 @@ async function callJerexd(endpoint, params) {
   return response.data;
 }
 
+async function handleGeminiModels(req, res) {
+  const chatId = getInput(req, "chatId", getInput(req, "session_id", "HAOMI_XML"));
+  const data = await callJerexd("/api/ai/gemini", {
+    prompt: "Halo",
+    model: "list",
+    chatId,
+  });
+
+  return sendJson(res, 200, {
+    success: true,
+    models: Array.isArray(data?.models) ? data.models : GEMINI_DIRECT_MODELS,
+    raw: data,
+  });
+}
+
 async function handleChat(req, res) {
   const prompt = requireString(
-    getInput(req, "prompt", getInput(req, "question")),
+    getInput(
+      req,
+      "prompt",
+      getInput(req, "query", getInput(req, "question"))
+    ),
     "Pesan"
   );
+
+  const rawPrompt = getInput(req, "raw_prompt", prompt);
+  const contextPrompt = getInput(req, "context_prompt", prompt);
 
   const requestedModel = getInput(
     req,
@@ -153,11 +288,19 @@ async function handleChat(req, res) {
     "openai/gpt-4o"
   );
 
-  const model = requestedModel === "GPT-4o"
-    ? "openai/gpt-4o"
-    : requestedModel;
+  let model = requestedModel;
+  if (requestedModel === "GPT-4o") {
+    model = "openai/gpt-4o";
+  } else if (COPILOT_MODELS.includes(requestedModel.toLowerCase())) {
+    model = "microsoft/copilot";
+  }
 
-  if (!ALLOWED_MODELS.includes(model)) {
+  const isGeminiDirect =
+    GEMINI_DIRECT_MODELS.includes(model) ||
+    model.startsWith("gemini-");
+  const isCopilot = model === "microsoft/copilot";
+
+  if (!ALLOWED_MODELS.includes(model) && !isGeminiDirect && !isCopilot) {
     return sendJson(res, 400, {
       success: false,
       message: "Model tidak tersedia.",
@@ -165,19 +308,123 @@ async function handleChat(req, res) {
     });
   }
 
-  // Setiap percakapan menggunakan session_id tersendiri.
-  // Frontend perlu menyimpan ID yang sama untuk chat yang sama.
-  const sessionId =
-    getInput(req, "session_id") ||
-    `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const isReset = getInput(req, "reset") === "true";
 
+  // Setiap percakapan menggunakan session_id / chatId tersendiri.
+  const rawSessionId =
+    getInput(req, "chatId") ||
+    getInput(req, "session_id") ||
+    `HAOMI_XML_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
+  const sessionId = isReset
+    ? `HAOMI_XML_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+    : rawSessionId;
+
+  // 1. Endpoint khusus Microsoft Copilot (/api/ai/copilot?apikey=...&query=...)
+  // Karena Copilot tidak memiliki session_id di server API, gunakan context_prompt
+  // (dan fallback otomatis ke prompt murni bila diperlukan).
+  if (isCopilot) {
+    const primaryQuery = !isReset && contextPrompt ? contextPrompt : prompt;
+    let data;
+
+    try {
+      data = await callJerexd("/api/ai/copilot", {
+        query: primaryQuery,
+      });
+      if (data?.status === false && primaryQuery !== rawPrompt) {
+        data = await callJerexd("/api/ai/copilot", {
+          query: rawPrompt || prompt,
+        });
+      }
+    } catch (err) {
+      if (primaryQuery !== rawPrompt) {
+        data = await callJerexd("/api/ai/copilot", {
+          query: rawPrompt || prompt,
+        });
+      } else {
+        throw err;
+      }
+    }
+
+    if (data?.status === false) {
+      return sendJson(res, 502, {
+        success: false,
+        message: data.message || "Copilot AI belum berhasil menjawab.",
+        details: data,
+        session_id: sessionId,
+      });
+    }
+
+    const answer = extractAiAnswer(data);
+    return sendJson(res, 200, {
+      success: true,
+      message: "Berhasil mendapatkan jawaban dari Copilot.",
+      session_id: sessionId,
+      model: "microsoft/copilot",
+      stateless_session: true,
+      answer: answer || data,
+      raw: data,
+    });
+  }
+
+  // 2. Endpoint khusus Gemini AI (/api/ai/gemini?apikey=...&prompt=...&model=...&chatId=HAOMI_XML)
+  if (isGeminiDirect) {
+    const targetUrl = getInput(req, "url", "");
+    const geminiParams = {
+      prompt,
+      model,
+      chatId: sessionId,
+      ...(targetUrl ? { url: targetUrl } : {}),
+    };
+
+    let data = await callJerexd("/api/ai/gemini", geminiParams);
+
+    // Jika model yang diminta mengembalikan daftar model (status: false & Array.isArray(data.models)),
+    // otomatis pilih model Gemini yang valid dari daftar tersebut dan kirim ulang.
+    if (
+      data?.status === false &&
+      Array.isArray(data?.models) &&
+      data.models.length > 0 &&
+      model.toLowerCase() !== "list"
+    ) {
+      const resolvedModel = resolveBestGeminiModel(model, data.models);
+      data = await callJerexd("/api/ai/gemini", {
+        ...geminiParams,
+        model: resolvedModel,
+      });
+    }
+
+    if (data?.status === false) {
+      return sendJson(res, 502, {
+        success: false,
+        message: data.message || "Gemini AI tidak berhasil menjawab.",
+        availableGeminiModels: data.models || undefined,
+        details: data,
+        session_id: sessionId,
+        chatId: sessionId,
+      });
+    }
+
+    const resolvedSessionId = extractSessionId(data, sessionId);
+    const answer = extractAiAnswer(data);
+
+    return sendJson(res, 200, {
+      success: true,
+      message: "Berhasil mendapatkan jawaban dari Gemini.",
+      session_id: resolvedSessionId,
+      chatId: resolvedSessionId,
+      model: data?.model || model,
+      answer: answer || data,
+      raw: data,
+    });
+  }
+
+  // 3. Endpoint AI Chat Multi-Model (/api/ai/aichat)
   const data = await callJerexd("/api/ai/aichat", {
     prompt,
     model,
     session_id: sessionId,
-    ...(getInput(req, "reset") === "true"
-      ? { reset: "true" }
-      : {}),
+    ...(isReset ? { reset: "true" } : {}),
   });
 
   if (data?.status === false) {
@@ -189,18 +436,14 @@ async function handleChat(req, res) {
     });
   }
 
+  const answer = extractAiAnswer(data);
+
   return sendJson(res, 200, {
     success: true,
     message: "Berhasil mendapatkan jawaban.",
-    session_id: data?.session_id || sessionId,
+    session_id: extractSessionId(data, sessionId),
     model: data?.model || model,
-    answer:
-      data?.result ??
-      data?.answer ??
-      data?.response ??
-      data?.message ??
-      data?.data ??
-      data,
+    answer: answer || data,
     history_count: data?.history_count,
     raw: data,
   });
@@ -345,7 +588,17 @@ module.exports = async function handler(req, res) {
   try {
     switch (action) {
       case "chat":
+      case "gemini":
+      case "copilot":
+        if (action === "copilot" && !getInput(req, "model")) {
+          req.body = { ...(req.body || {}), model: "microsoft/copilot" };
+        } else if (action === "gemini" && !getInput(req, "model")) {
+          req.body = { ...(req.body || {}), model: "gemini-2.0-pro" };
+        }
         return await handleChat(req, res);
+
+      case "gemini-models":
+        return await handleGeminiModels(req, res);
 
       case "am-send":
         return await handleAlightMotionSend(req, res);
@@ -373,6 +626,9 @@ module.exports = async function handler(req, res) {
           message: "Action tidak dikenal.",
           availableActions: [
             "chat",
+            "gemini",
+            "gemini-models",
+            "copilot",
             "models",
             "am-send",
             "am-verify",
