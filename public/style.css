@@ -39,6 +39,7 @@ body {
     flex-direction: column;
 }
 
+/* UTILITIES */
 .hidden {
     display: none !important;
 }
@@ -47,10 +48,7 @@ body {
     display: none !important;
 }
 
-/* =========================================
-   LANDING PAGE
-   ========================================= */
-
+/* LANDING PAGE */
 .landing-container {
     height: 100vh;
     padding: 24px;
@@ -187,10 +185,7 @@ body {
     opacity: 0.7;
 }
 
-/* =========================================
-   MAIN APP & HEADER
-   ========================================= */
-
+/* MAIN APP */
 .app-container {
     height: 100vh;
     height: 100dvh;
@@ -218,6 +213,12 @@ body {
     align-items: center;
 }
 
+.app-title {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    color: var(--text-highlight);
+}
+
 #menu-toggle,
 #close-sidebar {
     background: none;
@@ -230,12 +231,6 @@ body {
     padding: 5px;
 }
 
-.app-title {
-    font-family: var(--font-serif);
-    font-size: 1.2rem;
-    color: var(--text-highlight);
-}
-
 .user-avatar img {
     width: 35px;
     height: 35px;
@@ -243,10 +238,7 @@ body {
     border: 2px solid var(--bg-glass);
 }
 
-/* =========================================
-   CHAT AREA
-   ========================================= */
-
+/* CHAT AREA */
 .chat-area {
     flex: 1;
     min-height: 0;
@@ -274,10 +266,7 @@ body {
     width: 100%;
 }
 
-/* =========================================
-   WELCOME SCREEN
-   ========================================= */
-
+/* WELCOME SCREEN */
 .welcome-container {
     margin-top: 20px;
 }
@@ -366,10 +355,7 @@ body {
     font-size: 0.8rem;
 }
 
-/* =========================================
-   CHAT BUBBLES
-   ========================================= */
-
+/* CHAT BUBBLES */
 .chat-bubble {
     padding: 20px;
     border-radius: 20px;
@@ -445,10 +431,7 @@ body {
     color: #52685a;
 }
 
-/* =========================================
-   SOURCES & RELATED
-   ========================================= */
-
+/* SOURCES & RELATED */
 .info-card {
     background: var(--bg-card);
     border-radius: 16px;
@@ -493,10 +476,7 @@ body {
     cursor: pointer;
 }
 
-/* =========================================
-   INPUT BAR
-   ========================================= */
-
+/* INPUT BAR */
 .input-area-fixed {
     position: fixed;
     bottom: 0;
@@ -560,10 +540,7 @@ body {
     transform: scale(0.96);
 }
 
-/* =========================================
-   SIDEBAR
-   ========================================= */
-
+/* SIDEBAR */
 .sidebar-hidden {
     position: fixed;
     inset: 0;
@@ -646,28 +623,27 @@ body {
     font-size: 0.7rem;
 }
 
-/* =========================================
-   TYPING INDICATOR — THREE DOTS
-   ========================================= */
-
+/* TYPING INDICATOR — KECIL & ELEGAN */
 .typing-indicator {
     display: inline-flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 5px;
-    min-height: 24px;
-    padding: 5px 0;
+    gap: 4px;
+    height: 18px;
+    min-height: 0;
+    padding: 0;
     vertical-align: middle;
 }
 
 .typing-indicator span {
     display: block;
-    width: 7px;
-    height: 7px;
+    width: 5px;
+    height: 5px;
     flex-shrink: 0;
     border-radius: 50%;
-    background: #8a9b90;
-    animation: smartTyping 1.2s infinite ease-in-out;
+    background: #82958a;
+    opacity: 0.4;
+    animation: smartTyping 1.1s ease-in-out infinite;
 }
 
 .typing-indicator span:nth-child(2) {
@@ -680,20 +656,29 @@ body {
 
 @keyframes smartTyping {
     0%, 60%, 100% {
-        opacity: 0.35;
+        opacity: 0.3;
         transform: translateY(0);
     }
 
     30% {
-        opacity: 1;
-        transform: translateY(-4px);
+        opacity: 0.9;
+        transform: translateY(-2px);
     }
 }
 
-/* =========================================
-   LEGACY LOADER
-   ========================================= */
+/* BUBBLE SAAT AI SEDANG MEMPROSES */
+.ai-bubble:has(.typing-indicator) .bubble-content {
+    min-height: 0;
+    padding: 0;
+    line-height: 1.2;
+}
 
+.ai-bubble:has(.typing-indicator) .bubble-footer {
+    margin-top: 10px;
+    padding-top: 8px;
+}
+
+/* LEGACY LOADER */
 .loader-pulse {
     width: 50px;
     height: 50px;
@@ -726,10 +711,7 @@ body {
     padding: 40px;
 }
 
-/* =========================================
-   MOBILE RESPONSIVE
-   ========================================= */
-
+/* MOBILE */
 @media (max-width: 480px) {
     .landing-container {
         padding: 20px;
@@ -766,14 +748,14 @@ body {
     }
 }
 
-/* Hormati pengaturan pengurangan animasi */
+/* REDUCE MOTION */
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        scroll-behavior: auto !important;
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+    .typing-indicator span {
+        animation: none;
+        opacity: 0.7;
+    }
+
+    html {
+        scroll-behavior: auto;
     }
 }
