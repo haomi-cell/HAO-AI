@@ -68,40 +68,124 @@
     responseStyle: "standard",
     enterToSend: true,
     saveHistory: true,
+    soundFx: false,
     defaultWaEmoji: "🙄,💦,🥰,😋"
   };
 
-  // Pastikan kapsul Dynamic Island tersedia di bagian atas layar
+  // Pastikan kapsul Dynamic Island (khusus notifikasi on/off) & pengaturan suara tersedia
   function ensureDynamicIslandDOM() {
-    if ($("#dynamicIsland")) return;
-    const wrap = document.createElement("div");
-    wrap.className = "dynamic-island-wrap";
-    wrap.id = "dynamicIslandWrap";
-    wrap.innerHTML =
-      `<div class="dynamic-island" id="dynamicIsland" role="status" aria-live="polite" title="Ketuk untuk buka kapsul pintar">` +
-        `<div class="island-compact-row" id="islandCompactRow">` +
-          `<div class="island-left">` +
-            `<span class="island-orb" id="islandOrb"></span>` +
-            `<span class="island-text" id="islandText">HAOMI · Siap</span>` +
+    if (!$("#haomiIslandAndBottomFix")) {
+      const style = document.createElement("style");
+      style.id = "haomiIslandAndBottomFix";
+      style.textContent = `
+        .dynamic-island-wrap {
+          position: fixed !important;
+          top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          z-index: 220 !important;
+          pointer-events: none !important;
+        }
+        .dynamic-island {
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+          transform: translateY(-26px) scale(0.86) !important;
+          transition:
+            opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+            transform 0.34s cubic-bezier(0.22, 1.25, 0.36, 1),
+            visibility 0.26s linear !important;
+        }
+        .dynamic-island.is-notifying {
+          opacity: 1 !important;
+          visibility: visible !important;
+          pointer-events: auto !important;
+          transform: translateY(0) scale(1) !important;
+        }
+        .island-pod-body { display: none !important; }
+        html, body {
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          min-height: 100dvh !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          background-color: var(--bg-base) !important;
+        }
+        .app-shell, .main-panel, .view, .chat-view {
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          padding-bottom: 0 !important;
+          margin-bottom: 0 !important;
+          border-bottom: none !important;
+        }
+        .view, .chat-view {
+          height: auto !important;
+          flex: 1 1 0% !important;
+          min-height: 0 !important;
+        }
+        .composer-dock {
+          margin: 0 auto !important;
+          padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+          background: var(--bg-base) !important;
+          border-top: none !important;
+          border-bottom: none !important;
+          box-shadow: none !important;
+        }
+        .composer-dock::after, .main-panel::after, .app-shell::after {
+          display: none !important;
+          content: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const existingIsland = $("#dynamicIsland");
+    if (existingIsland) {
+      existingIsland.classList.remove("is-expanded", "is-notifying");
+      existingIsland.setAttribute("aria-hidden", "true");
+      const pod = $("#islandPodBody", existingIsland);
+      if (pod) pod.remove();
+    } else {
+      const wrap = document.createElement("div");
+      wrap.className = "dynamic-island-wrap";
+      wrap.id = "dynamicIslandWrap";
+      wrap.innerHTML =
+        `<div class="dynamic-island" id="dynamicIsland" role="status" aria-live="polite" aria-hidden="true">` +
+          `<div class="island-compact-row" id="islandCompactRow">` +
+            `<div class="island-left">` +
+              `<span class="island-orb" id="islandOrb"></span>` +
+              `<span class="island-text" id="islandText">Notifikasi</span>` +
+            `</div>` +
+            `<div class="island-wave" aria-hidden="true">` +
+              `<span></span><span></span><span></span><span></span>` +
+            `</div>` +
           `</div>` +
-          `<div class="island-wave" aria-hidden="true">` +
-            `<span></span><span></span><span></span><span></span>` +
-          `</div>` +
+        `</div>`;
+      document.body.prepend(wrap);
+    }
+
+    // Pastikan tombol Suara Sentuhan ada di dalam Pengaturan
+    const settingsBody = $(".settings-body");
+    if (settingsBody && !$("#soundFxToggle")) {
+      const row = document.createElement("div");
+      row.className = "settings-row";
+      row.innerHTML =
+        `<div class="settings-copy">` +
+          `<label for="soundFxToggle"><strong>Suara Sentuhan Tombol</strong></label>` +
+          `<p>Bunyi klik halus waktu kamu menekan tombol atau perintah cepat.</p>` +
         `</div>` +
-        `<div class="island-pod-body" id="islandPodBody" hidden>` +
-          `<div class="island-pod-metrics">` +
-            `<div class="island-mini-stat"><small>WAKTU</small><strong id="islandClock">AKTIF</strong></div>` +
-            `<div class="island-mini-stat"><small>PING</small><strong id="islandPing">12 ms</strong></div>` +
-            `<div class="island-mini-stat"><small>GERAK</small><strong id="islandFps">60 FPS</strong></div>` +
-          `</div>` +
-          `<div class="island-pod-actions">` +
-            `<button type="button" class="island-pod-btn" id="islandSoundBtn"><span id="islandSoundLabel">Suara: Mati</span></button>` +
-            `<button type="button" class="island-pod-btn" id="islandFocusBtn"><span>Mode Fokus</span></button>` +
-            `<button type="button" class="island-pod-btn" id="islandThemeBtn"><span id="islandThemeLabel">Tema</span></button>` +
-          `</div>` +
-        `</div>` +
-      `</div>`;
-    document.body.prepend(wrap);
+        `<label class="switch">` +
+          `<input type="checkbox" id="soundFxToggle">` +
+          `<span class="switch-slider"></span>` +
+        `</label>`;
+      const actionsBox = $(".settings-actions-box", settingsBody);
+      if (actionsBox) {
+        settingsBody.insertBefore(row, actionsBox);
+      } else {
+        settingsBody.appendChild(row);
+      }
+    }
   }
 
   ensureDynamicIslandDOM();
@@ -134,6 +218,7 @@
     responseStyle: $("#responseStyleSelect"),
     enterToSend: $("#enterToSendToggle"),
     saveHistory: $("#saveHistoryToggle"),
+    soundFx: $("#soundFxToggle"),
     defaultWaEmoji: $("#defaultWaEmojiInput"),
     enterHintBadge: $("#enterHintBadge"),
     welcomeModelBadge: $("#welcomeModelBadge"),
@@ -191,8 +276,11 @@
   let audioCtx = null;
 
   try {
-    soundEnabled = localStorage.getItem(SOUND_KEY) === "1";
-  } catch {}
+    const savedSound = localStorage.getItem(SOUND_KEY);
+    soundEnabled = savedSound !== null ? savedSound === "1" : Boolean(settings.soundFx);
+  } catch {
+    soundEnabled = Boolean(settings.soundFx);
+  }
 
   function id() {
     return window.crypto?.randomUUID?.() ||
@@ -464,6 +552,7 @@
     if (els.responseStyle) els.responseStyle.value = settings.responseStyle || "standard";
     if (els.enterToSend) els.enterToSend.checked = Boolean(settings.enterToSend);
     if (els.saveHistory) els.saveHistory.checked = Boolean(settings.saveHistory);
+    if (els.soundFx) els.soundFx.checked = Boolean(soundEnabled);
     if (els.defaultWaEmoji) els.defaultWaEmoji.value = settings.defaultWaEmoji || defaultSettings.defaultWaEmoji;
 
     if (els.enterHintBadge) {
@@ -682,7 +771,7 @@
     return result.join("");
   }
 
-  // Notifikasi langsung tampil di Dynamic Island bagian atas tengah
+  // Dynamic Island hanya muncul saat ada notifikasi / perubahan on-off, lalu sembunyi otomatis
   function toast(message, error = false) {
     const cleanMsg = String(message || "")
       .replace(/\/api\/[a-z0-9\/_-]+/gi, "")
@@ -694,25 +783,18 @@
     const textEl = els.islandText || $("#islandText");
 
     if (island && textEl) {
-      island.classList.add("is-notifying");
-      island.classList.toggle("is-error", Boolean(error));
       textEl.textContent = cleanMsg;
+      island.classList.toggle("is-error", Boolean(error));
+      island.classList.add("is-notifying");
+      island.setAttribute("aria-hidden", "false");
       playCyberTick(error ? 320 : 780, 0.06);
 
       if (islandTimer) window.clearTimeout(islandTimer);
       islandTimer = window.setTimeout(() => {
         island.classList.remove("is-notifying", "is-error");
-        textEl.textContent = getIdleIslandLabel();
-      }, 2800);
+        island.setAttribute("aria-hidden", "true");
+      }, 2200);
       return;
-    }
-
-    if (els.toast) {
-      const item = document.createElement("div");
-      item.className = `toast${error ? " error" : ""}`;
-      item.textContent = cleanMsg;
-      els.toast.appendChild(item);
-      window.setTimeout(() => item.remove(), 2800);
     }
   }
 
@@ -1305,35 +1387,7 @@
 
   function closeMobileSidebar() {
     document.body.classList.remove("sidebar-open");
-    $("#appShell")?.classList.remove("sidebar-open");
-    els.sidebar?.classList.remove("open");
-  }
-
-  const viewIds = {
-    chat: "chatView",
-    alight: "alightView",
-    urlscan: "urlscanView",
-    whatsapp: "whatsappView"
-  };
-
-  const viewTitles = {
-    chat: "Chat AI",
-    alight: "Alight Motion",
-    urlscan: "Cek Keamanan Link",
-    whatsapp: "Reaksi Saluran WA"
-  };
-
-  function showView(name) {
-    if (!viewIds[name]) return;
-
-    Object.entries(viewIds).forEach(([key, elementId]) => {
-      const view = document.getElementById(elementId);
-      if (!view) return;
-      view.hidden = key !== name;
-      view.classList.toggle("active", key === name);
-    });
-
-    $$(".nav-item[data-view], .mob-nav-item[data-view]").forEach(button => {
+    $("#appShell")?.classList.remove("sidebar-open"); els.sidebar?.classList.remove("open"); }    const viewIds = { chat: "chatView", alight: "alightView", urlscan: "urlscanView", whatsapp: "whatsappView" };    const viewTitles = { chat: "Chat AI", alight: "Alight Motion", urlscan: "Cek Keamanan Link", whatsapp: "Reaksi Saluran WA" };    function showView(name) { if (!viewIds[name]) return;      Object.entries(viewIds).forEach(([key, elementId]) => { const view = document.getElementById(elementId); if (!view) return; view.hidden = key !== name; view.classList.toggle("active", key === name); });      $$(".nav-item[data-view], .mob-nav-item[data-view]").forEach(button => {
       button.classList.toggle("active", button.dataset.view === name);
     });
 
@@ -1515,9 +1569,7 @@
   }
 
   function setAlightMode(mode) {
-    const select = $("#alightAction");
-    if (select) select.value = mode;
-    $$(".mode-tab[data-am-mode]").forEach(tab => {
+    const select = $("#alightAction"); if (select) select.value = mode; $$(".mode-tab[data-am-mode]").forEach(tab => {
       tab.classList.toggle("active", tab.dataset.amMode === mode);
     });
     updateAlightFields();
@@ -1530,13 +1582,7 @@
     const needsLink = mode === "am-verify";
     const linkGroup = $("#verificationLinkGroup");
     const linkInput = $("#alightLink");
-    const submitSpan = $("#alightSubmit span");
-    if (linkGroup) linkGroup.hidden = !needsLink;
-    if (linkInput) linkInput.required = needsLink;
-    if (submitSpan) {
-      submitSpan.textContent = needsLink ? "Verifikasi Tautan Akun" : "Kirim Email Verifikasi";
-    }
-    $$(".mode-tab[data-am-mode]").forEach(tab => {
+    const submitSpan = $("#alightSubmit span"); if (linkGroup) linkGroup.hidden = !needsLink; if (linkInput) linkInput.required = needsLink; if (submitSpan) { submitSpan.textContent = needsLink ? "Verifikasi Tautan Akun" : "Kirim Email Verifikasi"; } $$(".mode-tab[data-am-mode]").forEach(tab => {
       tab.classList.toggle("active", tab.dataset.amMode === mode);
     });
   }
@@ -1658,14 +1704,7 @@
   }
 
   function syncWaEmojiChips() {
-    const input = $("#whatsappReaction");
-    if (!input) return;
-    const currentList = input.value
-      .split(",")
-      .map(item => item.trim())
-      .filter(Boolean);
-
-    $$(".emoji-chip[data-emoji]").forEach(chip => {
+    const input = $("#whatsappReaction"); if (!input) return; const currentList = input.value .split(",") .map(item => item.trim()) .filter(Boolean);      $$(".emoji-chip[data-emoji]").forEach(chip => {
       chip.classList.toggle("active", currentList.includes(chip.dataset.emoji));
     });
   }
@@ -1784,48 +1823,11 @@
     $("#newChatButton")?.addEventListener("click", newChat);
     els.historySearch?.addEventListener("input", renderHistory);
 
-    // Interaksi kapsul Dynamic Island di bagian atas
-    if (els.dynamicIsland && els.islandPodBody) {
-      els.dynamicIsland.addEventListener("click", event => {
-        if (event.target.closest(".island-pod-btn")) return;
-        const expanded = !els.islandPodBody.hidden;
-        els.islandPodBody.hidden = expanded;
-        els.dynamicIsland.classList.toggle("is-expanded", !expanded);
-        playCyberTick(520, 0.04);
-      });
-
-      document.addEventListener("click", event => {
-        if (!els.dynamicIsland.contains(event.target) && !els.islandPodBody.hidden) {
-          els.islandPodBody.hidden = true;
-          els.dynamicIsland.classList.remove("is-expanded");
-        }
-      });
-    }
-
-    els.islandSoundBtn?.addEventListener("click", event => {
-      event.stopPropagation();
-      soundEnabled = !soundEnabled;
-      try {
-        localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
-      } catch {}
-      if (els.islandSoundLabel) {
-        els.islandSoundLabel.textContent = soundEnabled ? "Suara: Aktif" : "Suara: Mati";
-      }
-      toast(soundEnabled ? "Efek suara sentuhan aktif" : "Efek suara dimatikan");
-    });
-
-    els.islandFocusBtn?.addEventListener("click", event => {
-      event.stopPropagation();
-      if (els.welcome) {
-        forceShowHud = els.welcome.hidden;
-        els.welcome.hidden = !els.welcome.hidden;
-        toast(els.welcome.hidden ? "Mode Fokus: Dasbor disembunyikan" : "Panel dasbor ditampilkan");
-      }
-    });
-
-    els.islandThemeBtn?.addEventListener("click", event => {
-      event.stopPropagation();
-      toggleQuickTheme();
+    // Ketuk Dynamic Island saat muncul untuk langsung menutup notifikasi
+    els.dynamicIsland?.addEventListener("click", () => {
+      if (islandTimer) window.clearTimeout(islandTimer);
+      els.dynamicIsland.classList.remove("is-notifying", "is-error");
+      els.dynamicIsland.setAttribute("aria-hidden", "true");
     });
 
     document.addEventListener("pointerdown", event => {
@@ -1865,50 +1867,15 @@
     $("#popoverResetChat")?.addEventListener("click", resetCurrentSessionContext);
     $("#exportChatButton")?.addEventListener("click", exportCurrentChat);
 
-    $$("[data-view]").forEach(button => {
-      button.addEventListener("click", event => {
-        event.preventDefault();
-        showView(button.dataset.view);
-      });
-    });
-
-    // Chip perintah cepat & menu slash command di keyboard composer
-    $$(".cmd-chip[data-cmd]").forEach(chip => {
+    $$("[data-view]").forEach(button => { button.addEventListener("click", event => { event.preventDefault(); showView(button.dataset.view); }); });      // Chip perintah cepat & menu slash command di keyboard composer $$
+(".cmd-chip[data-cmd]").forEach(chip => {
       chip.addEventListener("click", () => {
         executeSlashShortcut(chip.dataset.cmd);
       });
     });
 
-    $$(".slash-cmd-item[data-slash]").forEach(item => {
-      item.addEventListener("click", () => {
-        if (els.input && item.dataset.slash !== "/kode" && item.dataset.slash !== "/ringkas") {
-          els.input.value = "";
-          resizeInput();
-        }
-        executeSlashShortcut(item.dataset.slash);
-      });
-    });
-
-    els.terminalInput?.addEventListener("input", handleTerminalFilter);
-    els.terminalInput?.addEventListener("keydown", event => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        handleTerminalExecute(els.terminalInput.value);
-      }
-    });
-
-    els.chatForm?.addEventListener("submit", event => {
-      event.preventDefault();
-      if (!busy && els.input) sendMessage(els.input.value);
-    });
-
-    els.input?.addEventListener("input", () => {
-      resizeInput();
-      const val = (els.input.value || "").trim();
-      if (els.slashCmdMenu) {
-        if (val.startsWith("/") && !val.includes(" ")) {
-          let anyVisible = false;
-          $$(".slash-cmd-item", els.slashCmdMenu).forEach(item => {
+    $$(".slash-cmd-item[data-slash]").forEach(item => { item.addEventListener("click", () => { if (els.input && item.dataset.slash !== "/kode" && item.dataset.slash !== "/ringkas") { els.input.value = ""; resizeInput(); } executeSlashShortcut(item.dataset.slash); }); });      els.terminalInput?.addEventListener("input", handleTerminalFilter); els.terminalInput?.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); handleTerminalExecute(els.terminalInput.value); } });      els.chatForm?.addEventListener("submit", event => { event.preventDefault(); if (!busy && els.input) sendMessage(els.input.value); });      els.input?.addEventListener("input", () => { resizeInput(); const val = (els.input.value \vert{}\vert{} "").trim(); if (els.slashCmdMenu) { if (val.startsWith("/") && !val.includes(" ")) { let anyVisible = false; $$
+(".slash-cmd-item", els.slashCmdMenu).forEach(item => {
             const cmd = item.dataset.slash || "";
             const match = cmd.startsWith(val.toLowerCase());
             item.hidden = !match;
@@ -1936,58 +1903,12 @@
       }
     });
 
-    $$(".prompt-card[data-prompt]").forEach(button => {
-      button.addEventListener("click", () => {
-        showView("chat");
-        if (els.input) {
-          els.input.value = button.dataset.prompt || "";
-          resizeInput();
-          els.input.focus();
-          toast("Ide obrolan siap dikirim");
-        }
-      });
-    });
-
-    els.welcomeModelBadge?.addEventListener("click", openModelDialog);
-    els.welcomeStyleBadge?.addEventListener("click", openSettings);
-
-    els.messages?.addEventListener("click", event => {
-      const codeBtn = event.target.closest("[data-copy-code]");
-      if (codeBtn) {
-        copyText(codeBtn.dataset.copyCode);
-      }
-    });
-
-    els.composerToolsBtn?.addEventListener("click", event => {
-      event.stopPropagation();
-      toggleComposerMenu();
-    });
-
-    document.addEventListener("click", event => {
-      if (els.composerToolsMenu && !els.composerToolsMenu.hidden &&
-          !els.composerToolsMenu.contains(event.target) &&
-          !els.composerToolsBtn?.contains(event.target)) {
-        closeComposerMenu();
-      }
-    });
-
-    els.modelTrigger?.addEventListener("click", openModelDialog);
-    els.closeModel?.addEventListener("click", closeModelDialog);
-    els.modelSearch?.addEventListener("input", updateModelOptions);
-
-    $$(".provider-filter").forEach(btn => {
+    $$(".prompt-card[data-prompt]").forEach(button => { button.addEventListener("click", () => { showView("chat"); if (els.input) { els.input.value = button.dataset.prompt \vert{}\vert{} ""; resizeInput(); els.input.focus(); toast("Ide obrolan siap dikirim"); } }); });      els.welcomeModelBadge?.addEventListener("click", openModelDialog); els.welcomeStyleBadge?.addEventListener("click", openSettings);      els.messages?.addEventListener("click", event => { const codeBtn = event.target.closest("[data-copy-code]"); if (codeBtn) { copyText(codeBtn.dataset.copyCode); } });      els.composerToolsBtn?.addEventListener("click", event => { event.stopPropagation(); toggleComposerMenu(); });      document.addEventListener("click", event => { if (els.composerToolsMenu && !els.composerToolsMenu.hidden && !els.composerToolsMenu.contains(event.target) && !els.composerToolsBtn?.contains(event.target)) { closeComposerMenu(); } });      els.modelTrigger?.addEventListener("click", openModelDialog); els.closeModel?.addEventListener("click", closeModelDialog); els.modelSearch?.addEventListener("input", updateModelOptions);      $$
+(".provider-filter").forEach(btn => {
       btn.addEventListener("click", () => {
         activeProviderFilter = btn.dataset.provider || "all";
-        $$(".provider-filter").forEach(b => b.classList.toggle("active", b === btn));
-        updateModelOptions();
-      });
-    });
-
-    els.modelDialog?.addEventListener("click", event => {
-      if (event.target === els.modelDialog) closeModelDialog();
-    });
-
-    $$(".model-option").forEach(button => {
+        $$(".provider-filter").forEach(b => b.classList.toggle("active", b === btn)); updateModelOptions(); }); });      els.modelDialog?.addEventListener("click", event => { if (event.target === els.modelDialog) closeModelDialog(); });      $$
+(".model-option").forEach(button => {
       button.addEventListener("click", () => selectModel(button.dataset.model));
     });
 
@@ -2001,14 +1922,8 @@
       if (event.target === els.settings) closeSettings();
     });
 
-    $$("[data-stream-choice]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        saveSettings({ streamSpeed: btn.dataset.streamChoice });
-        toast("Kecepatan ketikan AI diperbarui");
-      });
-    });
-
-    $$("[data-theme-choice]").forEach(btn => {
+    $$("[data-stream-choice]").forEach(btn => { btn.addEventListener("click", () => { saveSettings({ streamSpeed: btn.dataset.streamChoice }); toast("Kecepatan ketikan AI diperbarui"); }); });      $$
+("[data-theme-choice]").forEach(btn => {
       btn.addEventListener("click", () => {
         saveSettings({ theme: btn.dataset.themeChoice });
         const actual = getResolvedTheme(btn.dataset.themeChoice);
@@ -2066,6 +1981,15 @@
       }
     });
 
+    els.soundFx?.addEventListener("change", () => {
+      soundEnabled = Boolean(els.soundFx.checked);
+      try {
+        localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
+      } catch {}
+      saveSettings({ soundFx: soundEnabled });
+      toast(soundEnabled ? "Suara sentuhan: Aktif" : "Suara sentuhan: Mati");
+    });
+
     els.defaultWaEmoji?.addEventListener("change", () => {
       const val = els.defaultWaEmoji.value.trim() || defaultSettings.defaultWaEmoji;
       saveSettings({ defaultWaEmoji: val });
@@ -2079,49 +2003,7 @@
 
     $("#exportAllDataBtn")?.addEventListener("click", exportAllBackup);
 
-    const clearBtn = $("#clearAllHistory");
-    clearBtn?.addEventListener("click", () => {
-      if (busy) {
-        toast("Tunggu jawaban selesai sebelum menghapus riwayat.");
-        return;
-      }
-
-      if (!clearBtn.classList.contains("confirming")) {
-        clearBtn.classList.add("confirming");
-        clearBtn.textContent = "Ketuk sekali lagi buat hapus";
-        clearTimeout(clearHistoryConfirmTimer);
-        clearHistoryConfirmTimer = window.setTimeout(() => {
-          clearBtn.classList.remove("confirming");
-          clearBtn.textContent = "Hapus Semua Riwayat";
-        }, 3500);
-        return;
-      }
-
-      clearTimeout(clearHistoryConfirmTimer);
-      clearBtn.classList.remove("confirming");
-      clearBtn.textContent = "Hapus Semua Riwayat";
-
-      const conversation = newConversation();
-      state = {
-        conversations: [conversation],
-        activeId: conversation.id
-      };
-      telemetry = { totalRequests: 0, successCount: 0, totalLatencyMs: 0 };
-
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(TELEMETRY_KEY);
-      } catch {}
-      saveState();
-      renderTelemetryStats();
-      renderHistory();
-      renderMessages(false);
-      closeSettings();
-      toast("Semua riwayat obrolan berhasil dihapus");
-    });
-
-    // Alight Motion
-    $$(".mode-tab[data-am-mode]").forEach(tab => {
+    const clearBtn = $("#clearAllHistory"); clearBtn?.addEventListener("click", () => { if (busy) { toast("Tunggu jawaban selesai sebelum menghapus riwayat."); return; }        if (!clearBtn.classList.contains("confirming")) { clearBtn.classList.add("confirming"); clearBtn.textContent = "Ketuk sekali lagi buat hapus"; clearTimeout(clearHistoryConfirmTimer); clearHistoryConfirmTimer = window.setTimeout(() => { clearBtn.classList.remove("confirming"); clearBtn.textContent = "Hapus Semua Riwayat"; }, 3500); return; }        clearTimeout(clearHistoryConfirmTimer); clearBtn.classList.remove("confirming"); clearBtn.textContent = "Hapus Semua Riwayat";        const conversation = newConversation(); state = { conversations: [conversation], activeId: conversation.id }; telemetry = { totalRequests: 0, successCount: 0, totalLatencyMs: 0 };        try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(TELEMETRY_KEY); } catch {} saveState(); renderTelemetryStats(); renderHistory(); renderMessages(false); closeSettings(); toast("Semua riwayat obrolan berhasil dihapus"); });      // Alight Motion $$(".mode-tab[data-am-mode]").forEach(tab => {
       tab.addEventListener("click", () => setAlightMode(tab.dataset.amMode));
     });
 
@@ -2175,13 +2057,7 @@
         timeBadge: $("#urlscanTimeBadge"),
         summaryEl: $("#urlscanSummary"),
         action: "urlscan",
-        payload: { url: $("#scanUrl").value.trim() },
-        loadingText: "Memeriksa..."
-      });
-    });
-
-    // Reaksi WhatsApp
-    $$(".emoji-chip[data-emoji]").forEach(chip => {
+        payload: { url: $("#scanUrl").value.trim() }, loadingText: "Memeriksa..." }); });      // Reaksi WhatsApp $$(".emoji-chip[data-emoji]").forEach(chip => {
       chip.addEventListener("click", () => toggleWaEmoji(chip.dataset.emoji));
     });
 
@@ -2212,14 +2088,8 @@
       });
     });
 
-    $$("[data-copy-result]").forEach(button => {
-      button.addEventListener("click", () => {
-        const target = document.getElementById(button.dataset.copyResult);
-        if (target) copyText(target.textContent);
-      });
-    });
-
-    $$("[data-clear-result]").forEach(button => {
+    $$("[data-copy-result]").forEach(button => { button.addEventListener("click", () => { const target = document.getElementById(button.dataset.copyResult); if (target) copyText(target.textContent); }); });      $$
+("[data-clear-result]").forEach(button => {
       button.addEventListener("click", () => {
         const targetId = button.dataset.clearResult;
         const target = document.getElementById(targetId);
@@ -2315,3 +2185,4 @@
     initialize();
   }
 })();
+
