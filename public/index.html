@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0c0f0d">
-  <meta name="description" content="HAO AI — ruang kerja AI serbaguna untuk berpikir, belajar, menulis, dan coding.">
-  <title>HAO AI — AI Workspace</title>
+  <meta name="description" content="HAOMI — ruang kerja AI dan berbagai alat digital.">
+  <title>HAOMI — AI Workspace</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,53 +18,52 @@
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-top">
-        <a href="/" class="brand" aria-label="HAO AI beranda">
+        <a class="brand" href="/" aria-label="HAOMI beranda">
           <span class="brand-mark">h<span>.</span></span>
-          <span class="brand-name">HAO<span>AI</span></span>
+          <span class="brand-name">HAOMI</span>
         </a>
-        <button class="icon-button sidebar-close" id="sidebar-close" type="button" aria-label="Tutup sidebar">×</button>
+        <button class="icon-button sidebar-close" id="sidebar-close" type="button" aria-label="Tutup menu">×</button>
       </div>
 
       <button class="new-chat-button" id="new-chat" type="button">
         <span class="new-chat-icon">＋</span>
         <span>Obrolan baru</span>
-        <kbd>⌘ K</kbd>
       </button>
 
       <div class="sidebar-section">
-        <div class="section-label">WORKSPACE</div>
-        <button class="nav-item active" type="button" data-view="chat">
+        <div class="section-label">RUANG KERJA</div>
+
+        <button class="nav-item active" data-view="chat" type="button">
           <span class="nav-icon">◈</span>
           <span>Chat AI</span>
           <span class="nav-indicator"></span>
         </button>
-        <button class="nav-item" type="button" data-tool="web">
-          <span class="nav-icon">◎</span>
-          <span>Pencarian web</span>
-          <span class="soon-label">SEGERA</span>
+
+        <button class="nav-item" data-tool="alight-motion" type="button">
+          <span class="nav-icon">▶</span>
+          <span>Alight Motion</span>
         </button>
-        <button class="nav-item" type="button" data-tool="files">
-          <span class="nav-icon">▤</span>
-          <span>File & dokumen</span>
-          <span class="soon-label">SEGERA</span>
+
+        <button class="nav-item" data-tool="urlscan" type="button">
+          <span class="nav-icon">⌕</span>
+          <span>Scan URL</span>
         </button>
-        <button class="nav-item" type="button" data-tool="images">
-          <span class="nav-icon">▧</span>
-          <span>Studio gambar</span>
-          <span class="soon-label">SEGERA</span>
+
+        <button class="nav-item" data-tool="whatsapp-react" type="button">
+          <span class="nav-icon">◉</span>
+          <span>Reaksi WhatsApp</span>
         </button>
       </div>
 
-      <div class="history-section">
+      <div class="history-section" id="history-section">
         <div class="history-title-row">
-          <div class="section-label">RIWAYAT</div>
-          <span id="history-count" class="history-count">0</span>
+          <span class="section-label">RIWAYAT CHAT</span>
+          <span class="history-count" id="history-count">0</span>
         </div>
 
         <label class="history-search">
           <span>⌕</span>
           <input id="history-search" type="search" placeholder="Cari percakapan..." autocomplete="off">
-          <kbd>/</kbd>
         </label>
 
         <div class="conversation-list" id="conversation-list"></div>
@@ -74,8 +73,8 @@
         <div class="plan-card">
           <div class="plan-card-icon">✳</div>
           <div class="plan-card-copy">
-            <strong>HAO Workspace</strong>
-            <span>AI tools dalam satu tempat</span>
+            <strong>HAOMI Workspace</strong>
+            <span>AI dan alat digital</span>
           </div>
           <span class="plan-dot"></span>
         </div>
@@ -83,7 +82,7 @@
         <button class="profile-button" id="open-settings" type="button">
           <span class="profile-avatar">H</span>
           <span class="profile-copy">
-            <strong>HAO AI</strong>
+            <strong>HAOMI</strong>
             <small>Pengaturan aplikasi</small>
           </span>
           <span class="profile-more">···</span>
@@ -98,77 +97,56 @@
         <div class="topbar-left">
           <button class="icon-button mobile-menu" id="sidebar-open" type="button" aria-label="Buka menu">☰</button>
           <div class="breadcrumb">
-            <span class="breadcrumb-root">HAO AI</span>
+            <span class="breadcrumb-root">HAOMI</span>
             <span class="breadcrumb-separator">/</span>
             <span id="breadcrumb-current">Chat</span>
           </div>
         </div>
 
         <div class="topbar-right">
-          <div class="connection-status">
-            <span class="status-dot"></span>
-            <span>AI Workspace</span>
-          </div>
-          <button class="icon-button topbar-settings" id="topbar-settings" type="button" aria-label="Pengaturan" title="Pengaturan">⚙</button>
+          <span class="connection-status"><span class="status-dot"></span> Workspace</span>
+          <button class="icon-button" id="topbar-settings" type="button" aria-label="Pengaturan">⚙</button>
         </div>
       </header>
 
       <section class="welcome-screen" id="welcome-screen">
-        <div class="welcome-eyebrow"><span></span> YOUR PERSONAL AI WORKSPACE</div>
-        <h1>Ruang untuk berpikir.<br><span>Tempat ide berkembang.</span></h1>
+        <div class="welcome-eyebrow"><span></span> HAOMI DIGITAL WORKSPACE</div>
+        <h1>Ada yang ingin<br><span>kamu selesaikan?</span></h1>
         <p class="welcome-description">
-          Tanyakan sesuatu, pecahkan masalah, tulis ide, atau mulai proyek berikutnya bersama HAO.
+          Temukan jawaban, periksa tautan, kelola alat digital, dan mulai ide berikutnya.
         </p>
 
         <div class="welcome-composer-anchor" id="welcome-composer-anchor"></div>
 
         <div class="suggestions-heading">
-          <span>Mulai dari sini</span>
-          <span class="suggestions-caption">Pilih salah satu untuk memulai</span>
+          <span>Mulai dengan HAO</span>
+          <span class="suggestions-caption">Pilih kebutuhanmu</span>
         </div>
 
         <div class="suggestion-grid">
-          <button class="suggestion-card" type="button" data-prompt="Jelaskan topik yang sulit dengan bahasa sederhana, berikan contoh, lalu rangkum poin pentingnya.">
-            <span class="suggestion-icon icon-learn">↗</span>
-            <span class="suggestion-copy">
-              <strong>Belajar & memahami</strong>
-              <small>Uraikan topik rumit dengan sederhana</small>
-            </span>
+          <button class="suggestion-card" type="button" data-prompt="Jelaskan suatu topik yang sulit dengan bahasa sederhana, berikan contoh, dan rangkum poin pentingnya.">
+            <span class="suggestion-icon">↗</span>
+            <span class="suggestion-copy"><strong>Belajar sesuatu</strong><small>Pahami topik lebih cepat</small></span>
             <span class="suggestion-arrow">↗</span>
           </button>
 
-          <button class="suggestion-card" type="button" data-prompt="Bantu aku mengembangkan ide kreatif. Ajukan pertanyaan yang diperlukan lalu berikan beberapa alternatif yang realistis.">
-            <span class="suggestion-icon icon-ideas">✳</span>
-            <span class="suggestion-copy">
-              <strong>Eksplorasi ide</strong>
-              <small>Kembangkan ide menjadi rencana</small>
-            </span>
+          <button class="suggestion-card" type="button" data-prompt="Bantu aku mengembangkan ide kreatif menjadi rencana yang jelas dan realistis.">
+            <span class="suggestion-icon">✳</span>
+            <span class="suggestion-copy"><strong>Cari ide</strong><small>Mulai dari ide sederhana</small></span>
             <span class="suggestion-arrow">↗</span>
           </button>
 
-          <button class="suggestion-card" type="button" data-prompt="Bantu aku menulis sesuatu dengan struktur yang jelas, bahasa natural, dan hasil yang siap diedit. Tanyakan detail jika diperlukan.">
-            <span class="suggestion-icon icon-write">≡</span>
-            <span class="suggestion-copy">
-              <strong>Menulis & merancang</strong>
-              <small>Susun tulisan dengan lebih rapi</small>
-            </span>
+          <button class="suggestion-card" type="button" data-prompt="Bantu aku menulis dengan struktur jelas, bahasa natural, dan hasil yang siap diedit.">
+            <span class="suggestion-icon">≡</span>
+            <span class="suggestion-copy"><strong>Menulis</strong><small>Susun tulisan lebih rapi</small></span>
             <span class="suggestion-arrow">↗</span>
           </button>
 
-          <button class="suggestion-card" type="button" data-prompt="Bantu aku mengembangkan atau memperbaiki kode. Jelaskan solusi, tunjukkan kode lengkap yang relevan, dan sertakan langkah pengujian.">
-            <span class="suggestion-icon icon-code">&lt;/&gt;</span>
-            <span class="suggestion-copy">
-              <strong>Coding & problem solving</strong>
-              <small>Bangun dan perbaiki proyek</small>
-            </span>
+          <button class="suggestion-card" type="button" data-prompt="Bantu aku memeriksa dan memperbaiki kode. Jelaskan penyebab masalah dan berikan solusi yang bisa diuji.">
+            <span class="suggestion-icon code-icon">&lt;/&gt;</span>
+            <span class="suggestion-copy"><strong>Coding</strong><small>Bangun dan perbaiki proyek</small></span>
             <span class="suggestion-arrow">↗</span>
           </button>
-        </div>
-
-        <div class="welcome-footnote">
-          <span class="footnote-line"></span>
-          <span>Pilih model yang sesuai dengan pekerjaanmu.</span>
-          <span class="footnote-line"></span>
         </div>
       </section>
 
@@ -178,40 +156,56 @@
         </div>
       </section>
 
+      <section class="tool-view" id="tool-view" hidden>
+        <div class="tool-page">
+          <button class="back-to-chat" id="back-to-chat" type="button">← Kembali ke chat</button>
+
+          <div class="tool-page-heading">
+            <div class="tool-page-icon" id="tool-page-icon">⌕</div>
+            <div>
+              <div class="welcome-eyebrow" id="tool-page-eyebrow">HAOMI TOOLS</div>
+              <h1 id="tool-page-title">Scan URL</h1>
+              <p id="tool-page-description">Periksa sebuah tautan.</p>
+            </div>
+          </div>
+
+          <form id="tool-form" class="tool-form" novalidate>
+            <div id="tool-fields"></div>
+            <button id="tool-submit" class="tool-submit" type="submit">Jalankan alat <span>→</span></button>
+          </form>
+
+          <div class="tool-notice" id="tool-notice">
+            Hasil berasal dari layanan API. Jangan memasukkan data pribadi yang tidak diperlukan.
+          </div>
+
+          <section class="tool-result" id="tool-result" hidden>
+            <div class="tool-result-header">
+              <strong>Hasil</strong>
+              <button type="button" class="message-action" id="copy-tool-result">Salin hasil</button>
+            </div>
+            <div id="tool-result-message"></div>
+            <pre id="tool-result-data"></pre>
+          </section>
+        </div>
+      </section>
+
       <footer class="composer-area" id="composer-area">
         <div class="composer-shell">
           <form class="composer" id="chat-form">
-            <textarea
-              id="chat-input"
-              name="question"
-              rows="1"
-              maxlength="12000"
-              placeholder="Tulis pesan untuk HAO..."
-              aria-label="Tulis pesan untuk HAO"
-              required
-            ></textarea>
+            <textarea id="chat-input" name="question" rows="1" maxlength="12000" placeholder="Tulis pesan untuk HAOMI..." aria-label="Tulis pesan untuk HAOMI" required></textarea>
 
             <div class="composer-bottom">
               <div class="composer-left-tools">
-                <button class="composer-tool" id="tools-toggle" type="button" aria-label="Buka alat" title="Alat">＋</button>
+                <button class="composer-tool" id="tools-toggle" type="button" aria-label="Buka alat">＋</button>
 
                 <div class="tools-popover" id="tools-popover" hidden>
-                  <div class="popover-heading">ALAT HAO</div>
-                  <button type="button" class="tool-option" data-tool="web">
-                    <span>◎</span>
-                    <span><strong>Pencarian web</strong><small>Belum terhubung ke layanan pencarian</small></span>
-                  </button>
-                  <button type="button" class="tool-option" data-tool="files">
-                    <span>▤</span>
-                    <span><strong>Analisis dokumen</strong><small>Unggah file belum tersedia di backend</small></span>
-                  </button>
-                  <button type="button" class="tool-option" data-tool="images">
-                    <span>▧</span>
-                    <span><strong>Analisis gambar</strong><small>Memerlukan endpoint vision</small></span>
-                  </button>
+                  <div class="popover-heading">PILIH ALAT</div>
+                  <button type="button" class="tool-option" data-tool="alight-motion"><span>▶</span><span><strong>Alight Motion</strong><small>Kirim atau verifikasi permintaan akun</small></span></button>
+                  <button type="button" class="tool-option" data-tool="urlscan"><span>⌕</span><span><strong>Scan URL</strong><small>Periksa sebuah tautan</small></span></button>
+                  <button type="button" class="tool-option" data-tool="whatsapp-react"><span>◉</span><span><strong>Reaksi WhatsApp</strong><small>Kirim reaksi pada postingan kanal</small></span></button>
                 </div>
 
-                <div id="model-picker" class="model-picker">
+                <div class="model-picker" id="model-picker">
                   <button id="model-button" class="model-button" type="button" aria-haspopup="listbox" aria-expanded="false">
                     <span class="model-status-dot"></span>
                     <span id="model-button-label">GPT-4o</span>
@@ -219,14 +213,8 @@
                   </button>
 
                   <div class="model-menu" id="model-menu" hidden>
-                    <div class="model-menu-header">
-                      <strong>Pilih model</strong>
-                      <span>JERE-API</span>
-                    </div>
-                    <label class="model-search">
-                      <span>⌕</span>
-                      <input id="model-search-input" type="search" placeholder="Cari model..." autocomplete="off">
-                    </label>
+                    <div class="model-menu-header"><strong>Pilih model</strong><span>26 model</span></div>
+                    <label class="model-search"><span>⌕</span><input id="model-search-input" type="search" placeholder="Cari model..." autocomplete="off"></label>
                     <div id="model-options" class="model-options" role="listbox" aria-label="Daftar model"></div>
                   </div>
                 </div>
@@ -234,59 +222,28 @@
 
               <div class="composer-right-tools">
                 <span id="composer-state" class="composer-state">Siap membantu</span>
-                <button id="send-button" class="send-button" type="submit" aria-label="Kirim pesan" title="Kirim pesan">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/>
-                  </svg>
+                <button id="send-button" class="send-button" type="submit" aria-label="Kirim pesan">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>
                 </button>
               </div>
             </div>
           </form>
         </div>
-        <p class="composer-disclaimer">HAO AI dapat membuat kesalahan. Periksa kembali informasi penting.</p>
+        <p class="composer-disclaimer">HAOMI dapat membuat kesalahan. Periksa kembali informasi penting.</p>
       </footer>
     </main>
   </div>
 
   <dialog class="settings-dialog" id="settings-dialog">
     <div class="dialog-header">
-      <div>
-        <span class="dialog-eyebrow">PREFERENCES</span>
-        <h2>Pengaturan HAO</h2>
-      </div>
+      <div><span class="dialog-eyebrow">PREFERENCES</span><h2>Pengaturan HAOMI</h2></div>
       <button class="icon-button" id="settings-close" type="button" aria-label="Tutup pengaturan">×</button>
     </div>
-
     <div class="settings-content">
-      <div class="settings-row">
-        <div>
-          <strong>Tampilan</strong>
-          <p>Gaya visual ruang kerja</p>
-        </div>
-        <span class="settings-value">Dark premium</span>
-      </div>
-
-      <div class="settings-row">
-        <div>
-          <strong>Model default</strong>
-          <p>Model yang dipakai untuk obrolan baru</p>
-        </div>
-        <select id="default-model-setting" aria-label="Model default"></select>
-      </div>
-
-      <div class="settings-row">
-        <div>
-          <strong>Riwayat lokal</strong>
-          <p>Percakapan tersimpan di browser ini</p>
-        </div>
-        <span class="settings-value settings-enabled">Aktif</span>
-      </div>
-
-      <div class="settings-notice">
-        <strong>Privasi dan penyimpanan</strong>
-        <p>Riwayat disimpan pada penyimpanan lokal browser. Menghapus data situs atau berpindah perangkat dapat menghilangkan riwayat lokal. Memori percakapan AI juga bergantung pada dukungan sesi JERE-API.</p>
-      </div>
-
+      <div class="settings-row"><div><strong>Tampilan</strong><p>Gaya visual ruang kerja</p></div><span class="settings-value">Dark premium</span></div>
+      <div class="settings-row"><div><strong>Model default</strong><p>Model untuk obrolan</p></div><select id="default-model-setting" aria-label="Model default"></select></div>
+      <div class="settings-row"><div><strong>Riwayat lokal</strong><p>Tersimpan di browser ini</p></div><span class="settings-value">Aktif</span></div>
+      <div class="settings-notice"><strong>Privasi</strong><p>Riwayat chat tersimpan di browser. Jangan bagikan tautan verifikasi atau kode autentikasi kepada orang lain.</p></div>
       <button class="danger-button" id="clear-history" type="button">Hapus semua riwayat lokal</button>
     </div>
   </dialog>
