@@ -658,11 +658,18 @@
   }
 
   function openSidebar() {
+    // Class yang dipakai harus sama dengan selector CSS mobile.
+    els.sidebar.classList.add("open");
+    els.overlay.classList.add("visible");
     document.body.classList.add("sidebar-open");
+    els.overlay.setAttribute("aria-hidden", "false");
   }
 
   function closeSidebar() {
+    els.sidebar.classList.remove("open");
+    els.overlay.classList.remove("visible");
     document.body.classList.remove("sidebar-open");
+    els.overlay.setAttribute("aria-hidden", "true");
   }
 
   const viewIds = {
