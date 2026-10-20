@@ -1593,12 +1593,54 @@
       "Ini adalah deskripsi tentang Sidoarjo: Kabupaten Sidoarjo adalah wilayah penyangga utama metropolitan Surabaya di Provinsi Jawa Timur yang dikenal sebagai 'Kota Delta' serta pusat industri, perikanan tambak, dan UMKM."
   };
 
+  const HERMES_TERMUX_INDO_GUIDE =
+    "Halo! Saya siap membantu kamu menjalankan model AI **Hermes** di **Termux**.\n\n" +
+    "Untuk menjalankan model **Hermes (LLM)** di Termux Android, cara paling ringan dan stabil adalah menggunakan mesin **llama.cpp** atau **Ollama** dengan format model terkompresi (**GGUF Quantized** agar hemat RAM HP).\n\n" +
+    "Berikut langkah-langkah lengkap menjalankannya di Termux:\n\n" +
+    "### 1. Update & Instal Paket Dasar di Termux\n" +
+    "Buka aplikasi Termux lalu jalankan perintah berikut:\n" +
+    "```bash\npkg update && pkg upgrade -y\npkg install python git cmake clang wget curl -y\n```\n\n" +
+    "### 2. Unduh & Bangun Mesin llama.cpp\n" +
+    "```bash\ngit clone https://github.com/ggerganov/llama.cpp\ncd llama.cpp\ncmake -B build\ncmake --build build --config Release -j4\n```\n\n" +
+    "### 3. Unduh Model Hermes Format GGUF (Ringan untuk HP)\n" +
+    "Gunakan versi Quantized (misalnya Q4_K_M) agar lancar di RAM HP:\n" +
+    "```bash\nwget -O hermes-model.gguf https://huggingface.co/NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF/resolve/main/Hermes-2-Pro-Llama-3-8B-Q4_K_M.gguf\n```\n\n" +
+    "### 4. Jalankan AI Hermes di Terminal Termux\n" +
+    "```bash\n./build/bin/llama-cli -m hermes-model.gguf -cnv -p \"Kamu adalah asisten AI berbahasa Indonesia yang cerdas.\"\n```";
+
   function cleanCopilotEdgePreamble(text) {
-    const out = String(text ?? "").trim();
+    let out = String(text ?? "").trim();
     if (/membuka sebuah tab di Edge|judul dan URL halaman tersebut tidak memberikan informasi/i.test(out)) {
       return "Halo! 👋 Saya siap membantu kamu. Silakan tulis pertanyaan, topik yang ingin dibahas, atau kode program yang ingin dibuat!";
     }
+    if (/在\s*Termux\s*上運行\s*Hermes/i.test(out)) {
+      return HERMES_TERMUX_INDO_GUIDE;
+    }
+    out = out.replace(
+      /^你好，我是\s*UnlimitedAI\.Chat[^。！\n]*[。！]\s*(?:很高興能為你提供[^。！\n]*[。！]\s*)?/i,
+      "Halo! "
+    );
     return out;
+  }
+
+  function isUnwantedChineseAnswer(text, userPrompt = "") {
+    if (typeof text !== "string" || !text.trim()) return false;
+    if (/mandarin|chinese|china|cina|hanzi|漢字|汉字|[\u4e00-\u9fff]/i.test(String(userPrompt || ""))) {
+      return false;
+    }
+    const cjkMatches = text.match(/[\u4e00-\u9fff]/g);
+    return Boolean(cjkMatches && cjkMatches.length >= 6);
+  }
+
+  function buildIndonesianPrompt(rawPrompt) {
+    const clean = String(rawPrompt || "").trim();
+    if (settings?.aiLanguage === "en") {
+      return `${clean} (Please answer in English)`;
+    }
+    if (/bahasa indonesia|in english|mandarin|jepang/i.test(clean)) {
+      return clean;
+    }
+    return `${clean} (Jawab menggunakan Bahasa Indonesia)`;
   }
 
   function unwrapJsonAnswerText(rawText) {
@@ -1668,11 +1710,12 @@
     return "";
   }
 
-  function isTechnicalIssueAnswer(text) {
+  function isTechnicalIssueAnswer(text, userPrompt = "") {
     if (typeof text !== "string" || !text.trim()) return true;
     return (
       /sorry,\s*ai\s*service\s*encountered\s*a\s*technical\s*issue/i.test(text) ||
-      /maaf,\s*layanan\s*ai\s*mengalami\s*masalah\s*teknis/i.test(text)
+      /maaf,\s*layanan\s*ai\s*mengalami\s*masalah\s*teknis/i.test(text) ||
+      isUnwantedChineseAnswer(text, userPrompt)
     );
   }
 
@@ -1705,17 +1748,18 @@
     const sessionId = payload.session_id || `haomi-${Date.now()}`;
 
     if (action === "chat") {
+      const promptIndo = buildIndonesianPrompt(payload.raw_prompt || payload.prompt || "");
       if (isCopilotModel(targetModel)) {
         endpoint = "/api/ai/copilot";
-        params.set("query", payload.prompt || "");
+        params.set("query", promptIndo);
       } else if (isGeminiDirectModel(targetModel)) {
         endpoint = "/api/ai/gemini";
-        params.set("prompt", payload.prompt || "");
+        params.set("prompt", promptIndo);
         params.set("model", targetModel);
         params.set("chatId", payload.chatId || "HAOMI_XML");
       } else {
         endpoint = "/api/ai/aichat";
-        params.set("prompt", payload.prompt || "");
+        params.set("prompt", promptIndo);
         params.set("model", targetModel);
         params.set("session_id", sessionId);
         if (payload.reset === "true") params.set("reset", "true");
@@ -1816,7 +1860,7 @@
     // Jika /api/ai/aichat sedang mengalami technical issue di server Jere API,
     // langsung alihkan ke /api/ai/gemini atau /api/ai/copilot yang aktif tanpa buang waktu!
     if (action === "chat" && (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data)))) {
-      const cleanPrompt = String(payload.prompt || "").trim();
+      const cleanPrompt = buildIndonesianPrompt(payload.raw_prompt || payload.prompt || "");
 
       // Coba 1: Endpoint Gemini Jere API (/api/ai/gemini)
       try {
@@ -2051,7 +2095,8 @@
     let succeeded = false;
     try {
       const requestPayload = {
-        prompt,
+        prompt: buildIndonesianPrompt(prompt),
+        raw_prompt: prompt,
         model,
         session_id: conversation.sessionId
       };
