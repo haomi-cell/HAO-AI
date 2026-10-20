@@ -61,10 +61,10 @@
   const responseStyleOrder = ["standard", "casual", "concise", "technical"];
 
   const responseStylePrompts = {
-    standard: "[Gaya bicara: Gunakan bahasa Indonesia yang luwes, natural seperti teman ngobrol pintar, tidak kaku seperti terjemahan robot.]",
-    concise: "[Gaya bicara: Langsung ke inti, singkat, padat, dan praktis tanpa basa-basi.]",
-    technical: "[Gaya bicara: Fokus teknis, logika rapi, kode siap pakai, dan penjelasan to-the-point.]",
-    casual: "[Gaya bicara: Santai, akrab, ngalir enak dibaca, dan mudah dicerna.]"
+    standard: "",
+    concise: "",
+    technical: "",
+    casual: ""
   };
 
   const responseLengthPrompts = {
@@ -84,6 +84,9 @@
     responseStyle: "standard",
     responseLength: "auto",
     interactiveChoices: true,
+    userNickname: "",
+    aiLanguage: "id",
+    autoHideJson: true,
     customAiInstruction: "",
     cmatrixEnabled: true,
     cmatrixIntensity: "vivid",
@@ -135,7 +138,7 @@
           overflow: hidden !important;
           background-color: var(--bg-base) !important;
         }
-        .app-shell, .main-panel, .view, .chat-view {
+        .app-shell, .main-panel, .chat-view {
           height: 100dvh !important;
           max-height: 100dvh !important;
           padding-bottom: 0 !important;
@@ -642,6 +645,55 @@
     if (els.dashActiveStyle) {
       els.dashActiveStyle.textContent = styleLabel;
     }
+
+    // Sinkronkan kontrol baru di Modal Setelan V4
+    const nickInp = $("#userNicknameInput");
+    if (nickInp && document.activeElement !== nickInp) {
+      nickInp.value = settings.userNickname || "";
+    }
+    $$("[data-lang-choice]").forEach(btn => {
+      btn.classList.toggle("active", (settings.aiLanguage || "id") === btn.dataset.langChoice);
+    });
+    const autoHideToggle = $("#autoHideJsonToggle");
+    if (autoHideToggle) {
+      autoHideToggle.checked = settings.autoHideJson !== false;
+    }
+
+    // Update 2x2 Bento Ringkasan di atas Setelan
+    const setSumModel = $("#setSumModel");
+    const setSumProvider = $("#setSumProvider");
+    const setSumStyle = $("#setSumStyle");
+    const setSumLang = $("#setSumLang");
+    const setSumVisual = $("#setSumVisual");
+    const setSumTheme = $("#setSumTheme");
+    const setSumTable = $("#setSumTable");
+    const setSumHistory = $("#setSumHistory");
+
+    if (setSumModel) setSumModel.textContent = modelName(defMod);
+    if (setSumProvider) setSumProvider.textContent = `${modelProvider(defMod)} · Sesi Terpisah`;
+    if (setSumStyle) setSumStyle.textContent = styleLabel;
+    const langLabels = { id: "Indonesia", gaul: "Santai / Gaul", en: "Inggris" };
+    const lenLabels = { auto: "Otomatis", short: "Singkat", detailed: "Lengkap" };
+    if (setSumLang) {
+      setSumLang.textContent = `${langLabels[settings.aiLanguage || "id"] || "Indonesia"} · ${lenLabels[settings.responseLength || "auto"] || "Otomatis"}`;
+    }
+    const matLabels = { soft: "Halus", vivid: "Jelas", ultra: "Terang" };
+    if (setSumVisual) {
+      setSumVisual.textContent = settings.cmatrixEnabled === false
+        ? "CMatrix Nonaktif"
+        : `CMatrix ${matLabels[settings.cmatrixIntensity || "vivid"] || "Jelas"}`;
+    }
+    const glassLabels = { crystal: "Blur Bening", standard: "Blur Pas", deep: "Blur Tebal" };
+    if (setSumTheme) {
+      setSumTheme.textContent = `Mode ${resolvedTheme === "light" ? "Terang" : "Gelap"} · ${glassLabels[settings.glassLevel || "standard"] || "Blur Pas"}`;
+    }
+    if (setSumTable) {
+      setSumTable.textContent = settings.autoHideJson !== false ? "2 Tabel + Narasi" : "Tabel + JSON";
+    }
+    if (setSumHistory) {
+      setSumHistory.textContent = settings.saveHistory ? `${state.conversations?.length || 1} Ruang Tersimpan` : "Mode Privat";
+    }
+
     updateIslandIdleText();
   }
 
@@ -659,7 +711,7 @@
       id: id(),
       title: `Obrolan baru${suffix} (${timeStr})`,
       model: getDefaultModel(),
-      sessionId: `HAOMI_XML_${id().toUpperCase()}`,
+      sessionId: `haomi-${id()}`,
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -673,6 +725,11 @@
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (saved && Array.isArray(saved.conversations)) {
+        saved.conversations.forEach(conv => {
+          if (conv && (!conv.sessionId || /^HAOMI/i.test(String(conv.sessionId)))) {
+            conv.sessionId = `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+          }
+        });
         return saved;
       }
     } catch (error) {
@@ -983,6 +1040,7 @@
     article.append(heading, bubble, actions);
     els.messages.appendChild(article);
 
+    message.content = unwrapJsonAnswerText(message.content);
     const speedMode = settings.streamSpeed || "cyber";
     if (animateStream && !message.error && speedMode !== "instant") {
       streamAssistantText(article, bubble, actions, message.content, speedMode, message);
@@ -1501,8 +1559,47 @@
     return m === "microsoft/copilot" || m === "copilot";
   }
 
+  const CITY_DESCRIPTIONS_ID = {
+    jombang:
+      "Ini adalah deskripsi tentang Jombang: Kabupaten Jombang adalah sebuah wilayah kabupaten strategis di bagian tengah Provinsi Jawa Timur, Indonesia (ibu kotanya berada di Kecamatan Jombang). Wilayah ini dikenal luas dengan julukan 'Kota Santri' karena banyaknya pondok pesantren besar bersejarah seperti Tebuireng, Bahrul Ulum Tambakberas, Darul Ulum Rejoso, dan Mamba'ul Ma'arif Denanyar, serta melahirkan banyak tokoh besar nasional.",
+    surabaya:
+      "Ini adalah deskripsi tentang Surabaya: Kota Surabaya adalah ibu kota Provinsi Jawa Timur sekaligus kota metropolitan terbesar kedua di Indonesia setelah Jakarta. Dikenal sebagai 'Kota Pahlawan', Surabaya menjadi pusat ekonomi, pelabuhan maritim, industri, dan pendidikan utama di kawasan Indonesia Timur.",
+    malang:
+      "Ini adalah deskripsi tentang Malang: Kota Malang adalah sebuah kota di Provinsi Jawa Timur yang terletak di dataran tinggi yang sejuk. Dikenal sebagai 'Kota Pendidikan' dan 'Kota Bunga', Malang merupakan pusat perguruan tinggi ternama dan destinasi wisata unggulan di Jawa Timur.",
+    jakarta:
+      "Ini adalah deskripsi tentang Jakarta: Jakarta (DKI Jakarta) adalah pusat perekonomian, bisnis, keuangan, diplomasi, dan pemerintahan berskala megapolitan di Indonesia yang terletak di pesisir barat laut Pulau Jawa.",
+    bandung:
+      "Ini adalah deskripsi tentang Bandung: Kota Bandung adalah ibu kota Provinsi Jawa Barat yang dikelilingi kawasan pegunungan sejuk. Dikenal dengan julukan 'Kota Kembang' dan 'Paris van Java', Bandung menjadi pusat inovasi kreatif, pendidikan tinggi, mode, dan kuliner populer.",
+    yogyakarta:
+      "Ini adalah deskripsi tentang Yogyakarta: Kota Yogyakarta adalah ibu kota Daerah Istimewa Yogyakarta yang terkenal sebagai 'Kota Pelajar', pusat kebudayaan Jawa klasik, Keraton Yogyakarta, serta kawasan wisata budaya dan sejarah.",
+    semarang:
+      "Ini adalah deskripsi tentang Semarang: Kota Semarang adalah ibu kota Provinsi Jawa Tengah sekaligus kota pelabuhan, perdagangan, dan industri utama di jalur pantai utara (Pantura) Pulau Jawa yang ikonik dengan kawasan bersejarah Kota Lama dan Lawang Sewu.",
+    kediri:
+      "Ini adalah deskripsi tentang Kediri: Kediri adalah wilayah kota dan kabupaten bersejarah di Provinsi Jawa Timur yang dilalui Sungai Brantas, dikenal sebagai pusat industri nasional, sejarah Kerajaan Kadiri, serta pendidikan pesantren seperti Lirboyo.",
+    mojokerto:
+      "Ini adalah deskripsi tentang Mojokerto: Mojokerto adalah wilayah di Provinsi Jawa Timur yang berbatasan langsung dengan Jombang dan Sidoarjo, terkenal sebagai pusat sejarah kejayaan Kerajaan Majapahit di kawasan Trowulan.",
+    sidoarjo:
+      "Ini adalah deskripsi tentang Sidoarjo: Kabupaten Sidoarjo adalah wilayah penyangga utama metropolitan Surabaya di Provinsi Jawa Timur yang dikenal sebagai 'Kota Delta' serta pusat industri, perikanan tambak, dan UMKM."
+  };
+
+  function unwrapJsonAnswerText(rawText) {
+    const str = String(rawText ?? "").trim();
+    if (str.startsWith("{") && str.endsWith("}")) {
+      try {
+        const parsed = JSON.parse(str);
+        if (parsed && typeof parsed === "object") {
+          const inner = parsed.answer ?? parsed.result ?? parsed.response ?? parsed.text ?? parsed.message;
+          if (typeof inner === "string" && inner.trim()) {
+            return inner.trim();
+          }
+        }
+      } catch {}
+    }
+    return str;
+  }
+
   function extractAiAnswer(data) {
-    if (typeof data === "string") return data.trim();
+    if (typeof data === "string") return unwrapJsonAnswerText(data);
     if (!data || typeof data !== "object") return "";
 
     const candidates = [
@@ -1519,12 +1616,12 @@
 
     for (const item of candidates) {
       if (typeof item === "string" && item.trim()) {
-        return item.trim();
+        return unwrapJsonAnswerText(item);
       }
       if (item && typeof item === "object" && !Array.isArray(item)) {
         const nested =
-          item.result ??
           item.answer ??
+          item.result ??
           item.response ??
           item.reply ??
           item.output ??
@@ -1532,7 +1629,19 @@
           item.content ??
           item.message;
         if (typeof nested === "string" && nested.trim()) {
-          return nested.trim();
+          return unwrapJsonAnswerText(nested);
+        }
+        if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+          const deep =
+            nested.answer ??
+            nested.result ??
+            nested.response ??
+            nested.text ??
+            nested.content ??
+            nested.message;
+          if (typeof deep === "string" && deep.trim()) {
+            return unwrapJsonAnswerText(deep);
+          }
         }
       }
     }
@@ -1540,28 +1649,12 @@
     return "";
   }
 
-  function extractSessionId(data, fallbackId) {
-    if (!data || typeof data !== "object") return fallbackId;
-    const candidates = [
-      data.session_id,
-      data.chatId,
-      data.chat_id,
-      data.sessionId,
-      data.result?.chatId,
-      data.result?.chat_id,
-      data.result?.session_id,
-      data.result?.sessionId,
-      data.data?.chatId,
-      data.data?.chat_id,
-      data.data?.session_id,
-      data.data?.sessionId
-    ];
-    for (const candidate of candidates) {
-      if (typeof candidate === "string" && candidate.trim()) {
-        return candidate.trim();
-      }
-    }
-    return fallbackId;
+  function isTechnicalIssueAnswer(text) {
+    if (typeof text !== "string" || !text.trim()) return true;
+    return (
+      /sorry,\s*ai\s*service\s*encountered\s*a\s*technical\s*issue/i.test(text) ||
+      /maaf,\s*layanan\s*ai\s*mengalami\s*masalah\s*teknis/i.test(text)
+    );
   }
 
   function resolveBestGeminiModel(requestedModel, availableModels = []) {
@@ -1585,112 +1678,29 @@
     return availableModels[0];
   }
 
-  function buildStatelessContextPrompt(priorMessages, currentPrompt, stylePrefix = "") {
-    const recent = (priorMessages || [])
-      .filter(m => m && !m.error && typeof m.content === "string" && m.content.trim())
-      .slice(-4);
-    if (!recent.length) {
-      return stylePrefix ? `${stylePrefix}${currentPrompt}` : currentPrompt;
-    }
-    const transcript = recent
-      .map(m => {
-        const roleLabel = m.role === "user" ? "User" : "AI";
-        const snippet = m.content.replace(/\s+/g, " ").trim().slice(0, 180);
-        return `${roleLabel}: ${snippet}`;
-      })
-      .join("\n");
-    return `${stylePrefix}[Konteks obrolan sebelumnya:\n${transcript}]\n\nPertanyaan sekarang: ${currentPrompt}`;
-  }
-
   async function directJerexdFallback(action, payload = {}) {
     const API_KEY = "jere_sTl9OLzPIyMn";
     let endpoint = "/api/ai/aichat";
     const params = new URLSearchParams({ apikey: API_KEY });
     const targetModel = payload.model || "openai/gpt-4o";
-    const sessionId = payload.chatId || payload.session_id || `HAOMI_XML_${Date.now()}`;
+    const sessionId = payload.session_id || `haomi-${Date.now()}`;
 
     if (action === "chat") {
       if (isCopilotModel(targetModel)) {
         endpoint = "/api/ai/copilot";
-        const primaryQuery = payload.reset !== "true" && payload.context_prompt
-          ? payload.context_prompt
-          : (payload.prompt || "");
-        params.set("query", primaryQuery);
-
-        let res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
-          method: "GET",
-          headers: { Accept: "application/json" }
-        });
-        let data = await res.json();
-
-        if (data?.status === false && primaryQuery !== (payload.raw_prompt || payload.prompt)) {
-          params.set("query", payload.raw_prompt || payload.prompt || "");
-          res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
-            method: "GET",
-            headers: { Accept: "application/json" }
-          });
-          data = await res.json();
-        }
-
-        if (data?.status === false) {
-          throw new Error(data.message || "Copilot AI belum berhasil memproses pesan.");
-        }
-
-        return {
-          success: true,
-          session_id: sessionId,
-          model: "microsoft/copilot",
-          answer: extractAiAnswer(data) || data
-        };
-      }
-
-      if (isGeminiDirectModel(targetModel)) {
+        params.set("query", payload.prompt || "");
+      } else if (isGeminiDirectModel(targetModel)) {
         endpoint = "/api/ai/gemini";
         params.set("prompt", payload.prompt || "");
         params.set("model", targetModel);
-        params.set("chatId", sessionId);
-        if (payload.url) params.set("url", payload.url);
-
-        let res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
-          method: "GET",
-          headers: { Accept: "application/json" }
-        });
-        let data = await res.json();
-
-        if (
-          data?.status === false &&
-          Array.isArray(data?.models) &&
-          data.models.length > 0 &&
-          targetModel.toLowerCase() !== "list"
-        ) {
-          const resolvedModel = resolveBestGeminiModel(targetModel, data.models);
-          params.set("model", resolvedModel);
-          res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
-            method: "GET",
-            headers: { Accept: "application/json" }
-          });
-          data = await res.json();
-        }
-
-        if (data?.status === false) {
-          throw new Error(data.message || "Gemini AI belum berhasil memproses pesan.");
-        }
-
-        const resolvedSession = extractSessionId(data, sessionId);
-        return {
-          success: true,
-          session_id: resolvedSession,
-          chatId: resolvedSession,
-          model: data?.model || targetModel,
-          answer: extractAiAnswer(data) || data
-        };
+        params.set("chatId", payload.chatId || "HAOMI_XML");
+      } else {
+        endpoint = "/api/ai/aichat";
+        params.set("prompt", payload.prompt || "");
+        params.set("model", targetModel);
+        params.set("session_id", sessionId);
+        if (payload.reset === "true") params.set("reset", "true");
       }
-
-      endpoint = "/api/ai/aichat";
-      params.set("prompt", payload.prompt || "");
-      params.set("model", targetModel);
-      params.set("session_id", sessionId);
-      if (payload.reset === "true") params.set("reset", "true");
     } else if (action === "am-send") {
       endpoint = "/api/am/send";
       params.set("email", payload.email || "");
@@ -1768,36 +1778,59 @@
     });
     let data = await res.json();
 
-    // Auto-failover untuk chat apabila model atau penyedia utama sedang sibuk/limit
-    if (action === "chat" && data?.status === false) {
-      const cleanQueryPrompt = payload.raw_prompt || payload.prompt || "";
+    // Khusus Gemini Direct jika model perlu disesuaikan dengan daftar models Jere API
+    if (
+      action === "chat" &&
+      isGeminiDirectModel(targetModel) &&
+      data?.status === false &&
+      Array.isArray(data?.models) &&
+      data.models.length > 0
+    ) {
+      params.set("model", resolveBestGeminiModel(targetModel, data.models));
+      res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+        method: "GET",
+        headers: { Accept: "application/json" }
+      });
+      data = await res.json();
+    }
 
-      // Coba 1: ulangi di aichat memakai sesi segar & prompt murni (atau model gpt-4o)
-      try {
-        const retryParams = new URLSearchParams({
-          apikey: API_KEY,
-          prompt: cleanQueryPrompt,
-          model: targetModel === "openai/gpt-4o" ? "openai/gpt-4o-mini" : "openai/gpt-4o",
-          session_id: `HAOMI_XML_${Date.now()}`
-        });
-        const retryRes = await fetch(`https://api.jerexd.my.id/api/ai/aichat?${retryParams.toString()}`, {
-          method: "GET",
-          headers: { Accept: "application/json" }
-        });
-        const retryData = await retryRes.json();
-        if (retryData && retryData.status !== false) {
-          data = retryData;
-        }
-      } catch {}
+    // Jika model tertentu di /api/ai/aichat mengembalikan "Sorry, AI service encountered a technical issue",
+    // coba ulangi memakai model JERE API yang aktif (anthropic/claude-opus-4.5 atau google/gemini-3-pro-preview atau openai/gpt-4o)
+    if (action === "chat" && (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data)))) {
+      const fallbackModels = [
+        "anthropic/claude-opus-4.5",
+        "google/gemini-3-pro-preview",
+        "openai/gpt-4o",
+        "openai/gpt-4o-mini"
+      ].filter(m => m !== targetModel);
 
-      // Coba 2: alihkan ke endpoint Gemini (/api/ai/gemini)
-      if (data?.status === false) {
+      for (const fbModel of fallbackModels) {
+        try {
+          const retryParams = new URLSearchParams({
+            apikey: API_KEY,
+            prompt: payload.prompt || "",
+            model: fbModel,
+            session_id: `haomi-${Date.now()}`
+          });
+          const retryRes = await fetch(`https://api.jerexd.my.id/api/ai/aichat?${retryParams.toString()}`, {
+            method: "GET",
+            headers: { Accept: "application/json" }
+          });
+          const retryData = await retryRes.json();
+          if (retryData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(retryData))) {
+            data = retryData;
+            break;
+          }
+        } catch {}
+      }
+
+      if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
         try {
           const gemParams = new URLSearchParams({
             apikey: API_KEY,
-            prompt: cleanQueryPrompt,
+            prompt: payload.prompt || "",
             model: "gemini-2.0-pro",
-            chatId: sessionId
+            chatId: "HAOMI_XML"
           });
           let gemRes = await fetch(`https://api.jerexd.my.id/api/ai/gemini?${gemParams.toString()}`, {
             method: "GET",
@@ -1812,25 +1845,24 @@
             });
             gemData = await gemRes.json();
           }
-          if (gemData && gemData.status !== false) {
+          if (gemData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(gemData))) {
             data = gemData;
           }
         } catch {}
       }
 
-      // Coba 3: alihkan ke endpoint Microsoft Copilot (/api/ai/copilot)
-      if (data?.status === false) {
+      if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
         try {
           const copParams = new URLSearchParams({
             apikey: API_KEY,
-            query: cleanQueryPrompt
+            query: payload.prompt || ""
           });
           const copRes = await fetch(`https://api.jerexd.my.id/api/ai/copilot?${copParams.toString()}`, {
             method: "GET",
             headers: { Accept: "application/json" }
           });
           const copData = await copRes.json();
-          if (copData && copData.status !== false) {
+          if (copData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(copData))) {
             data = copData;
           }
         } catch {}
@@ -1841,12 +1873,11 @@
       throw new Error(data.message || "Permintaan belum berhasil diproses.");
     }
     if (action === "chat") {
-      const resolvedSession = extractSessionId(data, sessionId);
       return {
         success: true,
-        session_id: resolvedSession,
-        model: data?.model || targetModel,
-        answer: extractAiAnswer(data) || data
+        session_id: data?.session_id || payload.session_id,
+        model: data?.model || payload.model,
+        answer: extractAiAnswer(data)
       };
     }
     return {
@@ -1858,9 +1889,6 @@
   async function apiRequest(action, payload = {}) {
     const startMs = performance.now();
 
-    // Khusus web2apk (waktu build ~60-90 detik + upload file multipart),
-    // jalankan POST FormData langsung ke gateway terlebih dahulu agar tidak terputus limit waktu serverless,
-    // dan otomatis fallback ke /api bila diperlukan.
     if (action === "web2apk" || (action === "tmpfiles" && payload.rawFile)) {
       try {
         const directData = await directJerexdFallback(action, payload);
@@ -2020,37 +2048,13 @@
     renderMessages(false);
 
     const loading = createLoading(sequence, model);
-    const styleParts = [];
-    const baseStyle = responseStylePrompts[settings.responseStyle] || responseStylePrompts.standard;
-    if (baseStyle) styleParts.push(baseStyle);
-    const lenRule = responseLengthPrompts[settings.responseLength || "auto"] || "";
-    if (lenRule) styleParts.push(lenRule);
-    if (settings.customAiInstruction && settings.customAiInstruction.trim()) {
-      styleParts.push(`[Instruksi khusus pengguna: ${settings.customAiInstruction.trim()}]`);
-    }
-    if (settings.interactiveChoices !== false) {
-      styleParts.push(INTERACTIVE_CHOICE_INSTRUCTION);
-    }
-    const stylePrefix = styleParts.length ? `${styleParts.join("\n")}\n\n` : "";
-    const effectivePrompt = stylePrefix ? `${stylePrefix}Pesan pengguna: ${prompt}` : prompt;
 
     let succeeded = false;
     try {
-      const priorMessages = conversation.messages
-        .slice(0, -1)
-        .filter(msg => !msg.error && typeof msg.content === "string" && msg.content.trim());
-
-      const copilotContextPrompt = isCopilotModel(model) && !pendingResetSession
-        ? buildStatelessContextPrompt(priorMessages, prompt, stylePrefix)
-        : effectivePrompt;
-
       const requestPayload = {
-        prompt: effectivePrompt,
-        raw_prompt: prompt,
-        context_prompt: copilotContextPrompt,
+        prompt,
         model,
-        session_id: conversation.sessionId,
-        chatId: conversation.sessionId
+        session_id: conversation.sessionId
       };
 
       if (pendingResetSession) {
@@ -2060,17 +2064,13 @@
 
       const data = await apiRequest("chat", requestPayload);
 
-      const extracted = extractAiAnswer(data);
-      const rawAnswer = extracted || (data.answer ?? data.result ?? data.response ?? data.message);
-      const answer = typeof rawAnswer === "string"
-        ? rawAnswer
-        : rawAnswer == null ? "" : JSON.stringify(rawAnswer, null, 2);
+      const answer = extractAiAnswer(data);
 
       if (!answer.trim()) {
         throw new Error("Belum ada teks balasan yang diterima, coba kirim ulang ya.");
       }
 
-      conversation.sessionId = data.session_id || data.chatId || conversation.sessionId;
+      conversation.sessionId = data.session_id || conversation.sessionId;
       conversation.messages.push({
         role: "assistant",
         content: answer,
@@ -2229,7 +2229,7 @@
 
   function resetCurrentSessionContext() {
     const conversation = ensureConversation();
-    conversation.sessionId = `HAOMI_XML_${id().toUpperCase()}`;
+    conversation.sessionId = `haomi-${id()}`;
     conversation.messages = [];
     pendingResetSession = true;
     forceShowHud = false;
@@ -2396,73 +2396,704 @@
     });
   }
 
-  function renderStructuredSummary(summaryEl, data) {
+  const FIELD_LABELS_ID = {
+    nama: "Nama Wilayah / Kota",
+    kota: "Nama Kota / Kabupaten",
+    deskripsi: "Deskripsi Lengkap Wilayah",
+    description: "Deskripsi Lengkap",
+    provinsi: "Provinsi",
+    negara: "Negara",
+    bupati: "Bupati / Kepala Daerah",
+    walikota: "Wali Kota",
+    wali_kota: "Wali Kota",
+    gubernur: "Gubernur",
+    url: "Tautan Resmi / Referensi",
+    link: "Tautan Terkait",
+    luas: "Luas Wilayah",
+    populasi: "Jumlah Penduduk",
+    penduduk: "Jumlah Penduduk",
+    kode_pos: "Kode Pos",
+    kodepos: "Kode Pos",
+    kecamatan: "Jumlah Kecamatan",
+    kelurahan: "Jumlah Kelurahan / Desa",
+    koordinat: "Koordinat Geografis",
+    julukan: "Julukan Daerah",
+    hari_jadi: "Hari Jadi",
+    email: "Alamat Email Akun",
+    paket: "Paket Langganan",
+    plan: "Paket Langganan",
+    durasi: "Durasi Masa Aktif",
+    duration: "Durasi Masa Aktif",
+    expired: " Berlaku Hingga",
+    exp: "Masa Aktif Hingga",
+    orderid: "ID Pesanan (Order ID)",
+    order_id: "ID Pesanan",
+    username: "Nama Pengguna (Username)",
+    user: "Pengguna",
+    password: "Kata Sandi (Password)",
+    pass: "Kata Sandi",
+    pin: "Kode PIN",
+    number: "Nomor WhatsApp",
+    nomor: "Nomor WhatsApp",
+    phone: "Nomor Telepon",
+    isbanned: "Status Terblokir (Banned)",
+    is_banned: "Status Terblokir (Banned)",
+    banned: "Status Banned",
+    status_ban: "Status Keamanan Nomor",
+    reason: "Alasan / Keterangan",
+    download: "Tautan Unduh APK / File",
+    download_url: "Tautan Unduh APK / File",
+    apk_url: "Tautan Unduh APK",
+    file_url: "Tautan Unduh File Cloud",
+    app_name: "Nama Aplikasi Android",
+    name: "Nama Item / Aplikasi",
+    package_name: "Nama Paket Android",
+    package: "Paket Aplikasi",
+    version: "Versi Aplikasi",
+    size: "Ukuran File",
+    filesize: "Ukuran File",
+    mime: "Tipe File",
+    mimetype: "Format File",
+    ip: "Alamat IP Server",
+    country: "Negara Server",
+    isp: "Penyedia Jaringan (ISP)",
+    asn: "Kode Jaringan (ASN)",
+    domain: "Nama Domain",
+    server: "Perangkat Server",
+    malicious: "Indikasi Berbahaya",
+    safe: "Status Keamanan",
+    score: "Skor Keamanan",
+    reaction: "Emoji Reaksi Terkirim",
+    reactions: "Daftar Emoji Reaksi",
+    channel: "Saluran WhatsApp Target",
+    message: "Pesan Konfirmasi Server",
+    pesan: "Keterangan Server",
+    creator: "Pengembang Sistem",
+    author: "Pengembang Sistem"
+  };
+
+  const TOOL_META_CONFIG = {
+    infokota: {
+      serviceName: "Info Kota & Profil Wilayah Indonesia",
+      readyTitle: "Siap Mencari Profil & Deskripsi Kota",
+      readyNarrative: "Ketik nama kota atau kabupaten di Indonesia (contoh: Jombang, Surabaya, Malang) lalu tekan tombol 'Lihat Info Kota'. Sistem akan menyajikan deskripsi wilayah lengkap beserta Tabel Inti Status dan Tabel Seluruh Informasi.",
+      defaultTarget: "Jombang, Jawa Timur"
+    },
+    "am-send": {
+      serviceName: "Alight Motion Pro — Aktivasi 1 Tahun",
+      readyTitle: "Siap Memproses Akun Alight Motion Premium",
+      readyNarrative: "Masukkan alamat email akun Alight Motion Anda untuk mengaktifkan paket Alight Motion Premium durasi 1 Tahun. Status aktivasi dan rincian akun akan ditampilkan secara lengkap pada tabel di bawah.",
+      defaultTarget: "Email Akun Alight Motion"
+    },
+    "am-verify": {
+      serviceName: "Alight Motion Pro — Verifikasi Tautan 1 Tahun",
+      readyTitle: "Siap Memverifikasi Tautan Alight Motion",
+      readyNarrative: "Tempelkan tautan verifikasi dari kotak masuk email Anda untuk menyelesaikan aktivasi Alight Motion Premium durasi 1 Tahun.",
+      defaultTarget: "Tautan Verifikasi Email"
+    },
+    viuprem: {
+      serviceName: "Generator Akun Viu Premium VIP",
+      readyTitle: "Siap Mengambil Akun Viu Premium VIP",
+      readyNarrative: "Tekan tombol 'Ambil Viu Premium Sekarang' untuk menarik data akses akun Viu Premium VIP terbaru bebas iklan lengkap dengan tabel informasi akun.",
+      defaultTarget: "Server Viu VIP"
+    },
+    tmpfiles: {
+      serviceName: "TmpFiles Cloud File Hosting",
+      readyTitle: "Siap Mengunggah File ke Cloud",
+      readyNarrative: "Pilih file dari perangkat Anda atau masukkan tautan untuk membuat link unduhan awan sementara (TmpFiles) yang langsung siap dibagikan.",
+      defaultTarget: "File Perangkat / URL"
+    },
+    web2apk: {
+      serviceName: "Web2APK Android Application Builder",
+      readyTitle: "Siap Merakit Website Menjadi Aplikasi APK",
+      readyNarrative: "Masukkan alamat URL website, nama aplikasi Android, dan ikon (opsional) untuk membangun file instalasi Android (.apk) siap pasang.",
+      defaultTarget: "https://hao-ai-kappa.vercel.app/"
+    },
+    checkban: {
+      serviceName: "Diagnostik Status Banned Nomor WhatsApp",
+      readyTitle: "Siap Memeriksa Keamanan Nomor WhatsApp",
+      readyNarrative: "Masukkan nomor telepon WhatsApp (awalan 08... atau 628...) untuk memeriksa apakah nomor tersebut berstatus AMAN aktif atau sedang terkena blokir/banned.",
+      defaultTarget: "Nomor WhatsApp"
+    },
+    urlscan: {
+      serviceName: "Pemindai Keamanan Link & Reputasi Website",
+      readyTitle: "Siap Memindai Keamanan Tautan URL",
+      readyNarrative: "Masukkan alamat tautan (http:// atau https://) untuk memeriksa keamanan domain, alamat IP server, lokasi negara, dan reputasi website.",
+      defaultTarget: "Alamat Website (URL)"
+    },
+    "whatsapp-react": {
+      serviceName: "Pengirim Reaksi Emoji Saluran WhatsApp",
+      readyTitle: "Siap Mengirim Reaksi ke Saluran WhatsApp",
+      readyNarrative: "Masukkan tautan postingan Saluran (Channel) WhatsApp dan pilih susunan emoji untuk mengirimkan reaksi otomatis.",
+      defaultTarget: "Tautan Postingan Saluran WA"
+    }
+  };
+
+  function formatHumanKey(rawKey) {
+    const clean = String(rawKey || "").trim();
+    const lower = clean.toLowerCase();
+    if (FIELD_LABELS_ID[lower]) return FIELD_LABELS_ID[lower];
+    const lastPart = lower.split(".").pop();
+    if (FIELD_LABELS_ID[lastPart]) return FIELD_LABELS_ID[lastPart];
+    return clean
+      .replace(/[._-]+/g, " ")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function enrichCityDescription(cityData, fallbackKota = "Jombang") {
+    const nama = String(cityData?.nama || cityData?.kota || fallbackKota || "Wilayah").trim();
+    const prov = String(cityData?.provinsi || "Jawa Timur").trim();
+    const negara = String(cityData?.negara || "Indonesia").trim();
+    const pimpinan = String(cityData?.bupati || cityData?.walikota || cityData?.wali_kota || cityData?.gubernur || "").trim();
+    const rawDesc = String(cityData?.deskripsi || cityData?.description || "").trim();
+    const keyLower = nama.toLowerCase().replace(/^(kabupaten|kota)\s+/i, "").trim();
+
+    if (!rawDesc || /tidak ada deskripsi|no description|^-$|^null$/i.test(rawDesc)) {
+      if (CITY_DESCRIPTIONS_ID[keyLower]) {
+        return CITY_DESCRIPTIONS_ID[keyLower] + (pimpinan ? ` Saat ini pemerintahan daerah ${nama} dipimpin oleh ${pimpinan}.` : "");
+      }
+      return (
+        `Ini adalah deskripsi tentang ${nama}: ${nama} adalah sebuah wilayah daerah otonom yang terletak di Provinsi ${prov}, ${negara}.` +
+        (pimpinan ? ` Pemerintahan wilayah ${nama} saat ini dipimpin oleh ${pimpinan}.` : "") +
+        (cityData?.url ? ` Profil ensiklopedia dan data wilayah selengkapnya tercatat di referensi resmi ${cityData.url}.` : "")
+      );
+    }
+    if (!/^ini adalah deskripsi tentang/i.test(rawDesc)) {
+      return `Ini adalah deskripsi tentang ${nama}: ${rawDesc}`;
+    }
+    return rawDesc;
+  }
+
+  function flattenApiDataForTable(obj, prefix = "", out = []) {
+    if (!obj || typeof obj !== "object") return out;
+    if (Array.isArray(obj)) {
+      obj.slice(0, 15).forEach((item, idx) => {
+        if (item && typeof item === "object") {
+          flattenApiDataForTable(item, `${prefix ? prefix + " " : ""}#${idx + 1}`, out);
+        } else if (item !== null && item !== undefined && String(item).trim() !== "") {
+          out.push([`${prefix || "Data"} #${idx + 1}`, String(item)]);
+        }
+      });
+      return out;
+    }
+
+    for (const [k, v] of Object.entries(obj)) {
+      if (v === null || v === undefined || v === "") continue;
+      if (["statusCode", "status", "success", "raw"].includes(k)) continue;
+      const labelKey = prefix ? `${prefix} · ${formatHumanKey(k)}` : formatHumanKey(k);
+      if (typeof v === "object") {
+        flattenApiDataForTable(v, prefix ? `${prefix} · ${formatHumanKey(k)}` : formatHumanKey(k), out);
+      } else {
+        out.push([labelKey, v, k]);
+      }
+    }
+    return out;
+  }
+
+  function buildFeatureNarrativeAndCoreRows(action, cleanData, context = {}) {
+    const { payload = {}, status = "ready", elapsedMs = null, errorText = "" } = context;
+    const meta = TOOL_META_CONFIG[action] || TOOL_META_CONFIG.infokota;
+    const nested =
+      (cleanData?.result && typeof cleanData.result === "object" && !Array.isArray(cleanData.result) ? cleanData.result : null) ||
+      (cleanData?.data && typeof cleanData.data === "object" && !Array.isArray(cleanData.data) ? cleanData.data : null) ||
+      (cleanData && typeof cleanData === "object" ? cleanData : {});
+
+    const merged = { ...cleanData, ...nested };
+
+    if (status === "ready") {
+      return {
+        narrativeTitle: meta.readyTitle,
+        narrativeBadge: "SIAP DIGUNAKAN",
+        narrativeHtml: escapeHTML(meta.readyNarrative),
+        coreRows: [
+          ["Status Fitur", { pill: "SIAP DIGUNAKAN", pillType: "wait" }],
+          ["Nama Layanan", meta.serviceName],
+          ["Target Default", meta.defaultTarget],
+          ["Format Hasil", "Narasi Penjelasan + Tabel Inti Status + Tabel Seluruh Informasi"]
+        ],
+        extraDetailRows: []
+      };
+    }
+
+    if (status === "loading") {
+      return {
+        narrativeTitle: "Sedang Memproses Permintaan...",
+        narrativeBadge: "PROSES",
+        narrativeHtml: `Sistem sedang menghubungi server untuk memproses <strong>${escapeHTML(meta.serviceName)}</strong>. Mohon tunggu sebentar...`,
+        coreRows: [
+          ["Status Eksekusi", { pill: "SEDANG DIPROSES...", pillType: "wait" }],
+          ["Layanan Fitur", meta.serviceName],
+          ["Input Permintaan", payload.kota || payload.email || payload.number || payload.url || payload.name || " Aktif"]
+        ],
+        extraDetailRows: []
+      };
+    }
+
+    if (status === "error") {
+      const cleanErr = String(errorText || merged.message || "Terjadi kendala saat menghubungi layanan.").replace(/^\/\/\s*(Gagal diproses:\s*)?/i, "");
+      let customErrorHint = `Permintaan pada fitur <strong>${escapeHTML(meta.serviceName)}</strong> belum berhasil diselesaikan: <strong>${escapeHTML(cleanErr)}</strong>. Silakan periksa kembali data input Anda atau coba beberapa saat lagi.`;
+      if (action === "am-send" || action === "am-verify") {
+        customErrorHint = `Permintaan aktivasi <strong>Alight Motion Premium (Durasi 1 Tahun)</strong> untuk email <strong>${escapeHTML(payload.email || "-")}</strong> belum berhasil diproses: ${escapeHTML(cleanErr)}. Pastikan alamat email valid dan belum melewati batas harian server.`;
+      }
+      return {
+        narrativeTitle: "Informasi Kendala Proses",
+        narrativeBadge: "PERLU DICEK",
+        narrativeHtml: customErrorHint,
+        coreRows: [
+          ["Status Eksekusi", { pill: "GAGAL / PERLU CEK ULANG", pillType: "fail" }],
+          ["Nama Fitur", meta.serviceName],
+          ["Input Target", payload.kota || payload.email || payload.number || payload.url || payload.name || "-"],
+          ["Keterangan Server", cleanErr],
+          ["Waktu Respon", elapsedMs ? `${elapsedMs} ms` : "-"]
+        ],
+        extraDetailRows: []
+      };
+    }
+
+    // STATUS === "success"
+    if (action === "infokota") {
+      const namaKota = merged.nama || merged.kota || payload.kota || "Jombang";
+      const prov = merged.provinsi || "Jawa Timur";
+      const negara = merged.negara || "Indonesia";
+      const pimpinan = merged.bupati || merged.walikota || merged.wali_kota || merged.gubernur || "Terdaftar di Pemerintah Daerah";
+      const fullNarrative = enrichCityDescription(merged, namaKota);
+      merged.deskripsi = fullNarrative;
+      if (cleanData?.result && typeof cleanData.result === "object") {
+        cleanData.result.deskripsi = fullNarrative;
+      }
+
+      return {
+        narrativeTitle: `Deskripsi & Profil Wilayah: ${namaKota}`,
+        narrativeBadge: "DATA DITEMUKAN",
+        narrativeHtml: `<strong>${escapeHTML(fullNarrative)}</strong>`,
+        coreRows: [
+          ["Status Pencarian", { pill: "BERHASIL DITEMUKAN", pillType: "ok" }],
+          ["Nama Kota / Kabupaten", `${namaKota}`],
+          ["Provinsi & Negara", `${prov}, ${negara}`],
+          ["Kepala Daerah (Bupati / Wali Kota)", `${pimpinan}`],
+          ["Ringkasan Deskripsi", fullNarrative],
+          ["Waktu Respon Server", elapsedMs ? `${elapsedMs} ms (Cepat)` : "Instan"]
+        ],
+        extraDetailRows: []
+      };
+    }
+
+    if (action === "am-send" || action === "am-verify") {
+      const emailTarget = merged.email || payload.email || "Akun Anda";
+      const isVerify = action === "am-verify";
+      const amNarrative = isVerify
+        ? `🎉 <strong>Selamat! Akun Alight Motion Anda (${escapeHTML(emailTarget)}) berhasil diverifikasi dan aktif menjadi Premium dengan durasi 1 Tahun!</strong> Seluruh fitur Pro, efek eksklusif, serta ekspor proyek tanpa watermark kini sudah dapat digunakan sepenuhnya.`
+        : `🎉 <strong>Selamat! Akun Alight Motion Anda (${escapeHTML(emailTarget)}) berhasil diproses untuk paket Premium durasi 1 Tahun!</strong> Permintaan aktivasi telah dikirimkan oleh server — silakan periksa kotak masuk email Anda atau buka aplikasi Alight Motion untuk menikmati akses Pro 1 Tahun.`;
+
+      return {
+        narrativeTitle: "Status Aktivasi Alight Motion Premium",
+        narrativeBadge: "PREMIUM 1 TAHUN",
+        narrativeHtml: amNarrative,
+        coreRows: [
+          ["Status Aktivasi", { pill: "BERHASIL · AKTIF PREMIUM", pillType: "ok" }],
+          ["Email Akun Target", emailTarget],
+          ["Jenis Paket", "Alight Motion Pro / Premium VIP"],
+          ["Durasi Masa Aktif", "1 Tahun (365 Hari Full Akses)"],
+          ["Keterangan Fitur", "Bebas Watermark, Semua Efek Pro & Ekspor Resolusi Tinggi Terbuka"],
+          ["Waktu Proses Server", elapsedMs ? `${elapsedMs} ms` : "Selesai"]
+        ],
+        extraDetailRows: [
+          ["Paket Langganan", "Alight Motion Premium (Pro)"],
+          ["Durasi Aktif", "1 Tahun (365 Hari)"],
+          ["Status Watermark", "Nonaktif (Tanpa Watermark)"]
+        ]
+      };
+    }
+
+    if (action === "checkban") {
+      const numTarget = merged.number || merged.nomor || payload.number || "-";
+      const rawBanVal = String(merged.isBanned ?? merged.is_banned ?? merged.banned ?? merged.status_ban ?? "").toLowerCase();
+      const msgLower = String(merged.message || merged.pesan || JSON.stringify(merged)).toLowerCase();
+      const isBanned =
+        rawBanVal === "true" ||
+        rawBanVal === "banned" ||
+        (msgLower.includes("terblokir") && !msgLower.includes("tidak terblokir")) ||
+        (msgLower.includes("banned") && !msgLower.includes("not banned") && !msgLower.includes("unbanned") && !msgLower.includes("false"));
+
+      const waNarrative = isBanned
+        ? `⚠️ <strong>Perhatian: Nomor WhatsApp ${escapeHTML(numTarget)} terdeteksi sedang mengalami pembatasan / BANNED oleh pihak WhatsApp.</strong> Silakan ajukan peninjauan ulang melalui aplikasi WhatsApp resmi.`
+        : `🎉 <strong>Selamat! Nomor WhatsApp ${escapeHTML(numTarget)} berstatus AMAN &amp; AKTIF (Tidak Terblokir / Tidak Banned).</strong> Nomor ini bersih dari pelanggaran sistem dan dapat digunakan untuk berkirim pesan maupun panggilan secara normal.`;
+
+      return {
+        narrativeTitle: `Hasil Diagnostik Nomor WA: ${numTarget}`,
+        narrativeBadge: isBanned ? "TERDETEKSI BANNED" : "NOMOR AMAN",
+        narrativeHtml: waNarrative,
+        coreRows: [
+          ["Status Keamanan Nomor", { pill: isBanned ? "TERBLOKIR / BANNED" : "AMAN & AKTIF (NORMAL)", pillType: isBanned ? "fail" : "ok" }],
+          ["Nomor WhatsApp", numTarget],
+          ["Kesimpulan Pemeriksaan", isBanned ? "Nomor sedang dibatasi oleh sistem WhatsApp" : "Nomor aman dipakai & bebas blokir WhatsApp"],
+          ["Waktu Pemeriksaan", elapsedMs ? `${elapsedMs} ms` : "Selesai"]
+        ],
+        extraDetailRows: [
+          ["Nomor yang Diperiksa", numTarget],
+          ["Status Blokir WhatsApp", isBanned ? "Terblokir (Banned)" : "Tidak Terblokir (Aman)"]
+        ]
+      };
+    }
+
+    if (action === "web2apk") {
+      const appName = merged.name || merged.app_name || payload.name || "Ai Haomi";
+      const webUrl = merged.url || payload.url || "https://hao-ai-kappa.vercel.app/";
+      const dlUrl = merged.download || merged.download_url || merged.apk_url || merged.file_url || merged.result?.download || merged.result?.url || "";
+
+      return {
+        narrativeTitle: `Aplikasi Android ${appName}.apk Berhasil Dibuat!`,
+        narrativeBadge: "APK SIAP UNDUH",
+        narrativeHtml: `🎉 <strong>Selamat! Website ${escapeHTML(webUrl)} telah berhasil dikonversi dan dirakit menjadi aplikasi Android bernama "${escapeHTML(appName)}.apk"!</strong> Silakan tekan tombol <strong>Unduh File APK</strong> pada tabel di bawah untuk memasang aplikasi di HP Android Anda.`,
+        coreRows: [
+          ["Status Perakitan APK", { pill: "BERHASIL DIRAKIT (.APK)", pillType: "ok" }],
+          ["Nama Aplikasi Android", `${appName} (.apk)`],
+          ["Alamat Website Sumber", webUrl],
+          ...(dlUrl ? [["Tautan Unduhan APK", dlUrl]] : []),
+          [" Durasi Kompilasi", elapsedMs ? `${(elapsedMs / 1000).toFixed(1)} detik (${elapsedMs} ms)` : "Selesai"]
+        ],
+        extraDetailRows: [
+          ["Nama Aplikasi", appName],
+          ["Platform Target", "Android OS (.APK Instalasi Langsung)"]
+        ]
+      };
+    }
+
+    if (action === "viuprem") {
+      return {
+        narrativeTitle: "Akses Akun Viu Premium VIP Berhasil Diambil",
+        narrativeBadge: "VIP AKTIF",
+        narrativeHtml: `🎉 <strong>Selamat! Data akses Viu Premium VIP berhasil diambil dari server!</strong> Anda dapat menggunakan informasi akun pada Tabel Seluruh Informasi di bawah untuk menikmati tayangan drama Asia, anime, dan film eksklusif tanpa iklan.`,
+        coreRows: [
+          ["Status Pengambilan Data", { pill: "BERHASIL · VIU VIP AKTIF", pillType: "ok" }],
+          ["Layanan Streaming", "Viu Premium VIP (Full HD & Tanpa Iklan)"],
+          ["Keterangan Akses", merged.message || "Akun siap digunakan"],
+          ["Waktu Respon Server", elapsedMs ? `${elapsedMs} ms` : "Selesai"]
+        ],
+        extraDetailRows: [
+          ["Tipe Akun", "Viu Premium VIP"],
+          ["Benefit Utama", "Bebas Iklan, Episode Lebih Cepat & Resolusi Full HD"]
+        ]
+      };
+    }
+
+    if (action === "tmpfiles") {
+      const fileUrl = merged.url || merged.file_url || merged.download || merged.result?.url || payload.url || "";
+      return {
+        narrativeTitle: "Unggahan Cloud TmpFiles Berhasil!",
+        narrativeBadge: "LINK AKTIF",
+        narrativeHtml: `🎉 <strong>Selamat! File Anda berhasil diproses ke penyimpanan awan sementara (TmpFiles Cloud)!</strong> Tautan unduhan langsung sudah aktif dan siap disalin atau dibuka melalui tabel di bawah.`,
+        coreRows: [
+          ["Status Unggahan Cloud", { pill: "BERHASIL DIUNGGAH", pillType: "ok" }],
+          ["Nama File / Sumber", payload.file_name || payload.url || "File Cloud TmpFiles"],
+          ...(fileUrl ? [["Tautan Unduhan Cloud", fileUrl]] : []),
+          ["Waktu Proses", elapsedMs ? `${elapsedMs} ms` : "Selesai"]
+        ],
+        extraDetailRows: []
+      };
+    }
+
+    if (action === "urlscan") {
+      const targetUrl = payload.url || merged.url || "-";
+      return {
+        narrativeTitle: "Hasil Pemindaian Keamanan Link & Domain",
+        narrativeBadge: "SELESAI DIPINDAI",
+        narrativeHtml: `🛡️ <strong>Pemindaian keamanan untuk tautan ${escapeHTML(targetUrl)} telah selesai!</strong> Berikut adalah ringkasan status keamanan domain beserta rincian teknis alamat IP, lokasi server, dan identitas jaringan pada tabel di bawah.`,
+        coreRows: [
+          ["Status Pemindaian", { pill: "SELESAI & TERVERIFIKASI", pillType: "ok" }],
+          ["Tautan yang Diperiksa", targetUrl],
+          ["Keterangan Keamanan", merged.message || merged.status_text || "Data domain & server berhasil dianalisis"],
+          ["Waktu Pemindaian", elapsedMs ? `${elapsedMs} ms` : "Selesai"]
+        ],
+        extraDetailRows: []
+      };
+    }
+
+    if (action === "whatsapp-react") {
+      const reactList = payload.reaction || merged.reaction || "❤️";
+      const chUrl = payload.url || merged.url || "-";
+      return {
+        narrativeTitle: "Reaksi Emoji Saluran WhatsApp Terkirim!",
+        narrativeBadge: "TERKIRIM",
+        narrativeHtml: `🎉 <strong>Selamat! Paket reaksi emoji (${escapeHTML(reactList)}) berhasil dikirimkan ke postingan Saluran WhatsApp tujuan!</strong> Seluruh reaksi telah diproses secara otomatis oleh server.`,
+        coreRows: [
+          ["Status Pengiriman", { pill: "BERHASIL TERKIRIM", pillType: "ok" }],
+          ["Emoji yang Dikirim", reactList],
+          ["Tautan Saluran WA", chUrl],
+          ["Waktu Eksekusi", elapsedMs ? `${elapsedMs} ms` : "Selesai"]
+        ],
+        extraDetailRows: []
+      };
+    }
+
+    return {
+      narrativeTitle: "Hasil Eksekusi Fitur",
+      narrativeBadge: "BERHASIL",
+      narrativeHtml: `🎉 <strong>Permintaan Anda pada fitur ${escapeHTML(meta.serviceName)} telah berhasil diproses!</strong> Lihat rincian lengkapnya pada kedua tabel di bawah ini.`,
+      coreRows: [
+        ["Status Eksekusi", { pill: "BERHASIL", pillType: "ok" }],
+        ["Layanan", meta.serviceName],
+        ["Waktu Proses", elapsedMs ? `${elapsedMs} ms` : "Selesai"]
+      ],
+      extraDetailRows: []
+    };
+  }
+
+  function createTableCellValue(val, rawKey = "") {
+    const td = document.createElement("td");
+    if (val && typeof val === "object" && val.pill) {
+      const span = document.createElement("span");
+      const typeClass = val.pillType === "fail" ? "is-fail" : (val.pillType === "wait" ? "is-wait" : "is-ok");
+      span.className = `status-pill-inline ${typeClass}`;
+      span.textContent = val.pill;
+      td.appendChild(span);
+      return td;
+    }
+
+    const strVal = String(val ?? "-").trim();
+    if (/^https?:\/\//i.test(strVal)) {
+      const urlText = document.createElement("div");
+      urlText.style.fontFamily = "var(--font-mono)";
+      urlText.style.fontSize = "11.5px";
+      urlText.style.color = "var(--text-secondary)";
+      urlText.textContent = strVal;
+
+      const actions = document.createElement("div");
+      actions.className = "table-link-actions";
+
+      const a = document.createElement("a");
+      a.href = strVal;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.className = "apk-download-banner";
+      const isDownload = /apk|download|tmpfiles|file/i.test(rawKey) || /\.apk($|\?)/i.test(strVal);
+      a.textContent = isDownload ? "⬇ Unduh File / APK Sekarang" : "↗ Buka Tautan Resmi";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "table-copy-mini-btn";
+      copyBtn.textContent = "Salin Link";
+      copyBtn.addEventListener("click", () => copyText(strVal));
+
+      actions.append(a, copyBtn);
+      td.append(urlText, actions);
+      return td;
+    }
+
+    if (strVal.toLowerCase() === "true") {
+      td.textContent = "Ya / Aktif (True)";
+      return td;
+    }
+    if (strVal.toLowerCase() === "false") {
+      td.textContent = "Tidak / Nonaktif (False)";
+      return td;
+    }
+
+    td.textContent = strVal;
+    return td;
+  }
+
+  function buildCyberTableCard(titleText, badgeText, rows) {
+    const card = document.createElement("div");
+    card.className = "cyber-table-card";
+
+    const header = document.createElement("div");
+    header.className = "cyber-table-header";
+
+    const title = document.createElement("span");
+    title.className = "cyber-table-title";
+    title.innerHTML = `<span class="pulse-dot"></span> ${escapeHTML(titleText)}`;
+
+    const badge = document.createElement("span");
+    badge.className = "cyber-table-count";
+    badge.textContent = badgeText;
+
+    header.append(title, badge);
+
+    const scrollWrap = document.createElement("div");
+    scrollWrap.className = "cyber-table-scroll";
+
+    const table = document.createElement("table");
+    table.className = "cyber-status-table";
+
+    const tbody = document.createElement("tbody");
+    rows.forEach(([label, value, rawKey]) => {
+      const tr = document.createElement("tr");
+      const th = document.createElement("th");
+      th.scope = "row";
+      th.textContent = label;
+      const td = createTableCellValue(value, rawKey || label);
+      tr.append(th, td);
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    scrollWrap.appendChild(table);
+    card.append(header, scrollWrap);
+    return card;
+  }
+
+  function renderStructuredSummary(summaryEl, data, context = {}) {
     if (!summaryEl) return;
     summaryEl.replaceChildren();
 
-    if (!data || typeof data !== "object" || Array.isArray(data)) {
-      summaryEl.hidden = true;
-      return;
-    }
+    const action = context.action || summaryEl.dataset.toolAction || "infokota";
+    const status = context.status || "success";
+    const resultPre = context.resultElement || null;
 
-    const nestedObj =
-      (data.result && typeof data.result === "object" && !Array.isArray(data.result) ? data.result : null) ||
-      (data.data && typeof data.data === "object" && !Array.isArray(data.data) ? data.data : null);
+    const cleanObj = (data && typeof data === "object") ? sanitizeBrandData(data) : {};
+    const {
+      narrativeTitle,
+      narrativeBadge,
+      narrativeHtml,
+      coreRows,
+      extraDetailRows
+    } = buildFeatureNarrativeAndCoreRows(action, cleanObj, context);
 
-    const combinedSource = nestedObj ? { ...nestedObj, ...data } : data;
+    // 1. Kartu Narasi & Kesimpulan Mudah Dipahami
+    const narrativeCard = document.createElement("div");
+    narrativeCard.className = `feature-narrative-card${status === "error" ? " is-error-narrative" : (status === "ready" ? " is-ready-narrative" : "")}`;
 
-    const entries = Object.entries(combinedSource).filter(([key, val]) =>
-      val !== null &&
-      val !== undefined &&
-      typeof val !== "object" &&
-      !["statusCode", "status", "creator"].includes(key)
-    ).slice(0, 6);
+    const narHeader = document.createElement("div");
+    narHeader.className = "narrative-header";
 
-    if (!entries.length) {
-      summaryEl.hidden = true;
-      return;
-    }
+    const narTitle = document.createElement("span");
+    narTitle.className = "narrative-title";
+    narTitle.innerHTML = `<span class="pulse-dot"></span> ${escapeHTML(narrativeTitle)}`;
 
-    entries.forEach(([key, val]) => {
-      const row = document.createElement("div");
-      row.className = "summary-kv";
-      const k = document.createElement("span");
-      k.className = "summary-key";
-      k.textContent = key;
-      const v = document.createElement("span");
-      v.className = "summary-val";
-      const strVal = String(val);
-      if (/^https?:\/\//i.test(strVal)) {
-        const a = document.createElement("a");
-        a.href = strVal;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.className = "apk-download-banner";
-        a.textContent = /apk|download/i.test(key) ? "⬇ Unduh File / APK Sekarang" : "↗ Buka Tautan Hasil";
-        v.appendChild(a);
-      } else {
-        v.textContent = strVal;
+    const narBadge = document.createElement("span");
+    narBadge.className = "narrative-badge";
+    narBadge.textContent = narrativeBadge;
+
+    narHeader.append(narTitle, narBadge);
+
+    const narBody = document.createElement("p");
+    narBody.className = "narrative-body";
+    narBody.innerHTML = narrativeHtml;
+
+    narrativeCard.append(narHeader, narBody);
+    summaryEl.appendChild(narrativeCard);
+
+    // 2. Tabel 1: TABEL INTI STATUS FITUR
+    const coreTableCard = buildCyberTableCard(
+      "TABEL INTI STATUS",
+      status === "ready" ? "MODE SIAP" : "INTI STATUS",
+      coreRows
+    );
+    summaryEl.appendChild(coreTableCard);
+
+    // 3. Tabel 2: TABEL SELURUH INFORMASI & RINCIAN LENGKAP (saat hasil keluar)
+    if (status === "success" || (data && typeof data === "object" && Object.keys(cleanObj).length > 0)) {
+      const nestedTarget =
+        (cleanObj.result && typeof cleanObj.result === "object" ? cleanObj.result : null) ||
+        (cleanObj.data && typeof cleanObj.data === "object" ? cleanObj.data : null) ||
+        cleanObj;
+
+      const flatRows = flattenApiDataForTable(nestedTarget);
+      if (cleanObj !== nestedTarget) {
+        Object.entries(cleanObj).forEach(([k, v]) => {
+          if (["result", "data", "statusCode", "status", "success", "raw"].includes(k)) return;
+          if (v !== null && v !== undefined && typeof v !== "object") {
+            const lbl = formatHumanKey(k);
+            if (!flatRows.some(r => r[0] === lbl)) {
+              flatRows.push([lbl, v, k]);
+            }
+          }
+        });
       }
-      row.append(k, v);
-      summaryEl.appendChild(row);
-    });
+
+      extraDetailRows.forEach(([lbl, val]) => {
+        if (!flatRows.some(r => r[0].toLowerCase() === lbl.toLowerCase())) {
+          flatRows.unshift([lbl, val, lbl]);
+        }
+      });
+
+      if (flatRows.length > 0) {
+        const fullInfoTableCard = buildCyberTableCard(
+          "TABEL SELURUH INFORMASI LENGKAP",
+          `${flatRows.length} INFO DETAIL`,
+          flatRows
+        );
+        summaryEl.appendChild(fullInfoTableCard);
+      }
+    }
+
+    // 4. Tombol Lipat (Toggle) Data Teknis JSON Mentah agar tidak membingungkan
+    if (resultPre && (status === "success" || status === "error")) {
+      const hideJsonByDefault = settings.autoHideJson !== false && status === "success";
+      resultPre.hidden = hideJsonByDefault;
+
+      const toggleWrap = document.createElement("div");
+      toggleWrap.className = "raw-json-toggle-wrap";
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.type = "button";
+      toggleBtn.className = "raw-json-toggle-btn";
+      const updateBtnText = () => {
+        toggleBtn.innerHTML =
+          `<span>&lt;/&gt; ${resultPre.hidden ? "Tampilkan Data Teknis (JSON Mentah)" : "Sembunyikan Data Teknis (JSON Mentah)"}</span>` +
+          `<span>${resultPre.hidden ? "Buka ▾" : "Tutup ▴"}</span>`;
+      };
+      updateBtnText();
+
+      toggleBtn.addEventListener("click", () => {
+        resultPre.hidden = !resultPre.hidden;
+        updateBtnText();
+      });
+
+      toggleWrap.appendChild(toggleBtn);
+      summaryEl.appendChild(toggleWrap);
+    }
 
     summaryEl.hidden = false;
   }
 
-  function showToolResult(element, statusBadge, timeBadge, summaryEl, text, status = "", elapsedMs = null, rawObj = null) {
+  function initAllToolReadyTables() {
+    const map = [
+      ["alightSummary", "alightResult", "am-send"],
+      ["urlscanSummary", "urlscanResult", "urlscan"],
+      ["whatsappSummary", "whatsappResult", "whatsapp-react"],
+      ["viupremSummary", "viupremResult", "viuprem"],
+      ["infokotaSummary", "infokotaResult", "infokota"],
+      ["tmpfilesSummary", "tmpfilesResult", "tmpfiles"],
+      ["web2apkSummary", "web2apkResult", "web2apk"],
+      ["checkbanSummary", "checkbanResult", "checkban"]
+    ];
+    map.forEach(([sumId, resId, act]) => {
+      const sumEl = document.getElementById(sumId);
+      const resEl = document.getElementById(resId);
+      if (sumEl) {
+        sumEl.dataset.toolAction = act;
+        renderStructuredSummary(sumEl, null, {
+          action: act,
+          status: "ready",
+          resultElement: resEl
+        });
+      }
+      if (resEl) resEl.hidden = true;
+    });
+  }
+
+  function showToolResult(element, statusBadge, timeBadge, summaryEl, text, status = "", elapsedMs = null, rawObj = null, extraContext = {}) {
     if (!element) return;
     element.classList.remove("is-error", "is-success");
     statusBadge?.classList.remove("is-error", "is-success");
 
+    let normalizedStatus = "ready";
     if (status === "error") {
+      normalizedStatus = "error";
       element.classList.add("is-error");
       statusBadge?.classList.add("is-error");
       if (statusBadge) statusBadge.textContent = "GAGAL";
     } else if (status === "success") {
+      normalizedStatus = "success";
       element.classList.add("is-success");
       statusBadge?.classList.add("is-success");
       if (statusBadge) statusBadge.textContent = "BERHASIL";
+    } else if (status === "PROSES") {
+      normalizedStatus = "loading";
+      if (statusBadge) statusBadge.textContent = "PROSES";
     } else {
       if (statusBadge) statusBadge.textContent = status || "SIAP";
     }
@@ -2476,8 +3107,17 @@
       }
     }
 
-    renderStructuredSummary(summaryEl, sanitizeBrandData(rawObj));
-    element.textContent = sanitizeBrandText(text);
+    const cleanText = sanitizeBrandText(text);
+    element.textContent = cleanText;
+
+    renderStructuredSummary(summaryEl, rawObj, {
+      action: extraContext.action || summaryEl?.dataset?.toolAction || "infokota",
+      payload: extraContext.payload || {},
+      status: normalizedStatus,
+      elapsedMs,
+      errorText: status === "error" ? cleanText : "",
+      resultElement: element
+    });
   }
 
   // Bersihkan otomatis nama @jerexd6677 / jerexd666 dari hasil API menjadi nama brand HAOMI
@@ -2521,6 +3161,7 @@
     const { form, button, resultElement, statusBadge, timeBadge, summaryEl, action, payload, loadingText } = config;
     if (!form || form.dataset.busy === "true") return;
 
+    if (summaryEl) summaryEl.dataset.toolAction = action;
     form.dataset.busy = "true";
     const labelSpan = $("span", button) || button;
     const originalText = labelSpan.textContent;
@@ -2537,7 +3178,10 @@
       isLongBuild
         ? "// Sedang merakit file APK Android kamu (proses ini biasanya memakan waktu 60–95 detik, mohon tunggu sebentar)..."
         : "// Sedang memproses permintaan kamu...",
-      "PROSES"
+      "PROSES",
+      null,
+      null,
+      { action, payload }
     );
 
     let progressInterval = null;
@@ -2561,7 +3205,8 @@
         stringifyResult(result),
         "success",
         elapsed,
-        typeof result === "object" ? result : data
+        typeof result === "object" ? result : data,
+        { action, payload }
       );
       toast("Berhasil diproses!");
     } catch (error) {
@@ -2574,9 +3219,10 @@
         `// Gagal diproses: ${error.message || "Terjadi kendala koneksi."}`,
         "error",
         elapsed,
-        null
+        null,
+        { action, payload }
       );
-      toast("Gagal diproses, cek keterangan hasil.", true);
+      toast("Gagal diproses, cek tabel status hasil.", true);
     } finally {
       if (progressInterval) window.clearInterval(progressInterval);
       form.dataset.busy = "false";
@@ -3319,6 +3965,100 @@
       openModelDialog();
     });
 
+    $("#setOverviewModelCard")?.addEventListener("click", () => {
+      closeSettings();
+      openModelDialog();
+    });
+
+    $("#userNicknameInput")?.addEventListener("input", event => {
+      saveSettings({ userNickname: event.currentTarget.value });
+    });
+
+    $$("[data-nickname]").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const nick = chip.dataset.nickname || "";
+        const inp = $("#userNicknameInput");
+        if (inp) inp.value = nick;
+        saveSettings({ userNickname: nick });
+        toast(`Sapaan diatur ke "${nick}"`);
+      });
+    });
+
+    $$("[data-lang-choice]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const lang = btn.dataset.langChoice || "id";
+        saveSettings({ aiLanguage: lang });
+        toast("Bahasa utama AI diperbarui");
+      });
+    });
+
+    $("#autoHideJsonToggle")?.addEventListener("change", event => {
+      saveSettings({ autoHideJson: event.currentTarget.checked });
+      toast(event.currentTarget.checked ? "Mode Tabel Rapi (JSON disembunyikan)" : "JSON Mentah ditampilkan");
+    });
+
+    $("#resetDefaultSettingsBtn")?.addEventListener("click", () => {
+      settings = { ...defaultSettings };
+      soundEnabled = Boolean(defaultSettings.soundFx);
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
+      } catch {}
+      applySettingsToUI();
+      toast("Semua setelan dikembalikan ke awal");
+    });
+
+    $("#importBackupBtn")?.addEventListener("click", () => {
+      $("#importBackupFile")?.click();
+    });
+
+    $("#importBackupFile")?.addEventListener("change", event => {
+      const file = event.currentTarget.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || "{}"));
+          if (parsed.settings && typeof parsed.settings === "object") {
+            saveSettings(parsed.settings);
+          }
+          if (Array.isArray(parsed.conversations) && parsed.conversations.length) {
+            state.conversations = parsed.conversations;
+            state.activeId = parsed.conversations[0].id;
+            saveState();
+            renderHistory();
+            renderMessages(false);
+          }
+          toast("Cadangan data (.json) berhasil dimuat!");
+        } catch {
+          toast("File cadangan (.json) tidak valid.", true);
+        }
+      };
+      reader.readAsText(file);
+      event.currentTarget.value = "";
+    });
+
+    const tmpfilesFileInput = $("#tmpfilesFile");
+    const tmpfilesFileNameEl = $("#tmpfilesFileName");
+    const clearTmpfilesFileBtn = $("#clearTmpfilesFileBtn");
+
+    tmpfilesFileInput?.addEventListener("change", () => {
+      const file = tmpfilesFileInput.files?.[0];
+      if (!file) {
+        if (tmpfilesFileNameEl) tmpfilesFileNameEl.textContent = "Tidak ada file yang dipilih";
+        if (clearTmpfilesFileBtn) clearTmpfilesFileBtn.hidden = true;
+        return;
+      }
+      if (tmpfilesFileNameEl) tmpfilesFileNameEl.textContent = file.name;
+      if (clearTmpfilesFileBtn) clearTmpfilesFileBtn.hidden = false;
+    });
+
+    clearTmpfilesFileBtn?.addEventListener("click", () => {
+      if (tmpfilesFileInput) tmpfilesFileInput.value = "";
+      if (tmpfilesFileNameEl) tmpfilesFileNameEl.textContent = "Tidak ada file yang dipilih";
+      clearTmpfilesFileBtn.hidden = true;
+    });
+
     $$("[data-style-choice]").forEach(btn => {
       btn.addEventListener("click", () => {
         const nextStyle = btn.dataset.styleChoice || "standard";
@@ -3443,6 +4183,7 @@
         if (!target) return;
         target.classList.remove("is-error", "is-success");
         target.textContent = "// Hasil sudah dibersihkan, siap dipakai lagi.";
+        target.hidden = true;
 
         const prefix = targetId.replace("Result", "");
         const badge = document.getElementById(`${prefix}StatusBadge`);
@@ -3453,8 +4194,14 @@
           badge.textContent = "SIAP";
         }
         if (time) time.hidden = true;
-        if (summary) summary.hidden = true;
-        toast("Hasil dibersihkan");
+        if (summary) {
+          renderStructuredSummary(summary, null, {
+            action: summary.dataset.toolAction || "infokota",
+            status: "ready",
+            resultElement: target
+          });
+        }
+        toast("Hasil dibersihkan & siap digunakan kembali");
       });
     });
 
@@ -3705,6 +4452,7 @@
     syncModelIndicators(conversation?.model || getDefaultModel());
 
     bindEvents();
+    initAllToolReadyTables();
     updateAlightFields();
     syncWaEmojiChips();
     renderHistory();
