@@ -1,4 +1,4 @@
-const axios = require("axios");
+// HAOMI.AI Backend Gateway — Menggunakan WHATWG URL & Native Fetch (Bebas DeprecationWarning url.parse / DEP0169)
 
 const BASE_URL = "https://api.jerexd.my.id";
 
@@ -70,13 +70,8 @@ const CITY_KNOWLEDGE_BASE = {
     "Ini adalah deskripsi tentang Semarang: Kota Semarang adalah ibu kota Provinsi Jawa Tengah sekaligus kota pelabuhan, perdagangan, dan industri utama di jalur pantai utara (Pantura) Pulau Jawa yang terkenal dengan kawasan bersejarah Kota Lama.",
 };
 
-const http = axios.create({
-  baseURL: BASE_URL,
-  timeout: 60000,
-  headers: {
-    Accept: "application/json",
-  },
-});
+// Cache daftar model Gemini dari Jere API agar tidak perlu query ulang setiap saat
+let cachedGeminiModels = null;
 
 function sendJson(res, statusCode, data) {
   return res.status(statusCode).json(data);
@@ -156,7 +151,7 @@ function getApiError(error) {
     ).toString().slice(0, 1500);
   }
 
-  if (error?.code === "ECONNABORTED") {
+  if (error?.name === "AbortError" || error?.code === "ECONNABORTED") {
     return "Permintaan ke layanan API terlalu lama. Silakan coba lagi.";
   }
 
@@ -202,9 +197,100 @@ function buildMultipartPayload(fields = {}, filePart = null) {
   };
 }
 
+// Panggil JERE API menggunakan WHATWG URL & Native Fetch (tidak memicu DEP0169 url.parse)
+// dan tetap membaca body JSON meskipun status HTTP 400/500 (penting untuk /api/ai/gemini model=list)
+async function callJerexd(endpoint, params = {}, timeoutMs = 45000) {
+  const targetUrl = new URL(endpoint, BASE_URL);
+  targetUrl.searchParams.set("apikey", API_KEY);
+
+  for (const [key, val] of Object.entries(params)) {
+    if (val !== undefined && val !== null && val !== "") {
+      targetUrl.searchParams.set(key, String(val));
+    }
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(targetUrl.toString(), {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    });
+
+    const rawText = await response.text();
+    try {
+      return JSON.parse(rawText);
+    } catch {
+      return {
+        status: response.ok,
+        statusCode: response.status,
+        result: rawText,
+      };
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function postJerexdMultipart(endpoint, params = {}, bodyBuffer, boundary, timeoutMs = 150000) {
+  const targetUrl = new URL(endpoint, BASE_URL);
+  targetUrl.searchParams.set("apikey", API_KEY);
+
+  for (const [key, val] of Object.entries(params)) {
+    if (val !== undefined && val !== null && val !== "") {
+      targetUrl.searchParams.set(key, String(val));
+    }
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(targetUrl.toString(), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        "Content-Length": String(bodyBuffer.length),
+      },
+      body: bodyBuffer,
+      signal: controller.signal,
+    });
+
+    const rawText = await response.text();
+    try {
+      return JSON.parse(rawText);
+    } catch {
+      return {
+        status: response.ok,
+        statusCode: response.status,
+        result: rawText,
+      };
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Bersihkan kalimat pembuka bawaan Edge Sidebar pada Copilot ketika user hanya menyapa "Halo" / "Tes"
+function cleanCopilotEdgePreamble(text) {
+  if (typeof text !== "string" || !text.trim()) return "";
+  let out = text.trim();
+
+  if (/membuka sebuah tab di Edge|judul dan URL halaman tersebut tidak memberikan informasi/i.test(out)) {
+    return "Halo! 👋 Saya siap membantu kamu. Silakan tulis pertanyaan, topik yang ingin dibahas, atau kode program yang ingin dibuat!";
+  }
+
+  return out;
+}
+
 // Ekstrak teks jawaban murni dari struktur objek bersarang apa pun (termasuk { result: { prompt, answer } })
 function extractAiAnswer(data) {
-  if (typeof data === "string") return data.trim();
+  if (typeof data === "string") return cleanCopilotEdgePreamble(data.trim());
   if (!data || typeof data !== "object") return "";
 
   const candidates = [
@@ -221,7 +307,7 @@ function extractAiAnswer(data) {
 
   for (const item of candidates) {
     if (typeof item === "string" && item.trim()) {
-      return item.trim();
+      return cleanCopilotEdgePreamble(item.trim());
     }
     if (item && typeof item === "object" && !Array.isArray(item)) {
       const nested =
@@ -234,7 +320,7 @@ function extractAiAnswer(data) {
         item.content ??
         item.message;
       if (typeof nested === "string" && nested.trim()) {
-        return nested.trim();
+        return cleanCopilotEdgePreamble(nested.trim());
       }
       if (nested && typeof nested === "object" && !Array.isArray(nested)) {
         const deep =
@@ -245,7 +331,7 @@ function extractAiAnswer(data) {
           nested.content ??
           nested.message;
         if (typeof deep === "string" && deep.trim()) {
-          return deep.trim();
+          return cleanCopilotEdgePreamble(deep.trim());
         }
       }
     }
@@ -258,13 +344,22 @@ function isTechnicalIssueAnswer(text) {
   if (typeof text !== "string" || !text.trim()) return true;
   return (
     /sorry,\s*ai\s*service\s*encountered\s*a\s*technical\s*issue/i.test(text) ||
-    /maaf,\s*layanan\s*ai\s*mengalami\s*masalah\s*teknis/i.test(text)
+    /maaf,\s*layanan\s*ai\s*mengalami\s*masalah\s*teknis/i.test(text) ||
+    /please\s*try\s*again\s*later/i.test(text)
   );
+}
+
+function isUsableAiResponse(data) {
+  if (!data || typeof data !== "object") return false;
+  if (data.status === false || data.success === false) return false;
+  const ans = extractAiAnswer(data);
+  if (!ans || isTechnicalIssueAnswer(ans)) return false;
+  return true;
 }
 
 function resolveBestGeminiModel(requestedModel, availableModels = []) {
   if (!Array.isArray(availableModels) || !availableModels.length) {
-    return requestedModel || "gemini-2.0-pro";
+    return requestedModel || "gemini-2.0-flash";
   }
   const cleanReq = String(requestedModel || "").toLowerCase();
   if (availableModels.includes(cleanReq)) return cleanReq;
@@ -274,13 +369,6 @@ function resolveBestGeminiModel(requestedModel, availableModels = []) {
       String(m).toLowerCase().includes("flash")
     );
     if (flashMatch) return flashMatch;
-  }
-
-  if (cleanReq.includes("2.0")) {
-    const v2Match = availableModels.find((m) =>
-      String(m).toLowerCase().includes("2.0")
-    );
-    if (v2Match) return v2Match;
   }
 
   if (cleanReq.includes("pro")) {
@@ -293,15 +381,65 @@ function resolveBestGeminiModel(requestedModel, availableModels = []) {
   return availableModels[0];
 }
 
-async function callJerexd(endpoint, params = {}) {
-  const response = await http.get(endpoint, {
-    params: {
-      apikey: API_KEY,
-      ...params,
-    },
-  });
+// Panggil /api/ai/gemini dengan resolusi otomatis nama model yang terdaftar di Jere API
+async function callGeminiSmart(promptText, requestedModel = "gemini-2.0-pro", chatId = "HAOMI_XML") {
+  const cleanChatId = String(chatId || "HAOMI_XML").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 24) || "HAOMI_XML";
 
-  return response.data;
+  // Jika sudah punya daftar model valid dari Jere API, langsung pilih yang cocok
+  let modelToUse = cachedGeminiModels?.length
+    ? resolveBestGeminiModel(requestedModel, cachedGeminiModels)
+    : requestedModel;
+
+  let data = await callJerexd("/api/ai/gemini", {
+    prompt: promptText,
+    model: modelToUse,
+    chatId: cleanChatId,
+  }, 25000);
+
+  // Jika Jere API mengembalikan daftar models yang tersedia (saat nama model tidak cocok),
+  // simpan ke cache dan langsung panggil ulang dengan model valid pertama!
+  if (!isUsableAiResponse(data) && Array.isArray(data?.models) && data.models.length > 0) {
+    cachedGeminiModels = data.models;
+    const validModel = resolveBestGeminiModel(requestedModel, data.models);
+    data = await callJerexd("/api/ai/gemini", {
+      prompt: promptText,
+      model: validModel,
+      chatId: cleanChatId,
+    }, 25000);
+  }
+
+  // Jika belum punya daftar model dan masih gagal, cek via model=list
+  if (!isUsableAiResponse(data) && !cachedGeminiModels) {
+    const listData = await callJerexd("/api/ai/gemini", {
+      prompt: "Halo",
+      model: "list",
+      chatId: cleanChatId,
+    }, 15000);
+    if (Array.isArray(listData?.models) && listData.models.length > 0) {
+      cachedGeminiModels = listData.models;
+      const validModel = resolveBestGeminiModel(requestedModel, listData.models);
+      data = await callJerexd("/api/ai/gemini", {
+        prompt: promptText,
+        model: validModel,
+        chatId: cleanChatId,
+      }, 25000);
+    }
+  }
+
+  return data;
+}
+
+// Panggil /api/ai/copilot dengan penanganan sapaan singkat agar tidak memunculkan kalimat "tab di Edge"
+async function callCopilotSmart(promptText) {
+  const clean = String(promptText || "").trim();
+  const isShortGreeting = /^(halo|hai|hi|hello|hali|tes|test|ping|p|pagi|siang|sore|malam|assalamualaikum)[\s!?.]*$/i.test(clean);
+  const queryToSend = isShortGreeting
+    ? `${clean}! Jawab sapaan ini dengan ramah dalam bahasa Indonesia dan tanyakan apa yang bisa dibantu.`
+    : clean;
+
+  return await callJerexd("/api/ai/copilot", {
+    query: queryToSend,
+  }, 25000);
 }
 
 async function handleGeminiModels(req, res) {
@@ -311,6 +449,10 @@ async function handleGeminiModels(req, res) {
     model: "list",
     chatId,
   });
+
+  if (Array.isArray(data?.models) && data.models.length > 0) {
+    cachedGeminiModels = data.models;
+  }
 
   return sendJson(res, 200, {
     success: true,
@@ -329,7 +471,7 @@ async function handleChat(req, res) {
     "Pesan"
   );
 
-  // Bersihkan prefix [Instruksi Gaya: ...] yang membuat /api/ai/aichat error
+  // Bersihkan prefix [Instruksi Gaya: ...] jika masih ada di cache browser lama
   const prompt =
     rawInputPrompt
       .replace(/^\[[\s\S]*?\]\s*/g, "")
@@ -366,141 +508,123 @@ async function handleChat(req, res) {
     getInput(req, "session_id") ||
     `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-  // 1. Endpoint Microsoft Copilot (/api/ai/copilot?apikey=...&query=...)
+  // 1. Jika user memilih Microsoft Copilot (/api/ai/copilot)
   if (isCopilot) {
-    const data = await callJerexd("/api/ai/copilot", {
-      query: prompt,
-    });
+    let data = await callCopilotSmart(prompt);
 
-    if (data?.status === false) {
+    if (!isUsableAiResponse(data)) {
+      data = await callGeminiSmart(prompt, "gemini-2.0-pro", "HAOMI_XML");
+    }
+
+    if (!isUsableAiResponse(data)) {
       return sendJson(res, 502, {
         success: false,
-        message: data.message || "Copilot AI belum berhasil menjawab.",
-        details: data,
+        message: "Layanan AI sedang sibuk, silakan coba kirim ulang.",
         session_id: sessionId,
       });
     }
 
-    const copAnswer = extractAiAnswer(data);
     return sendJson(res, 200, {
       success: true,
       message: "Berhasil mendapatkan jawaban.",
       session_id: sessionId,
       model: "microsoft/copilot",
-      answer: copAnswer,
+      answer: extractAiAnswer(data),
       raw: data,
     });
   }
 
-  // 2. Endpoint Gemini Direct (/api/ai/gemini?apikey=...&prompt=...&model=...&chatId=HAOMI_XML)
+  // 2. Jika user memilih Gemini Direct (/api/ai/gemini)
   if (isGeminiDirect) {
     const chatId = getInput(req, "chatId", "HAOMI_XML") || "HAOMI_XML";
-    let data = await callJerexd("/api/ai/gemini", {
-      prompt,
-      model,
-      chatId,
-    });
+    let data = await callGeminiSmart(prompt, model, chatId);
 
-    if (
-      data?.status === false &&
-      Array.isArray(data?.models) &&
-      data.models.length > 0 &&
-      model.toLowerCase() !== "list"
-    ) {
-      const resolvedModel = resolveBestGeminiModel(model, data.models);
-      data = await callJerexd("/api/ai/gemini", {
-        prompt,
-        model: resolvedModel,
-        chatId,
-      });
+    if (!isUsableAiResponse(data)) {
+      data = await callCopilotSmart(prompt);
     }
 
-    if (data?.status === false) {
+    if (!isUsableAiResponse(data)) {
       return sendJson(res, 502, {
         success: false,
-        message: data?.message || "Gemini AI tidak berhasil menjawab.",
-        details: data,
+        message: "Layanan Gemini AI sedang sibuk, silakan coba lagi.",
         session_id: chatId,
       });
     }
 
-    const gemAnswer = extractAiAnswer(data);
     return sendJson(res, 200, {
       success: true,
       message: "Berhasil mendapatkan jawaban.",
       session_id: data?.chatId || data?.session_id || chatId,
-      model: data?.model || model,
-      answer: gemAnswer,
+      model,
+      answer: extractAiAnswer(data),
       raw: data,
     });
   }
 
-  // 3. Endpoint Utama JERE API (/api/ai/aichat) persis sesuai format asli
-  let data = await callJerexd("/api/ai/aichat", {
-    prompt,
-    model,
-    session_id: sessionId,
-    ...(getInput(req, "reset") === "true"
-      ? { reset: "true" }
-      : {}),
-  });
+  // 3. Jalur Utama /api/ai/aichat JERE API
+  let data = null;
+  try {
+    data = await callJerexd("/api/ai/aichat", {
+      prompt,
+      model,
+      session_id: sessionId,
+      ...(getInput(req, "reset") === "true" ? { reset: "true" } : {}),
+    }, 20000);
+  } catch {
+    data = { status: false };
+  }
 
-  // Jika sesi lama bermasalah atau model mengembalikan technical issue, ulangi dengan session_id baru di /api/ai/aichat
-  if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
+  // Jika /api/ai/aichat mengembalikan "Sorry, AI service encountered a technical issue",
+  // jangan loop 6x di /api/ai/aichat yang sedang limit! Coba 1x gpt-4o lalu langsung alihkan ke /api/ai/gemini atau /api/ai/copilot yang aktif!
+  if (!isUsableAiResponse(data) && model !== "openai/gpt-4o") {
     try {
-      const freshSession = `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const retrySame = await callJerexd("/api/ai/aichat", {
+      const retryGpt4o = await callJerexd("/api/ai/aichat", {
         prompt,
-        model,
-        session_id: freshSession,
-      });
-      if (retrySame?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(retrySame))) {
-        data = retrySame;
+        model: "openai/gpt-4o",
+        session_id: `haomi-${Date.now()}`,
+      }, 15000);
+      if (isUsableAiResponse(retryGpt4o)) {
+        data = retryGpt4o;
       }
     } catch {}
   }
 
-  // Jika model tertentu di /api/ai/aichat sedang down di Jere API, coba model /api/ai/aichat yang aktif
-  if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
-    const fallbackModels = [
-      "openai/gpt-4o",
-      "anthropic/claude-opus-4.5",
-      "google/gemini-3-pro-preview",
-      "openai/gpt-4o-mini",
-    ].filter((m) => m !== model);
-
-    for (const fbModel of fallbackModels) {
-      try {
-        const retryData = await callJerexd("/api/ai/aichat", {
-          prompt,
-          model: fbModel,
-          session_id: `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        });
-        if (retryData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(retryData))) {
-          data = retryData;
-          break;
-        }
-      } catch {}
-    }
+  // Cadangan 1: Endpoint /api/ai/gemini Jere API (dengan auto-detect daftar model valid)
+  if (!isUsableAiResponse(data)) {
+    try {
+      const gemData = await callGeminiSmart(prompt, "gemini-2.0-pro", "HAOMI_XML");
+      if (isUsableAiResponse(gemData)) {
+        data = gemData;
+      }
+    } catch {}
   }
 
-  if (data?.status === false) {
+  // Cadangan 2: Endpoint /api/ai/copilot Jere API (terbukti selalu aktif)
+  if (!isUsableAiResponse(data)) {
+    try {
+      const copData = await callCopilotSmart(prompt);
+      if (isUsableAiResponse(copData)) {
+        data = copData;
+      }
+    } catch {}
+  }
+
+  // Jangan pernah mengembalikan teks "Sorry, AI service encountered a technical issue" dengan status 200!
+  if (!isUsableAiResponse(data)) {
     return sendJson(res, 502, {
       success: false,
-      message: data.message || "JERE-API tidak berhasil menjawab.",
+      message: "Server AI sedang padat, silakan coba kirim ulang pesanmu.",
       details: data,
       session_id: sessionId,
     });
   }
 
-  const finalAnswer = extractAiAnswer(data);
-
   return sendJson(res, 200, {
     success: true,
     message: "Berhasil mendapatkan jawaban.",
     session_id: data?.session_id || sessionId,
-    model: data?.model || model,
-    answer: finalAnswer,
+    model,
+    answer: extractAiAnswer(data),
     history_count: data?.history_count,
     raw: data,
   });
@@ -692,14 +816,7 @@ async function handleTmpFiles(req, res) {
         { fieldName: "file", fileName, mimeType: fileMime, buffer }
       );
 
-      const postRes = await http.post("/api/tools/tmpfiles", bodyBuffer, {
-        params: { apikey: API_KEY },
-        headers: {
-          "Content-Type": `multipart/form-data; boundary=${boundary}`,
-          "Content-Length": bodyBuffer.length,
-        },
-      });
-      const postData = postRes.data;
+      const postData = await postJerexdMultipart("/api/tools/tmpfiles", {}, bodyBuffer, boundary, 90000);
       if (postData && postData.status !== false) {
         return sendJson(res, 200, {
           success: true,
@@ -762,18 +879,10 @@ async function handleWeb2Apk(req, res) {
       filePart
     );
 
-    const postRes = await http.post("/api/tools/web2apk", bodyBuffer, {
-      params: { apikey: API_KEY, url, name },
-      headers: {
-        "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        "Content-Length": bodyBuffer.length,
-      },
-      timeout: 180000,
-    });
-    data = postRes.data;
+    data = await postJerexdMultipart("/api/tools/web2apk", { url, name }, bodyBuffer, boundary, 180000);
   } catch (postErr) {
     try {
-      data = await callJerexd("/api/tools/web2apk", { url, name });
+      data = await callJerexd("/api/tools/web2apk", { url, name }, 180000);
     } catch {
       throw postErr;
     }
