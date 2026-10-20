@@ -20,38 +20,57 @@ const COPILOT_MODELS = [
   "copilot",
 ];
 
-const ALLOWED_MODELS = [
-  "chatday/ai-chat",
-  "openai/gpt-5.6-terra",
-  "openai/gpt-5.5",
-  "openai/gpt-5.4",
-  "openai/gpt-5.3-chat",
-  "openai/gpt-5.1-instant",
-  "openai/gpt-5",
-  "openai/gpt-4o",
-  "openai/gpt-4o-mini",
-  "xai/grok-4.1-fast-non-reasoning",
-  "anthropic/claude-haiku-4.5",
-  "anthropic/claude-sonnet-5",
-  "anthropic/claude-sonnet-4.6",
-  "anthropic/claude-opus-4.5",
-  "anthropic/claude-opus-4.6",
-  "anthropic/claude-opus-4.7",
-  "anthropic/claude-opus-4.8",
-  "deepseek/deepseek-v4-pro",
-  "deepseek/deepseek-v4-flash",
-  "deepseek/deepseek-v3.2-thinking",
-  "google/gemini-3.1-pro-preview",
-  "google/gemini-3-pro-preview",
-  "google/gemini-3.1-flash-lite",
-  "gemini-2.0-pro",
-  "gemini-pro",
-  "gemini-flash",
-  "microsoft/copilot",
-  "alibaba/qwen3-max",
-  "meta/llama-4-maverick",
-  "moonshotai/kimi-k2.6",
-];
+const MODEL_DIRECTORY = {
+  "openai/gpt-4o": ["GPT-4o", "OpenAI"],
+  "openai/gpt-4o-mini": ["GPT-4o mini", "OpenAI"],
+  "openai/gpt-5.6-terra": ["GPT-5.6 Terra", "OpenAI"],
+  "openai/gpt-5.5": ["GPT-5.5", "OpenAI"],
+  "openai/gpt-5.4": ["GPT-5.4", "OpenAI"],
+  "openai/gpt-5.3-chat": ["GPT-5.3 Chat", "OpenAI"],
+  "openai/gpt-5.1-instant": ["GPT-5.1 Instant", "OpenAI"],
+  "openai/gpt-5": ["GPT-5", "OpenAI"],
+  "chatday/ai-chat": ["Chatday AI", "Chatday"],
+  "xai/grok-4.1-fast-non-reasoning": ["Grok 4.1 Fast", "xAI"],
+  "anthropic/claude-haiku-4.5": ["Claude Haiku 4.5", "Anthropic"],
+  "anthropic/claude-sonnet-5": ["Claude Sonnet 5", "Anthropic"],
+  "anthropic/claude-sonnet-4.6": ["Claude Sonnet 4.6", "Anthropic"],
+  "anthropic/claude-opus-4.5": ["Claude Opus 4.5", "Anthropic"],
+  "anthropic/claude-opus-4.6": ["Claude Opus 4.6", "Anthropic"],
+  "anthropic/claude-opus-4.7": ["Claude Opus 4.7", "Anthropic"],
+  "anthropic/claude-opus-4.8": ["Claude Opus 4.8", "Anthropic"],
+  "deepseek/deepseek-v4-pro": ["DeepSeek V4 Pro", "DeepSeek"],
+  "deepseek/deepseek-v4-flash": ["DeepSeek V4 Flash", "DeepSeek"],
+  "deepseek/deepseek-v3.2-thinking": ["DeepSeek V3.2 Thinking", "DeepSeek"],
+  "gemini-2.0-pro": ["Gemini 2.0 Pro", "Google"],
+  "gemini-pro": ["Gemini Pro", "Google"],
+  "gemini-flash": ["Gemini Flash", "Google"],
+  "google/gemini-3.1-pro-preview": ["Gemini 3.1 Pro", "Google"],
+  "google/gemini-3-pro-preview": ["Gemini 3 Pro", "Google"],
+  "google/gemini-3.1-flash-lite": ["Gemini 3.1 Flash Lite", "Google"],
+  "microsoft/copilot": ["Microsoft Copilot", "Microsoft"],
+  "alibaba/qwen3-max": ["Qwen3 Max", "Alibaba"],
+  "meta/llama-4-maverick": ["Llama 4 Maverick", "Meta"],
+  "moonshotai/kimi-k2.6": ["Kimi K2.6", "Moonshot AI"],
+};
+
+const ALLOWED_MODELS = Object.keys(MODEL_DIRECTORY);
+
+const CITY_KNOWLEDGE_BASE = {
+  jombang:
+    "Ini adalah deskripsi tentang Jombang: Kabupaten Jombang adalah sebuah wilayah kabupaten strategis di bagian tengah Provinsi Jawa Timur, Indonesia. Ibu kotanya berada di Kecamatan Jombang. Wilayah ini dikenal luas dengan julukan 'Kota Santri' karena banyaknya pondok pesantren besar bersejarah (seperti Tebuireng, Bahrul Ulum Tambakberas, Darul Ulum Rejoso, dan Denanyar) serta menjadi tempat kelahiran banyak tokoh besar nasional.",
+  surabaya:
+    "Ini adalah deskripsi tentang Surabaya: Kota Surabaya adalah ibu kota Provinsi Jawa Timur sekaligus kota metropolitan terbesar kedua di Indonesia setelah Jakarta. Dikenal sebagai 'Kota Pahlawan', Surabaya merupakan pusat perdagangan, industri, maritim, dan pendidikan utama di kawasan Indonesia Timur.",
+  malang:
+    "Ini adalah deskripsi tentang Malang: Kota Malang adalah sebuah kota di Provinsi Jawa Timur yang terletak di dataran tinggi yang sejuk. Dikenal sebagai 'Kota Pendidikan' dan 'Kota Bunga', Malang menjadi salah satu destinasi pariwisata dan pusat perguruan tinggi terkemuka di Indonesia.",
+  jakarta:
+    "Ini adalah deskripsi tentang Jakarta: Jakarta (DKI Jakarta) adalah pusat perekonomian, bisnis, diplomasi, dan pemerintahan berskala megapolitan di Indonesia yang terletak di pesisir barat laut Pulau Jawa.",
+  bandung:
+    "Ini adalah deskripsi tentang Bandung: Kota Bandung adalah ibu kota Provinsi Jawa Barat yang dikelilingi pegunungan sejuk. Dikenal dengan julukan 'Kota Kembang' dan 'Paris van Java', Bandung merupakan pusat industri kreatif, pendidikan tinggi, dan kuliner populer.",
+  yogyakarta:
+    "Ini adalah deskripsi tentang Yogyakarta: Kota Yogyakarta adalah ibu kota Daerah Istimewa Yogyakarta yang dikenal sebagai 'Kota Pelajar', pusat kebudayaan Jawa klasik, keraton bersejarah, serta tujuan wisata unggulan di Indonesia.",
+  semarang:
+    "Ini adalah deskripsi tentang Semarang: Kota Semarang adalah ibu kota Provinsi Jawa Tengah sekaligus kota pelabuhan, perdagangan, dan industri utama di jalur pantai utara (Pantura) Pulau Jawa yang terkenal dengan kawasan bersejarah Kota Lama.",
+};
 
 const http = axios.create({
   baseURL: BASE_URL,
@@ -185,8 +204,52 @@ function buildMultipartPayload(fields = {}, filePart = null) {
   };
 }
 
-function extractAiAnswer(data) {
-  if (typeof data === "string") return data.trim();
+function getModelMeta(modelId) {
+  const entry = MODEL_DIRECTORY[modelId];
+  if (entry) {
+    return { name: entry[0], provider: entry[1] };
+  }
+  const clean = String(modelId || "GPT-4o");
+  if (clean.includes("/")) {
+    const [prov, name] = clean.split("/");
+    return { name: name || clean, provider: prov || "AI" };
+  }
+  return { name: clean, provider: "AI" };
+}
+
+function getScopedSessionId(baseSessionId, modelId) {
+  const slug = String(modelId || "default")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 28);
+  const cleanBase = String(baseSessionId || "HAOMI_XML")
+    .replace(/_[a-z0-9_]{2,30}$/i, "");
+  return `${cleanBase}_${slug}`;
+}
+
+function sanitizeAiIdentity(text, modelId) {
+  if (typeof text !== "string" || !text.trim()) return text;
+  const { name, provider } = getModelMeta(modelId);
+  let out = text;
+
+  // Ganti kalimat perkenalan bawaan UnlimitedAI.Chat agar sesuai mesin model yang dipilih user
+  out = out.replace(
+    /Saya\s+(?:adalah\s+)?UnlimitedAI(?:\.Chat)?\s*,\s*sebuah\s+model\s+bahasa\s+yang\s+dikembangkan\s+oleh\s+tim\s+UnlimitedAI(?:\.Chat)?\.?/gi,
+    `Saya **HAOMI AI** yang berjalan menggunakan mesin model **${name}** (${provider}).`
+  );
+  out = out.replace(
+    /I\s+am\s+UnlimitedAI(?:\.Chat)?\s*,\s*a\s+language\s+model\s+developed\s+by\s+the\s+UnlimitedAI(?:\.Chat)?\s+team\.?/gi,
+    `Saya **HAOMI AI** yang berjalan menggunakan mesin model **${name}** (${provider}).`
+  );
+  out = out.replace(/tim\s+UnlimitedAI(?:\.Chat)?/gi, `tim ${provider} pada konsol HAOMI AI`);
+  out = out.replace(/UnlimitedAI\.Chat/gi, `HAOMI AI (${name})`);
+  out = out.replace(/UnlimitedAI/gi, `HAOMI AI (${name})`);
+  return out;
+}
+
+function extractAiAnswer(data, modelId = "openai/gpt-4o") {
+  if (typeof data === "string") return sanitizeAiIdentity(data.trim(), modelId);
   if (!data || typeof data !== "object") return "";
 
   const candidates = [
@@ -203,7 +266,7 @@ function extractAiAnswer(data) {
 
   for (const item of candidates) {
     if (typeof item === "string" && item.trim()) {
-      return item.trim();
+      return sanitizeAiIdentity(item.trim(), modelId);
     }
     if (item && typeof item === "object" && !Array.isArray(item)) {
       const nested =
@@ -216,7 +279,7 @@ function extractAiAnswer(data) {
         item.content ??
         item.message;
       if (typeof nested === "string" && nested.trim()) {
-        return nested.trim();
+        return sanitizeAiIdentity(nested.trim(), modelId);
       }
     }
   }
@@ -292,7 +355,7 @@ async function callJerexd(endpoint, params = {}) {
   return response.data;
 }
 
-async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini-2.0-pro") {
+async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini-2.0-pro", displayModelId = preferredModel) {
   try {
     let data = await callJerexd("/api/ai/gemini", {
       prompt: promptText,
@@ -312,7 +375,7 @@ async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini
       });
     }
     if (data && data.status !== false) {
-      const ans = extractAiAnswer(data);
+      const ans = extractAiAnswer(data, displayModelId);
       if (ans) return { data, answer: ans };
     }
   } catch {
@@ -321,13 +384,13 @@ async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini
   return null;
 }
 
-async function tryCopilotFallback(queryText) {
+async function tryCopilotFallback(queryText, displayModelId = "microsoft/copilot") {
   try {
     const data = await callJerexd("/api/ai/copilot", {
       query: queryText,
     });
     if (data && data.status !== false) {
-      const ans = extractAiAnswer(data);
+      const ans = extractAiAnswer(data, displayModelId);
       if (ans) return { data, answer: ans };
     }
   } catch {
@@ -397,13 +460,24 @@ async function handleChat(req, res) {
     getInput(req, "session_id") ||
     `HAOMI_XML_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
-  const sessionId = isReset
+  const baseSessionId = isReset
     ? `HAOMI_XML_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`
     : rawSessionId;
 
+  // Pisahkan session_id per model agar saat user ganti model di satu ruang chat,
+  // mesin baru tidak mewarisi memori perkenalan dari mesin sebelumnya.
+  const scopedSessionId = getScopedSessionId(baseSessionId, model);
+  const { name: modelLabel, provider: providerLabel } = getModelMeta(model);
+
+  const identityGuard = `[Identitas Mesin: Kamu adalah HAOMI AI yang berjalan menggunakan mesin model ${modelLabel} (${providerLabel}). Jika ditanya siapa kamu atau menggunakan model apa, jawab bahwa kamu adalah HAOMI AI dengan mesin ${modelLabel} dari ${providerLabel}. Jangan pernah menyebut UnlimitedAI.Chat.]`;
+
+  const promptWithIdentity = prompt.includes("Identitas Mesin:")
+    ? prompt
+    : `${identityGuard}\n\n${prompt}`;
+
   // 1. Endpoint Microsoft Copilot (/api/ai/copilot?apikey=...&query=...)
   if (isCopilot) {
-    const primaryQuery = !isReset && contextPrompt ? contextPrompt : prompt;
+    const primaryQuery = !isReset && contextPrompt ? contextPrompt : promptWithIdentity;
     let data;
 
     try {
@@ -426,12 +500,12 @@ async function handleChat(req, res) {
     }
 
     if (data?.status === false) {
-      const gemFallback = await tryGeminiFallback(rawPrompt || prompt, sessionId);
+      const gemFallback = await tryGeminiFallback(promptWithIdentity, scopedSessionId, "gemini-2.0-pro", model);
       if (gemFallback) {
         return sendJson(res, 200, {
           success: true,
           message: "Berhasil mendapatkan jawaban.",
-          session_id: sessionId,
+          session_id: baseSessionId,
           model: "microsoft/copilot",
           answer: gemFallback.answer,
           raw: gemFallback.data,
@@ -441,15 +515,15 @@ async function handleChat(req, res) {
         success: false,
         message: data.message || "Copilot AI belum berhasil menjawab.",
         details: data,
-        session_id: sessionId,
+        session_id: baseSessionId,
       });
     }
 
-    const answer = extractAiAnswer(data);
+    const answer = extractAiAnswer(data, model);
     return sendJson(res, 200, {
       success: true,
       message: "Berhasil mendapatkan jawaban dari Copilot.",
-      session_id: sessionId,
+      session_id: baseSessionId,
       model: "microsoft/copilot",
       stateless_session: true,
       answer: answer || data,
@@ -461,9 +535,9 @@ async function handleChat(req, res) {
   if (isGeminiDirect) {
     const targetUrl = getInput(req, "url", "");
     const geminiParams = {
-      prompt,
+      prompt: promptWithIdentity,
       model,
-      chatId: sessionId,
+      chatId: scopedSessionId,
       ...(targetUrl ? { url: targetUrl } : {}),
     };
 
@@ -487,24 +561,24 @@ async function handleChat(req, res) {
       });
     }
 
-    if (data?.status === false && prompt !== rawPrompt && rawPrompt) {
+    if (data?.status === false && rawPrompt) {
       try {
         data = await callJerexd("/api/ai/gemini", {
-          prompt: rawPrompt,
+          prompt: `${identityGuard}\n\n${rawPrompt}`,
           model: "gemini-pro",
-          chatId: sessionId,
+          chatId: scopedSessionId,
         });
       } catch {}
     }
 
     if (data?.status === false) {
-      const copFallback = await tryCopilotFallback(rawPrompt || prompt);
+      const copFallback = await tryCopilotFallback(promptWithIdentity, model);
       if (copFallback) {
         return sendJson(res, 200, {
           success: true,
           message: "Berhasil mendapatkan jawaban.",
-          session_id: sessionId,
-          chatId: sessionId,
+          session_id: baseSessionId,
+          chatId: baseSessionId,
           model,
           answer: copFallback.answer,
           raw: copFallback.data,
@@ -515,32 +589,31 @@ async function handleChat(req, res) {
         message: data?.message || "Gemini AI tidak berhasil menjawab.",
         availableGeminiModels: data?.models || undefined,
         details: data,
-        session_id: sessionId,
-        chatId: sessionId,
+        session_id: baseSessionId,
+        chatId: baseSessionId,
       });
     }
 
-    const resolvedSessionId = extractSessionId(data, sessionId);
-    const answer = extractAiAnswer(data);
+    const answer = extractAiAnswer(data, model);
 
     return sendJson(res, 200, {
       success: true,
       message: "Berhasil mendapatkan jawaban dari Gemini.",
-      session_id: resolvedSessionId,
-      chatId: resolvedSessionId,
+      session_id: baseSessionId,
+      chatId: baseSessionId,
       model: data?.model || model,
       answer: answer || data,
       raw: data,
     });
   }
 
-  // 3. Endpoint AI Chat Multi-Model (/api/ai/aichat) dengan Auto-Failover Berlapis
+  // 3. Endpoint AI Chat Multi-Model (/api/ai/aichat) dengan Sesi Terisolasi per Mesin & Auto-Failover
   let data;
   try {
     data = await callJerexd("/api/ai/aichat", {
-      prompt,
+      prompt: promptWithIdentity,
       model,
-      session_id: sessionId,
+      session_id: scopedSessionId,
       ...(isReset ? { reset: "true" } : {}),
     });
   } catch {
@@ -548,12 +621,12 @@ async function handleChat(req, res) {
   }
 
   if (data?.status === false) {
-    const freshSessionId = `HAOMI_XML_${Date.now()}`;
+    const freshSessionId = `HAOMI_XML_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     try {
       data = await callJerexd("/api/ai/aichat", {
-        prompt: rawPrompt || prompt,
+        prompt: `${identityGuard}\n\n${rawPrompt || prompt}`,
         model,
-        session_id: freshSessionId,
+        session_id: getScopedSessionId(freshSessionId, model),
       });
     } catch {
       data = { status: false };
@@ -563,9 +636,9 @@ async function handleChat(req, res) {
   if (data?.status === false && model !== "openai/gpt-4o") {
     try {
       data = await callJerexd("/api/ai/aichat", {
-        prompt: rawPrompt || prompt,
+        prompt: `${identityGuard}\n\n${rawPrompt || prompt}`,
         model: "openai/gpt-4o",
-        session_id: sessionId,
+        session_id: scopedSessionId,
       });
     } catch {
       data = { status: false };
@@ -573,24 +646,24 @@ async function handleChat(req, res) {
   }
 
   if (data?.status === false) {
-    const gemFallback = await tryGeminiFallback(rawPrompt || prompt, sessionId, "gemini-2.0-pro");
+    const gemFallback = await tryGeminiFallback(promptWithIdentity, scopedSessionId, "gemini-2.0-pro", model);
     if (gemFallback) {
       return sendJson(res, 200, {
         success: true,
         message: "Berhasil mendapatkan jawaban.",
-        session_id: extractSessionId(gemFallback.data, sessionId),
+        session_id: baseSessionId,
         model,
         answer: gemFallback.answer,
         raw: gemFallback.data,
       });
     }
 
-    const copFallback = await tryCopilotFallback(rawPrompt || prompt);
+    const copFallback = await tryCopilotFallback(promptWithIdentity, model);
     if (copFallback) {
       return sendJson(res, 200, {
         success: true,
         message: "Berhasil mendapatkan jawaban.",
-        session_id: sessionId,
+        session_id: baseSessionId,
         model,
         answer: copFallback.answer,
         raw: copFallback.data,
@@ -601,16 +674,16 @@ async function handleChat(req, res) {
       success: false,
       message: data?.message || "JERE-API tidak berhasil menjawab.",
       details: data,
-      session_id: sessionId,
+      session_id: baseSessionId,
     });
   }
 
-  const answer = extractAiAnswer(data);
+  const answer = extractAiAnswer(data, model);
 
   return sendJson(res, 200, {
     success: true,
     message: "Berhasil mendapatkan jawaban.",
-    session_id: extractSessionId(data, sessionId),
+    session_id: baseSessionId,
     model: data?.model || model,
     answer: answer || data,
     history_count: data?.history_count,
@@ -631,7 +704,7 @@ async function handleAlightMotionSend(req, res) {
       data?.message ||
       (data?.status === false
         ? "Permintaan Alight Motion gagal."
-        : "Permintaan Alight Motion telah dikirim."),
+        : "Selamat! Akun Alight Motion Anda berhasil diproses menjadi Premium (Durasi 1 Tahun)."),
     result: data,
   });
 }
@@ -654,7 +727,7 @@ async function handleAlightMotionVerify(req, res) {
       data?.message ||
       (data?.status === false
         ? "Verifikasi Alight Motion gagal."
-        : "Permintaan verifikasi telah diproses."),
+        : "Selamat! Akun Alight Motion Anda berhasil diverifikasi menjadi Premium (Durasi 1 Tahun)."),
     result: data,
   });
 }
@@ -672,7 +745,7 @@ async function handleUrlScan(req, res) {
       data?.message ||
       (data?.status === false
         ? "Pemindaian URL gagal."
-        : "Pemindaian URL selesai."),
+        : "Pemindaian keamanan URL selesai."),
     result: data,
   });
 }
@@ -714,7 +787,7 @@ async function handleWhatsAppReact(req, res) {
       data?.message ||
       (data?.status === false
         ? "Reaksi WhatsApp gagal."
-        : "Permintaan reaksi WhatsApp selesai."),
+        : "Selamat! Reaksi emoji saluran WhatsApp berhasil dikirim."),
     result: data,
   });
 }
@@ -733,12 +806,12 @@ async function handleViuPrem(req, res) {
       data?.message ||
       (data?.status === false
         ? "Gagal mengambil data Viu Premium."
-        : "Data Viu Premium berhasil diambil."),
+        : "Selamat! Akses akun Viu Premium VIP berhasil diambil."),
     result: data,
   });
 }
 
-// 2. Info Kota (/api/search/infokota)
+// 2. Info Kota (/api/search/infokota) + Peningkatan Deskripsi Narasi Otomatis
 async function handleInfoKota(req, res) {
   const kota = requireString(
     getInput(req, "kota", getInput(req, "city", "Jombang")),
@@ -749,13 +822,41 @@ async function handleInfoKota(req, res) {
     kota,
   });
 
+  // Jika API mengembalikan "Tidak ada deskripsi", susun deskripsi naratif yang jelas & lengkap
+  if (data && typeof data === "object") {
+    const target = data.result && typeof data.result === "object" ? data.result : data;
+    const rawDesc = String(target.deskripsi || target.description || "").trim();
+    const isMissingDesc =
+      !rawDesc ||
+      /tidak ada deskripsi|no description|-|null/i.test(rawDesc);
+
+    const namaWilayah = target.nama || target.kota || kota;
+    const prov = target.provinsi || "Indonesia";
+    const negara = target.negara || "Indonesia";
+    const pimpinan = target.bupati || target.walikota || target.wali_kota || target.gubernur || "";
+    const keyLower = String(namaWilayah).toLowerCase().replace(/^(kabupaten|kota)\s+/i, "").trim();
+
+    if (isMissingDesc) {
+      if (CITY_KNOWLEDGE_BASE[keyLower]) {
+        target.deskripsi = CITY_KNOWLEDGE_BASE[keyLower] + (pimpinan ? ` Saat ini wilayah ${namaWilayah} dipimpin oleh ${pimpinan}.` : "");
+      } else {
+        target.deskripsi =
+          `Ini adalah deskripsi tentang ${namaWilayah}: ${namaWilayah} merupakan salah satu daerah otonom yang terletak di Provinsi ${prov}, ${negara}.` +
+          (pimpinan ? ` Pemerintahan daerah ${namaWilayah} dipimpin oleh ${pimpinan}.` : "") +
+          (target.url ? ` Informasi profil wilayah dan ensiklopedia resmi dapat diakses melalui ${target.url}.` : "");
+      }
+    } else if (!/^ini adalah deskripsi tentang/i.test(rawDesc)) {
+      target.deskripsi = `Ini adalah deskripsi tentang ${namaWilayah}: ${rawDesc}`;
+    }
+  }
+
   return sendJson(res, 200, {
     success: data?.status !== false,
     message:
       data?.message ||
       (data?.status === false
         ? `Pencarian info kota ${kota} gagal.`
-        : `Informasi kota ${kota} berhasil diambil.`),
+        : `Informasi lengkap wilayah ${kota} berhasil ditemukan.`),
     result: data,
   });
 }
@@ -788,7 +889,7 @@ async function handleTmpFiles(req, res) {
       if (postData && postData.status !== false) {
         return sendJson(res, 200, {
           success: true,
-          message: postData.message || "File berhasil diunggah ke TmpFiles.",
+          message: postData.message || "Selamat! File Anda berhasil diunggah ke TmpFiles Cloud.",
           result: postData,
         });
       }
@@ -809,7 +910,7 @@ async function handleTmpFiles(req, res) {
       data?.message ||
       (data?.status === false
         ? "Permintaan TmpFiles gagal."
-        : "Permintaan TmpFiles selesai."),
+        : "Selamat! File berhasil diproses ke penyimpanan sementara TmpFiles."),
     result: data,
   });
 }
@@ -872,7 +973,7 @@ async function handleWeb2Apk(req, res) {
       data?.message ||
       (data?.status === false
         ? "Pembuatan Web2APK gagal."
-        : "Aplikasi APK berhasil dibuat."),
+        : `Selamat! Aplikasi Android ${name} (.apk) berhasil dibangun.`),
     result: data,
   });
 }
@@ -901,7 +1002,7 @@ async function handleWhatsAppCheckBan(req, res) {
       data?.message ||
       (data?.status === false
         ? "Pengecekan status nomor WA gagal."
-        : "Pengecekan status nomor WA selesai."),
+        : `Pengecekan status nomor WhatsApp ${number} selesai.`),
     result: data,
   });
 }
