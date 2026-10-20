@@ -20,40 +20,38 @@ const COPILOT_MODELS = [
   "copilot",
 ];
 
-const MODEL_DIRECTORY = {
-  "openai/gpt-4o": ["GPT-4o", "OpenAI"],
-  "openai/gpt-4o-mini": ["GPT-4o mini", "OpenAI"],
-  "openai/gpt-5.6-terra": ["GPT-5.6 Terra", "OpenAI"],
-  "openai/gpt-5.5": ["GPT-5.5", "OpenAI"],
-  "openai/gpt-5.4": ["GPT-5.4", "OpenAI"],
-  "openai/gpt-5.3-chat": ["GPT-5.3 Chat", "OpenAI"],
-  "openai/gpt-5.1-instant": ["GPT-5.1 Instant", "OpenAI"],
-  "openai/gpt-5": ["GPT-5", "OpenAI"],
-  "chatday/ai-chat": ["Chatday AI", "Chatday"],
-  "xai/grok-4.1-fast-non-reasoning": ["Grok 4.1 Fast", "xAI"],
-  "anthropic/claude-haiku-4.5": ["Claude Haiku 4.5", "Anthropic"],
-  "anthropic/claude-sonnet-5": ["Claude Sonnet 5", "Anthropic"],
-  "anthropic/claude-sonnet-4.6": ["Claude Sonnet 4.6", "Anthropic"],
-  "anthropic/claude-opus-4.5": ["Claude Opus 4.5", "Anthropic"],
-  "anthropic/claude-opus-4.6": ["Claude Opus 4.6", "Anthropic"],
-  "anthropic/claude-opus-4.7": ["Claude Opus 4.7", "Anthropic"],
-  "anthropic/claude-opus-4.8": ["Claude Opus 4.8", "Anthropic"],
-  "deepseek/deepseek-v4-pro": ["DeepSeek V4 Pro", "DeepSeek"],
-  "deepseek/deepseek-v4-flash": ["DeepSeek V4 Flash", "DeepSeek"],
-  "deepseek/deepseek-v3.2-thinking": ["DeepSeek V3.2 Thinking", "DeepSeek"],
-  "gemini-2.0-pro": ["Gemini 2.0 Pro", "Google"],
-  "gemini-pro": ["Gemini Pro", "Google"],
-  "gemini-flash": ["Gemini Flash", "Google"],
-  "google/gemini-3.1-pro-preview": ["Gemini 3.1 Pro", "Google"],
-  "google/gemini-3-pro-preview": ["Gemini 3 Pro", "Google"],
-  "google/gemini-3.1-flash-lite": ["Gemini 3.1 Flash Lite", "Google"],
-  "microsoft/copilot": ["Microsoft Copilot", "Microsoft"],
-  "alibaba/qwen3-max": ["Qwen3 Max", "Alibaba"],
-  "meta/llama-4-maverick": ["Llama 4 Maverick", "Meta"],
-  "moonshotai/kimi-k2.6": ["Kimi K2.6", "Moonshot AI"],
-};
-
-const ALLOWED_MODELS = Object.keys(MODEL_DIRECTORY);
+const ALLOWED_MODELS = [
+  "chatday/ai-chat",
+  "openai/gpt-5.6-terra",
+  "openai/gpt-5.5",
+  "openai/gpt-5.4",
+  "openai/gpt-5.3-chat",
+  "openai/gpt-5.1-instant",
+  "openai/gpt-5",
+  "openai/gpt-4o",
+  "openai/gpt-4o-mini",
+  "xai/grok-4.1-fast-non-reasoning",
+  "anthropic/claude-haiku-4.5",
+  "anthropic/claude-sonnet-5",
+  "anthropic/claude-sonnet-4.6",
+  "anthropic/claude-opus-4.5",
+  "anthropic/claude-opus-4.6",
+  "anthropic/claude-opus-4.7",
+  "anthropic/claude-opus-4.8",
+  "deepseek/deepseek-v4-pro",
+  "deepseek/deepseek-v4-flash",
+  "deepseek/deepseek-v3.2-thinking",
+  "google/gemini-3.1-pro-preview",
+  "google/gemini-3-pro-preview",
+  "google/gemini-3.1-flash-lite",
+  "gemini-2.0-pro",
+  "gemini-pro",
+  "gemini-flash",
+  "microsoft/copilot",
+  "alibaba/qwen3-max",
+  "meta/llama-4-maverick",
+  "moonshotai/kimi-k2.6",
+];
 
 const CITY_KNOWLEDGE_BASE = {
   jombang:
@@ -74,7 +72,7 @@ const CITY_KNOWLEDGE_BASE = {
 
 const http = axios.create({
   baseURL: BASE_URL,
-  timeout: 120000,
+  timeout: 60000,
   headers: {
     Accept: "application/json",
   },
@@ -204,108 +202,8 @@ function buildMultipartPayload(fields = {}, filePart = null) {
   };
 }
 
-function getModelMeta(modelId) {
-  const entry = MODEL_DIRECTORY[modelId];
-  if (entry) {
-    return { name: entry[0], provider: entry[1] };
-  }
-  const clean = String(modelId || "GPT-4o");
-  if (clean.includes("/")) {
-    const [prov, name] = clean.split("/");
-    return { name: name || clean, provider: prov || "AI" };
-  }
-  return { name: clean, provider: "AI" };
-}
-
-// Buat session_id pendek & alfanumerik murni (tanpa tanda hubung '-') yang 100% kompatibel dengan JERE API
-function getScopedSessionId(baseSessionId, modelId) {
-  const rawBase = String(baseSessionId || "HAOMI_XML")
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .toUpperCase()
-    .slice(0, 12) || "HAOMIXML";
-  const modelCode = String(modelId || "gpt4o")
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .toUpperCase()
-    .slice(-6);
-  return `HAOMI_${rawBase.replace(/^HAOMIXML|^HAOMI/, "") || "XML"}_${modelCode}`;
-}
-
-// Deteksi pesan error semu dari upstream yang dikembalikan dengan status: true
-function isUpstreamErrorText(text) {
-  if (typeof text !== "string") return true;
-  const clean = text.trim();
-  if (!clean) return true;
-  return (
-    /sorry,\s*ai\s*service\s*encountered\s*a\s*technical\s*issue/i.test(clean) ||
-    /encountered\s*a\s*technical\s*issue/i.test(clean) ||
-    /please\s*try\s*again\s*later/i.test(clean) ||
-    /service\s*is\s*currently\s*unavailable/i.test(clean) ||
-    /model\s*is\s*currently\s*overloaded/i.test(clean) ||
-    /^(error|internal\s*server\s*error|bad\s*gateway|gateway\s*timeout)$/i.test(clean) ||
-    /rate\s*limit\s*exceeded|too\s*many\s*requests/i.test(clean)
-  );
-}
-
-function isIdentityQuestionPrompt(promptText) {
-  const clean = String(promptText || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!clean || clean.length > 90) return false;
-  return (
-    /\b(siapa kamu|kamu siapa|siapa namamu|nama kamu siapa)\b/.test(clean) ||
-    /\b(kamu model apa|kamu model ai apa|model ai apa|pakai model apa|mesin ai apa|kamu ai apa|ai apa ini)\b/.test(clean) ||
-    /\b(who are you|what model are you|what ai are you)\b/.test(clean)
-  );
-}
-
-function isSimpleGreetingPrompt(promptText) {
-  const clean = String(promptText || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return /^(halo|hai|hi|hello|tes|test|ping|p|pagi|siang|sore|malam|assalamualaikum)$/.test(clean);
-}
-
-function buildIdentityReply(modelId) {
-  const { name, provider } = getModelMeta(modelId);
-  return `Halo! Saya **HAOMI AI** yang saat ini berjalan menggunakan mesin model **${name}** dari **${provider}**. Saya siap membantu kamu menjawab pertanyaan, menyusun kode program, maupun membahas berbagai topik. Ada yang ingin kamu tanyakan?`;
-}
-
-function sanitizeAiIdentity(text, modelId, rawUserPrompt = "") {
-  if (typeof text !== "string" || !text.trim()) return "";
-  const { name, provider } = getModelMeta(modelId);
-  let out = text.trim();
-
-  if (isUpstreamErrorText(out)) {
-    return "";
-  }
-
-  // Jika user bertanya langsung tentang model/identitas dan upstream menjawab sebagai model lain / UnlimitedAI
-  if (isIdentityQuestionPrompt(rawUserPrompt)) {
-    if (/unlimitedai|model bahasa|language model|openai|anthropic|claude|gemini|gpt|copilot|asisten/i.test(out)) {
-      return buildIdentityReply(modelId);
-    }
-  }
-
-  out = out.replace(
-    /Saya\s+(?:adalah\s+)?UnlimitedAI(?:\.Chat)?\s*,\s*sebuah\s+model\s+bahasa\s+yang\s+dikembangkan\s+oleh\s+tim\s+UnlimitedAI(?:\.Chat)?\.?/gi,
-    `Saya **HAOMI AI** yang berjalan menggunakan mesin model **${name}** (${provider}).`
-  );
-  out = out.replace(
-    /I\s+am\s+UnlimitedAI(?:\.Chat)?\s*,\s*a\s+language\s+model\s+developed\s+by\s+the\s+UnlimitedAI(?:\.Chat)?\s+team\.?/gi,
-    `Saya **HAOMI AI** yang berjalan menggunakan mesin model **${name}** (${provider}).`
-  );
-  out = out.replace(/tim\s+UnlimitedAI(?:\.Chat)?/gi, `tim ${provider} pada konsol HAOMI AI`);
-  out = out.replace(/UnlimitedAI\.Chat/gi, `HAOMI AI (${name})`);
-  out = out.replace(/UnlimitedAI/gi, `HAOMI AI (${name})`);
-  return out;
-}
-
-function extractAiAnswer(data, modelId = "openai/gpt-4o", rawUserPrompt = "") {
-  if (typeof data === "string") return sanitizeAiIdentity(data.trim(), modelId, rawUserPrompt);
+function extractAiAnswer(data) {
+  if (typeof data === "string") return data.trim();
   if (!data || typeof data !== "object") return "";
 
   const candidates = [
@@ -322,8 +220,7 @@ function extractAiAnswer(data, modelId = "openai/gpt-4o", rawUserPrompt = "") {
 
   for (const item of candidates) {
     if (typeof item === "string" && item.trim()) {
-      const cleaned = sanitizeAiIdentity(item.trim(), modelId, rawUserPrompt);
-      if (cleaned) return cleaned;
+      return item.trim();
     }
     if (item && typeof item === "object" && !Array.isArray(item)) {
       const nested =
@@ -336,8 +233,7 @@ function extractAiAnswer(data, modelId = "openai/gpt-4o", rawUserPrompt = "") {
         item.content ??
         item.message;
       if (typeof nested === "string" && nested.trim()) {
-        const cleaned = sanitizeAiIdentity(nested.trim(), modelId, rawUserPrompt);
-        if (cleaned) return cleaned;
+        return nested.trim();
       }
     }
   }
@@ -345,38 +241,12 @@ function extractAiAnswer(data, modelId = "openai/gpt-4o", rawUserPrompt = "") {
   return "";
 }
 
-function isValidAiPayload(data, modelId, rawUserPrompt = "") {
-  if (!data || typeof data !== "object") return false;
-  if (data.status === false || data.success === false) return false;
-  const answer = extractAiAnswer(data, modelId, rawUserPrompt);
-  if (!answer || isUpstreamErrorText(answer)) return false;
-  return true;
-}
-
-function extractSessionId(data, fallbackId) {
-  if (!data || typeof data !== "object") return fallbackId;
-  const candidates = [
-    data.session_id,
-    data.chatId,
-    data.chat_id,
-    data.sessionId,
-    data.result?.chatId,
-    data.result?.chat_id,
-    data.result?.session_id,
-    data.result?.sessionId,
-    data.data?.chatId,
-    data.data?.chat_id,
-    data.data?.session_id,
-    data.data?.sessionId,
-  ];
-
-  for (const id of candidates) {
-    if (typeof id === "string" && id.trim()) {
-      return id.trim();
-    }
-  }
-
-  return fallbackId;
+function isTechnicalIssueAnswer(text) {
+  if (typeof text !== "string" || !text.trim()) return true;
+  return (
+    /sorry,\s*ai\s*service\s*encountered\s*a\s*technical\s*issue/i.test(text) ||
+    /maaf,\s*layanan\s*ai\s*mengalami\s*masalah\s*teknis/i.test(text)
+  );
 }
 
 function resolveBestGeminiModel(requestedModel, availableModels = []) {
@@ -410,29 +280,6 @@ function resolveBestGeminiModel(requestedModel, availableModels = []) {
   return availableModels[0];
 }
 
-// Daftar model cadangan paling stabil di /api/ai/aichat berdasarkan keluarga model
-function getReliableFallbackModels(requestedModel) {
-  const m = String(requestedModel || "").toLowerCase();
-  const candidates = [];
-  if (m.startsWith("anthropic/")) {
-    candidates.push("anthropic/claude-opus-4.5", "anthropic/claude-haiku-4.5");
-  } else if (m.startsWith("google/") || m.startsWith("gemini")) {
-    candidates.push("google/gemini-3-pro-preview", "google/gemini-3.1-flash-lite");
-  } else if (m.startsWith("openai/")) {
-    candidates.push("openai/gpt-4o", "openai/gpt-4o-mini");
-  } else if (m.startsWith("deepseek/")) {
-    candidates.push("deepseek/deepseek-v3.2-thinking", "openai/gpt-4o");
-  }
-  candidates.push(
-    "anthropic/claude-opus-4.5",
-    "google/gemini-3-pro-preview",
-    "openai/gpt-4o",
-    "openai/gpt-4o-mini",
-    "chatday/ai-chat"
-  );
-  return [...new Set(candidates)].filter((item) => item !== requestedModel);
-}
-
 async function callJerexd(endpoint, params = {}) {
   const response = await http.get(endpoint, {
     params: {
@@ -442,51 +289,6 @@ async function callJerexd(endpoint, params = {}) {
   });
 
   return response.data;
-}
-
-async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini-2.0-pro", displayModelId = preferredModel, rawUserPrompt = "") {
-  const cleanChatId = String(sessionId || "HAOMI_XML").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20) || "HAOMI_XML";
-  try {
-    let data = await callJerexd("/api/ai/gemini", {
-      prompt: promptText,
-      model: preferredModel,
-      chatId: cleanChatId,
-    });
-    if (
-      !isValidAiPayload(data, displayModelId, rawUserPrompt) &&
-      Array.isArray(data?.models) &&
-      data.models.length > 0
-    ) {
-      const resolvedModel = resolveBestGeminiModel(preferredModel, data.models);
-      data = await callJerexd("/api/ai/gemini", {
-        prompt: promptText,
-        model: resolvedModel,
-        chatId: cleanChatId,
-      });
-    }
-    if (isValidAiPayload(data, displayModelId, rawUserPrompt)) {
-      const ans = extractAiAnswer(data, displayModelId, rawUserPrompt);
-      if (ans) return { data, answer: ans };
-    }
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-async function tryCopilotFallback(queryText, displayModelId = "microsoft/copilot", rawUserPrompt = "") {
-  try {
-    const data = await callJerexd("/api/ai/copilot", {
-      query: queryText,
-    });
-    if (isValidAiPayload(data, displayModelId, rawUserPrompt)) {
-      const ans = extractAiAnswer(data, displayModelId, rawUserPrompt);
-      if (ans) return { data, answer: ans };
-    }
-  } catch {
-    // ignore
-  }
-  return null;
 }
 
 async function handleGeminiModels(req, res) {
@@ -514,9 +316,6 @@ async function handleChat(req, res) {
     "Pesan"
   );
 
-  const rawPrompt = getInput(req, "raw_prompt", prompt) || prompt;
-  const contextPrompt = getInput(req, "context_prompt", rawPrompt) || rawPrompt;
-
   const requestedModel = getInput(
     req,
     "model",
@@ -543,213 +342,145 @@ async function handleChat(req, res) {
     });
   }
 
-  const isReset = getInput(req, "reset") === "true";
-
-  const rawSessionId =
-    getInput(req, "chatId") ||
+  const sessionId =
     getInput(req, "session_id") ||
-    `HAOMI_XML_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-
-  const baseSessionId = isReset
-    ? `HAOMI_XML_${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-    : rawSessionId;
-
-  const scopedSessionId = getScopedSessionId(baseSessionId, model);
-
-  // Jika user bertanya langsung tentang identitas model ("Kamu model ai apa", "Halo siapa kamu"),
-  // langsung berikan jawaban identitas model yang akurat & instan tanpa risiko ditolak filter upstream.
-  if (isIdentityQuestionPrompt(rawPrompt)) {
-    return sendJson(res, 200, {
-      success: true,
-      message: "Berhasil mendapatkan jawaban.",
-      session_id: baseSessionId,
-      model,
-      answer: buildIdentityReply(model),
-    });
-  }
-
-  // Gunakan prompt yang bersih tanpa kata "UnlimitedAI.Chat" agar tidak memicu blokir WAF upstream
-  const cleanUserPrompt = rawPrompt.trim();
+    `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
   // 1. Endpoint Microsoft Copilot (/api/ai/copilot?apikey=...&query=...)
   if (isCopilot) {
-    const primaryQuery = !isReset && contextPrompt ? contextPrompt : cleanUserPrompt;
-    let data = null;
-
-    try {
-      data = await callJerexd("/api/ai/copilot", {
-        query: primaryQuery,
-      });
-      if (!isValidAiPayload(data, model, rawPrompt) && primaryQuery !== cleanUserPrompt) {
-        data = await callJerexd("/api/ai/copilot", {
-          query: cleanUserPrompt,
-        });
-      }
-    } catch {
-      data = { status: false };
-    }
-
-    if (isValidAiPayload(data, model, rawPrompt)) {
-      return sendJson(res, 200, {
-        success: true,
-        message: "Berhasil mendapatkan jawaban dari Copilot.",
-        session_id: baseSessionId,
-        model: "microsoft/copilot",
-        stateless_session: true,
-        answer: extractAiAnswer(data, model, rawPrompt),
-        raw: data,
-      });
-    }
-
-    const gemFallback = await tryGeminiFallback(cleanUserPrompt, scopedSessionId, "gemini-2.0-pro", model, rawPrompt);
-    if (gemFallback) {
-      return sendJson(res, 200, {
-        success: true,
-        message: "Berhasil mendapatkan jawaban.",
-        session_id: baseSessionId,
-        model: "microsoft/copilot",
-        answer: gemFallback.answer,
-        raw: gemFallback.data,
-      });
-    }
-  }
-
-  // 2. Endpoint Gemini AI (/api/ai/gemini?apikey=...&prompt=...&model=...&chatId=HAOMI_XML)
-  if (isGeminiDirect) {
-    const gemDirect = await tryGeminiFallback(cleanUserPrompt, scopedSessionId, model, model, rawPrompt);
-    if (gemDirect) {
-      return sendJson(res, 200, {
-        success: true,
-        message: "Berhasil mendapatkan jawaban dari Gemini.",
-        session_id: baseSessionId,
-        chatId: baseSessionId,
-        model,
-        answer: gemDirect.answer,
-        raw: gemDirect.data,
-      });
-    }
-
-    const copFallback = await tryCopilotFallback(cleanUserPrompt, model, rawPrompt);
-    if (copFallback) {
-      return sendJson(res, 200, {
-        success: true,
-        message: "Berhasil mendapatkan jawaban.",
-        session_id: baseSessionId,
-        chatId: baseSessionId,
-        model,
-        answer: copFallback.answer,
-        raw: copFallback.data,
-      });
-    }
-  }
-
-  // 3. Endpoint AI Chat Multi-Model (/api/ai/aichat) dengan Deteksi Error Semu & Auto-Failover Berlapis
-  let data = null;
-
-  // Percobaan 3A: Panggil model yang diminta memakai cleanUserPrompt & scopedSessionId
-  try {
-    data = await callJerexd("/api/ai/aichat", {
-      prompt: cleanUserPrompt,
-      model,
-      session_id: scopedSessionId,
-      ...(isReset ? { reset: "true" } : {}),
+    const data = await callJerexd("/api/ai/copilot", {
+      query: prompt,
     });
-  } catch {
-    data = { status: false };
-  }
 
-  // Percobaan 3B: Jika balasan mengandung "Sorry, AI service encountered a technical issue", ulangi dengan session_id standar "HAOMI_XML"
-  if (!isValidAiPayload(data, model, rawPrompt)) {
-    try {
-      data = await callJerexd("/api/ai/aichat", {
-        prompt: cleanUserPrompt,
-        model,
-        session_id: "HAOMI_XML",
+    if (data?.status === false) {
+      return sendJson(res, 502, {
+        success: false,
+        message: data.message || "Copilot AI belum berhasil menjawab.",
+        details: data,
+        session_id: sessionId,
       });
-    } catch {
-      data = { status: false };
     }
+
+    return sendJson(res, 200, {
+      success: true,
+      message: "Berhasil mendapatkan jawaban.",
+      session_id: sessionId,
+      model: "microsoft/copilot",
+      answer: extractAiAnswer(data) || data?.result || data,
+      raw: data,
+    });
   }
 
-  // Percobaan 3C: Jika model spesifik (mis. gpt-5.6-terra / claude-sonnet-5 / claude-opus-4.8) sedang gangguan di upstream,
-  // otomatis alihkan ke daftar model paling stabil di keluarga yang sama
-  if (!isValidAiPayload(data, model, rawPrompt)) {
-    const fallbackModels = getReliableFallbackModels(model);
-    for (const candidateModel of fallbackModels) {
+  // 2. Endpoint Gemini Direct (/api/ai/gemini?apikey=...&prompt=...&model=...&chatId=HAOMI_XML)
+  if (isGeminiDirect) {
+    const chatId = getInput(req, "chatId", "HAOMI_XML") || "HAOMI_XML";
+    let data = await callJerexd("/api/ai/gemini", {
+      prompt,
+      model,
+      chatId,
+    });
+
+    if (
+      data?.status === false &&
+      Array.isArray(data?.models) &&
+      data.models.length > 0 &&
+      model.toLowerCase() !== "list"
+    ) {
+      const resolvedModel = resolveBestGeminiModel(model, data.models);
+      data = await callJerexd("/api/ai/gemini", {
+        prompt,
+        model: resolvedModel,
+        chatId,
+      });
+    }
+
+    if (data?.status === false) {
+      return sendJson(res, 502, {
+        success: false,
+        message: data?.message || "Gemini AI tidak berhasil menjawab.",
+        details: data,
+        session_id: chatId,
+      });
+    }
+
+    return sendJson(res, 200, {
+      success: true,
+      message: "Berhasil mendapatkan jawaban.",
+      session_id: data?.chatId || data?.session_id || chatId,
+      model: data?.model || model,
+      answer: extractAiAnswer(data) || data?.result || data,
+      raw: data,
+    });
+  }
+
+  // 3. Endpoint Utama JERE API (/api/ai/aichat) persis sesuai format asli
+  let data = await callJerexd("/api/ai/aichat", {
+    prompt,
+    model,
+    session_id: sessionId,
+    ...(getInput(req, "reset") === "true"
+      ? { reset: "true" }
+      : {}),
+  });
+
+  // Jika model tertentu di JERE API sedang mengembalikan technical issue,
+  // coba ulangi memakai model JERE API yang aktif (anthropic/claude-opus-4.5 atau google/gemini-3-pro-preview atau openai/gpt-4o)
+  if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
+    const fallbackModels = [
+      "anthropic/claude-opus-4.5",
+      "google/gemini-3-pro-preview",
+      "openai/gpt-4o",
+      "openai/gpt-4o-mini",
+    ].filter((m) => m !== model);
+
+    for (const fbModel of fallbackModels) {
       try {
         const retryData = await callJerexd("/api/ai/aichat", {
-          prompt: cleanUserPrompt,
-          model: candidateModel,
-          session_id: getScopedSessionId(baseSessionId, candidateModel),
+          prompt,
+          model: fbModel,
+          session_id: `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         });
-        if (isValidAiPayload(retryData, model, rawPrompt)) {
+        if (retryData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(retryData))) {
           data = retryData;
           break;
         }
       } catch {
-        // lanjut kandidat berikutnya
+        // lanjut
       }
     }
   }
 
-  // Percobaan 3D: Failover ke Endpoint Gemini Direct (/api/ai/gemini)
-  if (!isValidAiPayload(data, model, rawPrompt)) {
-    const gemFallback = await tryGeminiFallback(cleanUserPrompt, scopedSessionId, "gemini-2.0-pro", model, rawPrompt);
-    if (gemFallback) {
-      return sendJson(res, 200, {
-        success: true,
-        message: "Berhasil mendapatkan jawaban.",
-        session_id: baseSessionId,
-        model,
-        answer: gemFallback.answer,
-        raw: gemFallback.data,
-      });
-    }
+  // Jika masih gagal di aichat, coba ke /api/ai/copilot JERE API
+  if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
+    try {
+      const copData = await callJerexd("/api/ai/copilot", { query: prompt });
+      if (copData?.status !== false && extractAiAnswer(copData)) {
+        data = copData;
+      }
+    } catch {}
   }
 
-  // Percobaan 3E: Failover ke Endpoint Microsoft Copilot (/api/ai/copilot)
-  if (!isValidAiPayload(data, model, rawPrompt)) {
-    const copFallback = await tryCopilotFallback(cleanUserPrompt, model, rawPrompt);
-    if (copFallback) {
-      return sendJson(res, 200, {
-        success: true,
-        message: "Berhasil mendapatkan jawaban.",
-        session_id: baseSessionId,
-        model,
-        answer: copFallback.answer,
-        raw: copFallback.data,
-      });
-    }
-  }
-
-  // Jika sapaan sederhana ("Halo", "Hai", "Tes") dan semua jalur upstream sedang sibuk
-  if (!isValidAiPayload(data, model, rawPrompt) && isSimpleGreetingPrompt(rawPrompt)) {
-    return sendJson(res, 200, {
-      success: true,
-      message: "Berhasil mendapatkan jawaban.",
-      session_id: baseSessionId,
-      model,
-      answer: buildIdentityReply(model),
-    });
-  }
-
-  if (!isValidAiPayload(data, model, rawPrompt)) {
+  if (data?.status === false) {
     return sendJson(res, 502, {
       success: false,
-      message: "Server AI sedang padat, silakan kirim ulang pesanmu.",
+      message: data.message || "JERE-API tidak berhasil menjawab.",
       details: data,
-      session_id: baseSessionId,
+      session_id: sessionId,
     });
   }
-
-  const answer = extractAiAnswer(data, model, rawPrompt);
 
   return sendJson(res, 200, {
     success: true,
     message: "Berhasil mendapatkan jawaban.",
-    session_id: baseSessionId,
-    model,
-    answer: answer || buildIdentityReply(model),
+    session_id: data?.session_id || sessionId,
+    model: data?.model || model,
+    answer:
+      data?.result ??
+      data?.answer ??
+      data?.response ??
+      data?.message ??
+      data?.data ??
+      data,
     history_count: data?.history_count,
     raw: data,
   });
@@ -875,7 +606,7 @@ async function handleViuPrem(req, res) {
   });
 }
 
-// 2. Info Kota (/api/search/infokota) + Peningkatan Deskripsi Narasi Otomatis
+// 2. Info Kota (/api/search/infokota)
 async function handleInfoKota(req, res) {
   const kota = requireString(
     getInput(req, "kota", getInput(req, "city", "Jombang")),
@@ -924,7 +655,7 @@ async function handleInfoKota(req, res) {
   });
 }
 
-// 3. Tmp Files (/api/tools/tmpfiles) - Mendukung POST multipart/form-data & GET
+// 3. Tmp Files (/api/tools/tmpfiles)
 async function handleTmpFiles(req, res) {
   const url = getInput(req, "url", "");
   const text = getInput(req, "text", "");
@@ -978,7 +709,7 @@ async function handleTmpFiles(req, res) {
   });
 }
 
-// 4. Web2APK (/api/tools/web2apk) - Menggunakan POST multipart/form-data (URL, NAME, FILE UPLOAD) + fallback GET
+// 4. Web2APK (/api/tools/web2apk)
 async function handleWeb2Apk(req, res) {
   const url = requireHttpUrl(
     getInput(req, "url", "https://hao-ai-kappa.vercel.app/"),
