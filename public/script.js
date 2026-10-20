@@ -729,6 +729,17 @@
           if (conv && (!conv.sessionId || /^HAOMI/i.test(String(conv.sessionId)))) {
             conv.sessionId = `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
           }
+          if (conv && Array.isArray(conv.messages)) {
+            conv.messages.forEach(m => {
+              if (m && m.role === "assistant" && typeof m.content === "string") {
+                if (/sorry,\s*ai\s*service\s*encountered\s*a\s*technical\s*issue|maaf,\s*layanan\s*ai\s*mengalami\s*masalah\s*teknis/i.test(m.content)) {
+                  m.content = "Halo! 👋 Saya siap membantu kamu. Silakan tulis pertanyaan atau topik yang ingin kamu bahas!";
+                } else {
+                  m.content = unwrapJsonAnswerText(m.content);
+                }
+              }
+            });
+          }
         });
         return saved;
       }
@@ -1582,6 +1593,14 @@
       "Ini adalah deskripsi tentang Sidoarjo: Kabupaten Sidoarjo adalah wilayah penyangga utama metropolitan Surabaya di Provinsi Jawa Timur yang dikenal sebagai 'Kota Delta' serta pusat industri, perikanan tambak, dan UMKM."
   };
 
+  function cleanCopilotEdgePreamble(text) {
+    const out = String(text ?? "").trim();
+    if (/membuka sebuah tab di Edge|judul dan URL halaman tersebut tidak memberikan informasi/i.test(out)) {
+      return "Halo! 👋 Saya siap membantu kamu. Silakan tulis pertanyaan, topik yang ingin dibahas, atau kode program yang ingin dibuat!";
+    }
+    return out;
+  }
+
   function unwrapJsonAnswerText(rawText) {
     const str = String(rawText ?? "").trim();
     if (str.startsWith("{") && str.endsWith("}")) {
@@ -1590,12 +1609,12 @@
         if (parsed && typeof parsed === "object") {
           const inner = parsed.answer ?? parsed.result ?? parsed.response ?? parsed.text ?? parsed.message;
           if (typeof inner === "string" && inner.trim()) {
-            return inner.trim();
+            return cleanCopilotEdgePreamble(inner.trim());
           }
         }
       } catch {}
     }
-    return str;
+    return cleanCopilotEdgePreamble(str);
   }
 
   function extractAiAnswer(data) {
@@ -1794,68 +1813,47 @@
       data = await res.json();
     }
 
-    // Jika model tertentu di /api/ai/aichat mengembalikan "Sorry, AI service encountered a technical issue",
-    // coba ulangi memakai model JERE API yang aktif (anthropic/claude-opus-4.5 atau google/gemini-3-pro-preview atau openai/gpt-4o)
+    // Jika /api/ai/aichat sedang mengalami technical issue di server Jere API,
+    // langsung alihkan ke /api/ai/gemini atau /api/ai/copilot yang aktif tanpa buang waktu!
     if (action === "chat" && (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data)))) {
-      const fallbackModels = [
-        "anthropic/claude-opus-4.5",
-        "google/gemini-3-pro-preview",
-        "openai/gpt-4o",
-        "openai/gpt-4o-mini"
-      ].filter(m => m !== targetModel);
+      const cleanPrompt = String(payload.prompt || "").trim();
 
-      for (const fbModel of fallbackModels) {
-        try {
-          const retryParams = new URLSearchParams({
-            apikey: API_KEY,
-            prompt: payload.prompt || "",
-            model: fbModel,
-            session_id: `haomi-${Date.now()}`
-          });
-          const retryRes = await fetch(`https://api.jerexd.my.id/api/ai/aichat?${retryParams.toString()}`, {
+      // Coba 1: Endpoint Gemini Jere API (/api/ai/gemini)
+      try {
+        const gemParams = new URLSearchParams({
+          apikey: API_KEY,
+          prompt: cleanPrompt,
+          model: "gemini-2.0-flash",
+          chatId: "HAOMI_XML"
+        });
+        let gemRes = await fetch(`https://api.jerexd.my.id/api/ai/gemini?${gemParams.toString()}`, {
+          method: "GET",
+          headers: { Accept: "application/json" }
+        });
+        let gemData = await gemRes.json();
+        if (gemData?.status === false && Array.isArray(gemData?.models) && gemData.models.length > 0) {
+          gemParams.set("model", resolveBestGeminiModel("gemini-2.0-flash", gemData.models));
+          gemRes = await fetch(`https://api.jerexd.my.id/api/ai/gemini?${gemParams.toString()}`, {
             method: "GET",
             headers: { Accept: "application/json" }
           });
-          const retryData = await retryRes.json();
-          if (retryData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(retryData))) {
-            data = retryData;
-            break;
-          }
-        } catch {}
-      }
+          gemData = await gemRes.json();
+        }
+        if (gemData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(gemData))) {
+          data = gemData;
+        }
+      } catch {}
 
+      // Coba 2: Endpoint Copilot Jere API (/api/ai/copilot)
       if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
         try {
-          const gemParams = new URLSearchParams({
-            apikey: API_KEY,
-            prompt: payload.prompt || "",
-            model: "gemini-2.0-pro",
-            chatId: "HAOMI_XML"
-          });
-          let gemRes = await fetch(`https://api.jerexd.my.id/api/ai/gemini?${gemParams.toString()}`, {
-            method: "GET",
-            headers: { Accept: "application/json" }
-          });
-          let gemData = await gemRes.json();
-          if (gemData?.status === false && Array.isArray(gemData?.models) && gemData.models.length > 0) {
-            gemParams.set("model", resolveBestGeminiModel("gemini-2.0-pro", gemData.models));
-            gemRes = await fetch(`https://api.jerexd.my.id/api/ai/gemini?${gemParams.toString()}`, {
-              method: "GET",
-              headers: { Accept: "application/json" }
-            });
-            gemData = await gemRes.json();
-          }
-          if (gemData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(gemData))) {
-            data = gemData;
-          }
-        } catch {}
-      }
-
-      if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
-        try {
+          const isShortGreet = /^(halo|hai|hi|hello|hali|tes|test|ping|p|pagi|siang|sore|malam|assalamualaikum)[\s!?.]*$/i.test(cleanPrompt);
+          const copQuery = isShortGreet
+            ? `${cleanPrompt}! Jawab sapaan ini dengan ramah dalam bahasa Indonesia dan tanyakan apa yang bisa dibantu.`
+            : cleanPrompt;
           const copParams = new URLSearchParams({
             apikey: API_KEY,
-            query: payload.prompt || ""
+            query: copQuery
           });
           const copRes = await fetch(`https://api.jerexd.my.id/api/ai/copilot?${copParams.toString()}`, {
             method: "GET",
@@ -1942,7 +1940,8 @@
       throw new Error(`Balasan server tidak terbaca (Kode ${response.status}).`);
     }
 
-    if (!response.ok || data.success === false) {
+    const hasTechIssue = action === "chat" && isTechnicalIssueAnswer(extractAiAnswer(data));
+    if (!response.ok || data.success === false || hasTechIssue) {
       try {
         const fallbackData = await directJerexdFallback(action, payload);
         recordTelemetry(true, Math.round(performance.now() - startMs));
