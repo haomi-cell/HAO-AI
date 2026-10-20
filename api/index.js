@@ -70,7 +70,6 @@ const CITY_KNOWLEDGE_BASE = {
     "Ini adalah deskripsi tentang Semarang: Kota Semarang adalah ibu kota Provinsi Jawa Tengah sekaligus kota pelabuhan, perdagangan, dan industri utama di jalur pantai utara (Pantura) Pulau Jawa yang terkenal dengan kawasan bersejarah Kota Lama.",
 };
 
-// Cache daftar model Gemini dari Jere API agar tidak perlu query ulang setiap saat
 let cachedGeminiModels = null;
 
 function sendJson(res, statusCode, data) {
@@ -197,8 +196,6 @@ function buildMultipartPayload(fields = {}, filePart = null) {
   };
 }
 
-// Panggil JERE API menggunakan WHATWG URL & Native Fetch (tidak memicu DEP0169 url.parse)
-// dan tetap membaca body JSON meskipun status HTTP 400/500 (penting untuk /api/ai/gemini model=list)
 async function callJerexd(endpoint, params = {}, timeoutMs = 45000) {
   const targetUrl = new URL(endpoint, BASE_URL);
   targetUrl.searchParams.set("apikey", API_KEY);
@@ -276,7 +273,6 @@ async function postJerexdMultipart(endpoint, params = {}, bodyBuffer, boundary, 
   }
 }
 
-// Bersihkan kalimat pembuka bawaan Edge Sidebar pada Copilot ketika user hanya menyapa "Halo" / "Tes"
 function cleanCopilotEdgePreamble(text) {
   if (typeof text !== "string" || !text.trim()) return "";
   let out = text.trim();
@@ -285,10 +281,15 @@ function cleanCopilotEdgePreamble(text) {
     return "Halo! 👋 Saya siap membantu kamu. Silakan tulis pertanyaan, topik yang ingin dibahas, atau kode program yang ingin dibuat!";
   }
 
+  // Bersihkan kalimat pembuka bahasa Mandarin dari UnlimitedAI jika terselip di awal jawaban
+  out = out.replace(
+    /^你好，我是\s*UnlimitedAI\.Chat[^。！\n]*[。！]\s*(?:很高興能為你提供[^。！\n]*[。！]\s*)?/i,
+    "Halo! "
+  );
+
   return out;
 }
 
-// Ekstrak teks jawaban murni dari struktur objek bersarang apa pun (termasuk { result: { prompt, answer } })
 function extractAiAnswer(data) {
   if (typeof data === "string") return cleanCopilotEdgePreamble(data.trim());
   if (!data || typeof data !== "object") return "";
@@ -349,12 +350,31 @@ function isTechnicalIssueAnswer(text) {
   );
 }
 
-function isUsableAiResponse(data) {
+// Deteksi apakah balasan AI malah keluar bahasa Mandarin/Cina padahal user tidak meminta bahasa Mandarin
+function isUnwantedChineseAnswer(text, userPrompt = "") {
+  if (typeof text !== "string" || !text.trim()) return false;
+  if (/mandarin|chinese|china|cina|hanzi|漢字|汉字|[\u4e00-\u9fff]/i.test(String(userPrompt || ""))) {
+    return false;
+  }
+  const cjkMatches = text.match(/[\u4e00-\u9fff]/g);
+  return Boolean(cjkMatches && cjkMatches.length >= 6);
+}
+
+function isUsableAiResponse(data, userPrompt = "") {
   if (!data || typeof data !== "object") return false;
   if (data.status === false || data.success === false) return false;
   const ans = extractAiAnswer(data);
-  if (!ans || isTechnicalIssueAnswer(ans)) return false;
+  if (!ans || isTechnicalIssueAnswer(ans) || isUnwantedChineseAnswer(ans, userPrompt)) return false;
   return true;
+}
+
+// Tambahkan akhiran kalimat singkat tanpa kurung siku agar UnlimitedAI.Chat tidak membalas pakai bahasa Mandarin
+function buildIndonesianPrompt(rawPrompt) {
+  const clean = String(rawPrompt || "").trim();
+  if (/bahasa indonesia|in english|mandarin|jepang/i.test(clean)) {
+    return clean;
+  }
+  return `${clean} (Jawab menggunakan Bahasa Indonesia)`;
 }
 
 function resolveBestGeminiModel(requestedModel, availableModels = []) {
@@ -381,35 +401,31 @@ function resolveBestGeminiModel(requestedModel, availableModels = []) {
   return availableModels[0];
 }
 
-// Panggil /api/ai/gemini dengan resolusi otomatis nama model yang terdaftar di Jere API
 async function callGeminiSmart(promptText, requestedModel = "gemini-2.0-pro", chatId = "HAOMI_XML") {
   const cleanChatId = String(chatId || "HAOMI_XML").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 24) || "HAOMI_XML";
+  const promptIndo = buildIndonesianPrompt(promptText);
 
-  // Jika sudah punya daftar model valid dari Jere API, langsung pilih yang cocok
   let modelToUse = cachedGeminiModels?.length
     ? resolveBestGeminiModel(requestedModel, cachedGeminiModels)
     : requestedModel;
 
   let data = await callJerexd("/api/ai/gemini", {
-    prompt: promptText,
+    prompt: promptIndo,
     model: modelToUse,
     chatId: cleanChatId,
   }, 25000);
 
-  // Jika Jere API mengembalikan daftar models yang tersedia (saat nama model tidak cocok),
-  // simpan ke cache dan langsung panggil ulang dengan model valid pertama!
-  if (!isUsableAiResponse(data) && Array.isArray(data?.models) && data.models.length > 0) {
+  if (!isUsableAiResponse(data, promptText) && Array.isArray(data?.models) && data.models.length > 0) {
     cachedGeminiModels = data.models;
     const validModel = resolveBestGeminiModel(requestedModel, data.models);
     data = await callJerexd("/api/ai/gemini", {
-      prompt: promptText,
+      prompt: promptIndo,
       model: validModel,
       chatId: cleanChatId,
     }, 25000);
   }
 
-  // Jika belum punya daftar model dan masih gagal, cek via model=list
-  if (!isUsableAiResponse(data) && !cachedGeminiModels) {
+  if (!isUsableAiResponse(data, promptText) && !cachedGeminiModels) {
     const listData = await callJerexd("/api/ai/gemini", {
       prompt: "Halo",
       model: "list",
@@ -419,7 +435,7 @@ async function callGeminiSmart(promptText, requestedModel = "gemini-2.0-pro", ch
       cachedGeminiModels = listData.models;
       const validModel = resolveBestGeminiModel(requestedModel, listData.models);
       data = await callJerexd("/api/ai/gemini", {
-        prompt: promptText,
+        prompt: promptIndo,
         model: validModel,
         chatId: cleanChatId,
       }, 25000);
@@ -429,13 +445,12 @@ async function callGeminiSmart(promptText, requestedModel = "gemini-2.0-pro", ch
   return data;
 }
 
-// Panggil /api/ai/copilot dengan penanganan sapaan singkat agar tidak memunculkan kalimat "tab di Edge"
 async function callCopilotSmart(promptText) {
   const clean = String(promptText || "").trim();
   const isShortGreeting = /^(halo|hai|hi|hello|hali|tes|test|ping|p|pagi|siang|sore|malam|assalamualaikum)[\s!?.]*$/i.test(clean);
   const queryToSend = isShortGreeting
     ? `${clean}! Jawab sapaan ini dengan ramah dalam bahasa Indonesia dan tanyakan apa yang bisa dibantu.`
-    : clean;
+    : buildIndonesianPrompt(clean);
 
   return await callJerexd("/api/ai/copilot", {
     query: queryToSend,
@@ -471,12 +486,13 @@ async function handleChat(req, res) {
     "Pesan"
   );
 
-  // Bersihkan prefix [Instruksi Gaya: ...] jika masih ada di cache browser lama
   const prompt =
     rawInputPrompt
       .replace(/^\[[\s\S]*?\]\s*/g, "")
       .replace(/^Pesan pengguna:\s*/i, "")
       .trim() || rawInputPrompt.trim();
+
+  const promptIndo = buildIndonesianPrompt(prompt);
 
   const requestedModel = getInput(
     req,
@@ -512,11 +528,11 @@ async function handleChat(req, res) {
   if (isCopilot) {
     let data = await callCopilotSmart(prompt);
 
-    if (!isUsableAiResponse(data)) {
+    if (!isUsableAiResponse(data, prompt)) {
       data = await callGeminiSmart(prompt, "gemini-2.0-pro", "HAOMI_XML");
     }
 
-    if (!isUsableAiResponse(data)) {
+    if (!isUsableAiResponse(data, prompt)) {
       return sendJson(res, 502, {
         success: false,
         message: "Layanan AI sedang sibuk, silakan coba kirim ulang.",
@@ -539,11 +555,11 @@ async function handleChat(req, res) {
     const chatId = getInput(req, "chatId", "HAOMI_XML") || "HAOMI_XML";
     let data = await callGeminiSmart(prompt, model, chatId);
 
-    if (!isUsableAiResponse(data)) {
+    if (!isUsableAiResponse(data, prompt)) {
       data = await callCopilotSmart(prompt);
     }
 
-    if (!isUsableAiResponse(data)) {
+    if (!isUsableAiResponse(data, prompt)) {
       return sendJson(res, 502, {
         success: false,
         message: "Layanan Gemini AI sedang sibuk, silakan coba lagi.",
@@ -561,11 +577,11 @@ async function handleChat(req, res) {
     });
   }
 
-  // 3. Jalur Utama /api/ai/aichat JERE API
+  // 3. Jalur Utama /api/ai/aichat JERE API (dengan akhiran Bahasa Indonesia agar tidak membalas pakai bahasa Mandarin)
   let data = null;
   try {
     data = await callJerexd("/api/ai/aichat", {
-      prompt,
+      prompt: promptIndo,
       model,
       session_id: sessionId,
       ...(getInput(req, "reset") === "true" ? { reset: "true" } : {}),
@@ -574,43 +590,41 @@ async function handleChat(req, res) {
     data = { status: false };
   }
 
-  // Jika /api/ai/aichat mengembalikan "Sorry, AI service encountered a technical issue",
-  // jangan loop 6x di /api/ai/aichat yang sedang limit! Coba 1x gpt-4o lalu langsung alihkan ke /api/ai/gemini atau /api/ai/copilot yang aktif!
-  if (!isUsableAiResponse(data) && model !== "openai/gpt-4o") {
+  // Jika balasan masih berbahasa Mandarin atau technical issue, coba ulangi dengan sesi baru & penegasan Bahasa Indonesia
+  if (!isUsableAiResponse(data, prompt)) {
     try {
-      const retryGpt4o = await callJerexd("/api/ai/aichat", {
-        prompt,
-        model: "openai/gpt-4o",
-        session_id: `haomi-${Date.now()}`,
-      }, 15000);
-      if (isUsableAiResponse(retryGpt4o)) {
-        data = retryGpt4o;
+      const retryIndo = await callJerexd("/api/ai/aichat", {
+        prompt: `Tolong jelaskan dalam Bahasa Indonesia: ${prompt}`,
+        model: model === "openai/gpt-4o" ? "anthropic/claude-opus-4.5" : "openai/gpt-4o",
+        session_id: `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      }, 16000);
+      if (isUsableAiResponse(retryIndo, prompt)) {
+        data = retryIndo;
       }
     } catch {}
   }
 
-  // Cadangan 1: Endpoint /api/ai/gemini Jere API (dengan auto-detect daftar model valid)
-  if (!isUsableAiResponse(data)) {
+  // Cadangan 1: Endpoint /api/ai/gemini Jere API
+  if (!isUsableAiResponse(data, prompt)) {
     try {
       const gemData = await callGeminiSmart(prompt, "gemini-2.0-pro", "HAOMI_XML");
-      if (isUsableAiResponse(gemData)) {
+      if (isUsableAiResponse(gemData, prompt)) {
         data = gemData;
       }
     } catch {}
   }
 
-  // Cadangan 2: Endpoint /api/ai/copilot Jere API (terbukti selalu aktif)
-  if (!isUsableAiResponse(data)) {
+  // Cadangan 2: Endpoint /api/ai/copilot Jere API
+  if (!isUsableAiResponse(data, prompt)) {
     try {
       const copData = await callCopilotSmart(prompt);
-      if (isUsableAiResponse(copData)) {
+      if (isUsableAiResponse(copData, prompt)) {
         data = copData;
       }
     } catch {}
   }
 
-  // Jangan pernah mengembalikan teks "Sorry, AI service encountered a technical issue" dengan status 200!
-  if (!isUsableAiResponse(data)) {
+  if (!isUsableAiResponse(data, prompt)) {
     return sendJson(res, 502, {
       success: false,
       message: "Server AI sedang padat, silakan coba kirim ulang pesanmu.",
