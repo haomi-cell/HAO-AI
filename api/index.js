@@ -217,23 +217,79 @@ function getModelMeta(modelId) {
   return { name: clean, provider: "AI" };
 }
 
+// Buat session_id pendek & alfanumerik murni (tanpa tanda hubung '-') yang 100% kompatibel dengan JERE API
 function getScopedSessionId(baseSessionId, modelId) {
-  const slug = String(modelId || "default")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 28);
-  const cleanBase = String(baseSessionId || "HAOMI_XML")
-    .replace(/_[a-z0-9_]{2,30}$/i, "");
-  return `${cleanBase}_${slug}`;
+  const rawBase = String(baseSessionId || "HAOMI_XML")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 12) || "HAOMIXML";
+  const modelCode = String(modelId || "gpt4o")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .slice(-6);
+  return `HAOMI_${rawBase.replace(/^HAOMIXML|^HAOMI/, "") || "XML"}_${modelCode}`;
 }
 
-function sanitizeAiIdentity(text, modelId) {
-  if (typeof text !== "string" || !text.trim()) return text;
-  const { name, provider } = getModelMeta(modelId);
-  let out = text;
+// Deteksi pesan error semu dari upstream yang dikembalikan dengan status: true
+function isUpstreamErrorText(text) {
+  if (typeof text !== "string") return true;
+  const clean = text.trim();
+  if (!clean) return true;
+  return (
+    /sorry,\s*ai\s*service\s*encountered\s*a\s*technical\s*issue/i.test(clean) ||
+    /encountered\s*a\s*technical\s*issue/i.test(clean) ||
+    /please\s*try\s*again\s*later/i.test(clean) ||
+    /service\s*is\s*currently\s*unavailable/i.test(clean) ||
+    /model\s*is\s*currently\s*overloaded/i.test(clean) ||
+    /^(error|internal\s*server\s*error|bad\s*gateway|gateway\s*timeout)$/i.test(clean) ||
+    /rate\s*limit\s*exceeded|too\s*many\s*requests/i.test(clean)
+  );
+}
 
-  // Ganti kalimat perkenalan bawaan UnlimitedAI.Chat agar sesuai mesin model yang dipilih user
+function isIdentityQuestionPrompt(promptText) {
+  const clean = String(promptText || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!clean || clean.length > 90) return false;
+  return (
+    /\b(siapa kamu|kamu siapa|siapa namamu|nama kamu siapa)\b/.test(clean) ||
+    /\b(kamu model apa|kamu model ai apa|model ai apa|pakai model apa|mesin ai apa|kamu ai apa|ai apa ini)\b/.test(clean) ||
+    /\b(who are you|what model are you|what ai are you)\b/.test(clean)
+  );
+}
+
+function isSimpleGreetingPrompt(promptText) {
+  const clean = String(promptText || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return /^(halo|hai|hi|hello|tes|test|ping|p|pagi|siang|sore|malam|assalamualaikum)$/.test(clean);
+}
+
+function buildIdentityReply(modelId) {
+  const { name, provider } = getModelMeta(modelId);
+  return `Halo! Saya **HAOMI AI** yang saat ini berjalan menggunakan mesin model **${name}** dari **${provider}**. Saya siap membantu kamu menjawab pertanyaan, menyusun kode program, maupun membahas berbagai topik. Ada yang ingin kamu tanyakan?`;
+}
+
+function sanitizeAiIdentity(text, modelId, rawUserPrompt = "") {
+  if (typeof text !== "string" || !text.trim()) return "";
+  const { name, provider } = getModelMeta(modelId);
+  let out = text.trim();
+
+  if (isUpstreamErrorText(out)) {
+    return "";
+  }
+
+  // Jika user bertanya langsung tentang model/identitas dan upstream menjawab sebagai model lain / UnlimitedAI
+  if (isIdentityQuestionPrompt(rawUserPrompt)) {
+    if (/unlimitedai|model bahasa|language model|openai|anthropic|claude|gemini|gpt|copilot|asisten/i.test(out)) {
+      return buildIdentityReply(modelId);
+    }
+  }
+
   out = out.replace(
     /Saya\s+(?:adalah\s+)?UnlimitedAI(?:\.Chat)?\s*,\s*sebuah\s+model\s+bahasa\s+yang\s+dikembangkan\s+oleh\s+tim\s+UnlimitedAI(?:\.Chat)?\.?/gi,
     `Saya **HAOMI AI** yang berjalan menggunakan mesin model **${name}** (${provider}).`
@@ -248,8 +304,8 @@ function sanitizeAiIdentity(text, modelId) {
   return out;
 }
 
-function extractAiAnswer(data, modelId = "openai/gpt-4o") {
-  if (typeof data === "string") return sanitizeAiIdentity(data.trim(), modelId);
+function extractAiAnswer(data, modelId = "openai/gpt-4o", rawUserPrompt = "") {
+  if (typeof data === "string") return sanitizeAiIdentity(data.trim(), modelId, rawUserPrompt);
   if (!data || typeof data !== "object") return "";
 
   const candidates = [
@@ -266,7 +322,8 @@ function extractAiAnswer(data, modelId = "openai/gpt-4o") {
 
   for (const item of candidates) {
     if (typeof item === "string" && item.trim()) {
-      return sanitizeAiIdentity(item.trim(), modelId);
+      const cleaned = sanitizeAiIdentity(item.trim(), modelId, rawUserPrompt);
+      if (cleaned) return cleaned;
     }
     if (item && typeof item === "object" && !Array.isArray(item)) {
       const nested =
@@ -279,12 +336,21 @@ function extractAiAnswer(data, modelId = "openai/gpt-4o") {
         item.content ??
         item.message;
       if (typeof nested === "string" && nested.trim()) {
-        return sanitizeAiIdentity(nested.trim(), modelId);
+        const cleaned = sanitizeAiIdentity(nested.trim(), modelId, rawUserPrompt);
+        if (cleaned) return cleaned;
       }
     }
   }
 
   return "";
+}
+
+function isValidAiPayload(data, modelId, rawUserPrompt = "") {
+  if (!data || typeof data !== "object") return false;
+  if (data.status === false || data.success === false) return false;
+  const answer = extractAiAnswer(data, modelId, rawUserPrompt);
+  if (!answer || isUpstreamErrorText(answer)) return false;
+  return true;
 }
 
 function extractSessionId(data, fallbackId) {
@@ -344,6 +410,29 @@ function resolveBestGeminiModel(requestedModel, availableModels = []) {
   return availableModels[0];
 }
 
+// Daftar model cadangan paling stabil di /api/ai/aichat berdasarkan keluarga model
+function getReliableFallbackModels(requestedModel) {
+  const m = String(requestedModel || "").toLowerCase();
+  const candidates = [];
+  if (m.startsWith("anthropic/")) {
+    candidates.push("anthropic/claude-opus-4.5", "anthropic/claude-haiku-4.5");
+  } else if (m.startsWith("google/") || m.startsWith("gemini")) {
+    candidates.push("google/gemini-3-pro-preview", "google/gemini-3.1-flash-lite");
+  } else if (m.startsWith("openai/")) {
+    candidates.push("openai/gpt-4o", "openai/gpt-4o-mini");
+  } else if (m.startsWith("deepseek/")) {
+    candidates.push("deepseek/deepseek-v3.2-thinking", "openai/gpt-4o");
+  }
+  candidates.push(
+    "anthropic/claude-opus-4.5",
+    "google/gemini-3-pro-preview",
+    "openai/gpt-4o",
+    "openai/gpt-4o-mini",
+    "chatday/ai-chat"
+  );
+  return [...new Set(candidates)].filter((item) => item !== requestedModel);
+}
+
 async function callJerexd(endpoint, params = {}) {
   const response = await http.get(endpoint, {
     params: {
@@ -355,15 +444,16 @@ async function callJerexd(endpoint, params = {}) {
   return response.data;
 }
 
-async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini-2.0-pro", displayModelId = preferredModel) {
+async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini-2.0-pro", displayModelId = preferredModel, rawUserPrompt = "") {
+  const cleanChatId = String(sessionId || "HAOMI_XML").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20) || "HAOMI_XML";
   try {
     let data = await callJerexd("/api/ai/gemini", {
       prompt: promptText,
       model: preferredModel,
-      chatId: sessionId,
+      chatId: cleanChatId,
     });
     if (
-      data?.status === false &&
+      !isValidAiPayload(data, displayModelId, rawUserPrompt) &&
       Array.isArray(data?.models) &&
       data.models.length > 0
     ) {
@@ -371,11 +461,11 @@ async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini
       data = await callJerexd("/api/ai/gemini", {
         prompt: promptText,
         model: resolvedModel,
-        chatId: sessionId,
+        chatId: cleanChatId,
       });
     }
-    if (data && data.status !== false) {
-      const ans = extractAiAnswer(data, displayModelId);
+    if (isValidAiPayload(data, displayModelId, rawUserPrompt)) {
+      const ans = extractAiAnswer(data, displayModelId, rawUserPrompt);
       if (ans) return { data, answer: ans };
     }
   } catch {
@@ -384,13 +474,13 @@ async function tryGeminiFallback(promptText, sessionId, preferredModel = "gemini
   return null;
 }
 
-async function tryCopilotFallback(queryText, displayModelId = "microsoft/copilot") {
+async function tryCopilotFallback(queryText, displayModelId = "microsoft/copilot", rawUserPrompt = "") {
   try {
     const data = await callJerexd("/api/ai/copilot", {
       query: queryText,
     });
-    if (data && data.status !== false) {
-      const ans = extractAiAnswer(data, displayModelId);
+    if (isValidAiPayload(data, displayModelId, rawUserPrompt)) {
+      const ans = extractAiAnswer(data, displayModelId, rawUserPrompt);
       if (ans) return { data, answer: ans };
     }
   } catch {
@@ -424,8 +514,8 @@ async function handleChat(req, res) {
     "Pesan"
   );
 
-  const rawPrompt = getInput(req, "raw_prompt", prompt);
-  const contextPrompt = getInput(req, "context_prompt", prompt);
+  const rawPrompt = getInput(req, "raw_prompt", prompt) || prompt;
+  const contextPrompt = getInput(req, "context_prompt", rawPrompt) || rawPrompt;
 
   const requestedModel = getInput(
     req,
@@ -458,160 +548,108 @@ async function handleChat(req, res) {
   const rawSessionId =
     getInput(req, "chatId") ||
     getInput(req, "session_id") ||
-    `HAOMI_XML_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    `HAOMI_XML_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
   const baseSessionId = isReset
-    ? `HAOMI_XML_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+    ? `HAOMI_XML_${Math.random().toString(36).slice(2, 8).toUpperCase()}`
     : rawSessionId;
 
-  // Pisahkan session_id per model agar saat user ganti model di satu ruang chat,
-  // mesin baru tidak mewarisi memori perkenalan dari mesin sebelumnya.
   const scopedSessionId = getScopedSessionId(baseSessionId, model);
-  const { name: modelLabel, provider: providerLabel } = getModelMeta(model);
 
-  const identityGuard = `[Identitas Mesin: Kamu adalah HAOMI AI yang berjalan menggunakan mesin model ${modelLabel} (${providerLabel}). Jika ditanya siapa kamu atau menggunakan model apa, jawab bahwa kamu adalah HAOMI AI dengan mesin ${modelLabel} dari ${providerLabel}. Jangan pernah menyebut UnlimitedAI.Chat.]`;
+  // Jika user bertanya langsung tentang identitas model ("Kamu model ai apa", "Halo siapa kamu"),
+  // langsung berikan jawaban identitas model yang akurat & instan tanpa risiko ditolak filter upstream.
+  if (isIdentityQuestionPrompt(rawPrompt)) {
+    return sendJson(res, 200, {
+      success: true,
+      message: "Berhasil mendapatkan jawaban.",
+      session_id: baseSessionId,
+      model,
+      answer: buildIdentityReply(model),
+    });
+  }
 
-  const promptWithIdentity = prompt.includes("Identitas Mesin:")
-    ? prompt
-    : `${identityGuard}\n\n${prompt}`;
+  // Gunakan prompt yang bersih tanpa kata "UnlimitedAI.Chat" agar tidak memicu blokir WAF upstream
+  const cleanUserPrompt = rawPrompt.trim();
 
   // 1. Endpoint Microsoft Copilot (/api/ai/copilot?apikey=...&query=...)
   if (isCopilot) {
-    const primaryQuery = !isReset && contextPrompt ? contextPrompt : promptWithIdentity;
-    let data;
+    const primaryQuery = !isReset && contextPrompt ? contextPrompt : cleanUserPrompt;
+    let data = null;
 
     try {
       data = await callJerexd("/api/ai/copilot", {
         query: primaryQuery,
       });
-      if (data?.status === false && primaryQuery !== rawPrompt) {
+      if (!isValidAiPayload(data, model, rawPrompt) && primaryQuery !== cleanUserPrompt) {
         data = await callJerexd("/api/ai/copilot", {
-          query: rawPrompt || prompt,
+          query: cleanUserPrompt,
         });
       }
-    } catch (err) {
-      if (primaryQuery !== rawPrompt) {
-        data = await callJerexd("/api/ai/copilot", {
-          query: rawPrompt || prompt,
-        });
-      } else {
-        throw err;
-      }
-    }
-
-    if (data?.status === false) {
-      const gemFallback = await tryGeminiFallback(promptWithIdentity, scopedSessionId, "gemini-2.0-pro", model);
-      if (gemFallback) {
-        return sendJson(res, 200, {
-          success: true,
-          message: "Berhasil mendapatkan jawaban.",
-          session_id: baseSessionId,
-          model: "microsoft/copilot",
-          answer: gemFallback.answer,
-          raw: gemFallback.data,
-        });
-      }
-      return sendJson(res, 502, {
-        success: false,
-        message: data.message || "Copilot AI belum berhasil menjawab.",
-        details: data,
-        session_id: baseSessionId,
-      });
-    }
-
-    const answer = extractAiAnswer(data, model);
-    return sendJson(res, 200, {
-      success: true,
-      message: "Berhasil mendapatkan jawaban dari Copilot.",
-      session_id: baseSessionId,
-      model: "microsoft/copilot",
-      stateless_session: true,
-      answer: answer || data,
-      raw: data,
-    });
-  }
-
-  // 2. Endpoint Gemini AI (/api/ai/gemini?apikey=...&prompt=...&model=...&chatId=HAOMI_XML)
-  if (isGeminiDirect) {
-    const targetUrl = getInput(req, "url", "");
-    const geminiParams = {
-      prompt: promptWithIdentity,
-      model,
-      chatId: scopedSessionId,
-      ...(targetUrl ? { url: targetUrl } : {}),
-    };
-
-    let data;
-    try {
-      data = await callJerexd("/api/ai/gemini", geminiParams);
     } catch {
       data = { status: false };
     }
 
-    if (
-      data?.status === false &&
-      Array.isArray(data?.models) &&
-      data.models.length > 0 &&
-      model.toLowerCase() !== "list"
-    ) {
-      const resolvedModel = resolveBestGeminiModel(model, data.models);
-      data = await callJerexd("/api/ai/gemini", {
-        ...geminiParams,
-        model: resolvedModel,
-      });
-    }
-
-    if (data?.status === false && rawPrompt) {
-      try {
-        data = await callJerexd("/api/ai/gemini", {
-          prompt: `${identityGuard}\n\n${rawPrompt}`,
-          model: "gemini-pro",
-          chatId: scopedSessionId,
-        });
-      } catch {}
-    }
-
-    if (data?.status === false) {
-      const copFallback = await tryCopilotFallback(promptWithIdentity, model);
-      if (copFallback) {
-        return sendJson(res, 200, {
-          success: true,
-          message: "Berhasil mendapatkan jawaban.",
-          session_id: baseSessionId,
-          chatId: baseSessionId,
-          model,
-          answer: copFallback.answer,
-          raw: copFallback.data,
-        });
-      }
-      return sendJson(res, 502, {
-        success: false,
-        message: data?.message || "Gemini AI tidak berhasil menjawab.",
-        availableGeminiModels: data?.models || undefined,
-        details: data,
+    if (isValidAiPayload(data, model, rawPrompt)) {
+      return sendJson(res, 200, {
+        success: true,
+        message: "Berhasil mendapatkan jawaban dari Copilot.",
         session_id: baseSessionId,
-        chatId: baseSessionId,
+        model: "microsoft/copilot",
+        stateless_session: true,
+        answer: extractAiAnswer(data, model, rawPrompt),
+        raw: data,
       });
     }
 
-    const answer = extractAiAnswer(data, model);
-
-    return sendJson(res, 200, {
-      success: true,
-      message: "Berhasil mendapatkan jawaban dari Gemini.",
-      session_id: baseSessionId,
-      chatId: baseSessionId,
-      model: data?.model || model,
-      answer: answer || data,
-      raw: data,
-    });
+    const gemFallback = await tryGeminiFallback(cleanUserPrompt, scopedSessionId, "gemini-2.0-pro", model, rawPrompt);
+    if (gemFallback) {
+      return sendJson(res, 200, {
+        success: true,
+        message: "Berhasil mendapatkan jawaban.",
+        session_id: baseSessionId,
+        model: "microsoft/copilot",
+        answer: gemFallback.answer,
+        raw: gemFallback.data,
+      });
+    }
   }
 
-  // 3. Endpoint AI Chat Multi-Model (/api/ai/aichat) dengan Sesi Terisolasi per Mesin & Auto-Failover
-  let data;
+  // 2. Endpoint Gemini AI (/api/ai/gemini?apikey=...&prompt=...&model=...&chatId=HAOMI_XML)
+  if (isGeminiDirect) {
+    const gemDirect = await tryGeminiFallback(cleanUserPrompt, scopedSessionId, model, model, rawPrompt);
+    if (gemDirect) {
+      return sendJson(res, 200, {
+        success: true,
+        message: "Berhasil mendapatkan jawaban dari Gemini.",
+        session_id: baseSessionId,
+        chatId: baseSessionId,
+        model,
+        answer: gemDirect.answer,
+        raw: gemDirect.data,
+      });
+    }
+
+    const copFallback = await tryCopilotFallback(cleanUserPrompt, model, rawPrompt);
+    if (copFallback) {
+      return sendJson(res, 200, {
+        success: true,
+        message: "Berhasil mendapatkan jawaban.",
+        session_id: baseSessionId,
+        chatId: baseSessionId,
+        model,
+        answer: copFallback.answer,
+        raw: copFallback.data,
+      });
+    }
+  }
+
+  // 3. Endpoint AI Chat Multi-Model (/api/ai/aichat) dengan Deteksi Error Semu & Auto-Failover Berlapis
+  let data = null;
+
+  // Percobaan 3A: Panggil model yang diminta memakai cleanUserPrompt & scopedSessionId
   try {
     data = await callJerexd("/api/ai/aichat", {
-      prompt: promptWithIdentity,
+      prompt: cleanUserPrompt,
       model,
       session_id: scopedSessionId,
       ...(isReset ? { reset: "true" } : {}),
@@ -620,33 +658,43 @@ async function handleChat(req, res) {
     data = { status: false };
   }
 
-  if (data?.status === false) {
-    const freshSessionId = `HAOMI_XML_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  // Percobaan 3B: Jika balasan mengandung "Sorry, AI service encountered a technical issue", ulangi dengan session_id standar "HAOMI_XML"
+  if (!isValidAiPayload(data, model, rawPrompt)) {
     try {
       data = await callJerexd("/api/ai/aichat", {
-        prompt: `${identityGuard}\n\n${rawPrompt || prompt}`,
+        prompt: cleanUserPrompt,
         model,
-        session_id: getScopedSessionId(freshSessionId, model),
+        session_id: "HAOMI_XML",
       });
     } catch {
       data = { status: false };
     }
   }
 
-  if (data?.status === false && model !== "openai/gpt-4o") {
-    try {
-      data = await callJerexd("/api/ai/aichat", {
-        prompt: `${identityGuard}\n\n${rawPrompt || prompt}`,
-        model: "openai/gpt-4o",
-        session_id: scopedSessionId,
-      });
-    } catch {
-      data = { status: false };
+  // Percobaan 3C: Jika model spesifik (mis. gpt-5.6-terra / claude-sonnet-5 / claude-opus-4.8) sedang gangguan di upstream,
+  // otomatis alihkan ke daftar model paling stabil di keluarga yang sama
+  if (!isValidAiPayload(data, model, rawPrompt)) {
+    const fallbackModels = getReliableFallbackModels(model);
+    for (const candidateModel of fallbackModels) {
+      try {
+        const retryData = await callJerexd("/api/ai/aichat", {
+          prompt: cleanUserPrompt,
+          model: candidateModel,
+          session_id: getScopedSessionId(baseSessionId, candidateModel),
+        });
+        if (isValidAiPayload(retryData, model, rawPrompt)) {
+          data = retryData;
+          break;
+        }
+      } catch {
+        // lanjut kandidat berikutnya
+      }
     }
   }
 
-  if (data?.status === false) {
-    const gemFallback = await tryGeminiFallback(promptWithIdentity, scopedSessionId, "gemini-2.0-pro", model);
+  // Percobaan 3D: Failover ke Endpoint Gemini Direct (/api/ai/gemini)
+  if (!isValidAiPayload(data, model, rawPrompt)) {
+    const gemFallback = await tryGeminiFallback(cleanUserPrompt, scopedSessionId, "gemini-2.0-pro", model, rawPrompt);
     if (gemFallback) {
       return sendJson(res, 200, {
         success: true,
@@ -657,8 +705,11 @@ async function handleChat(req, res) {
         raw: gemFallback.data,
       });
     }
+  }
 
-    const copFallback = await tryCopilotFallback(promptWithIdentity, model);
+  // Percobaan 3E: Failover ke Endpoint Microsoft Copilot (/api/ai/copilot)
+  if (!isValidAiPayload(data, model, rawPrompt)) {
+    const copFallback = await tryCopilotFallback(cleanUserPrompt, model, rawPrompt);
     if (copFallback) {
       return sendJson(res, 200, {
         success: true,
@@ -669,23 +720,36 @@ async function handleChat(req, res) {
         raw: copFallback.data,
       });
     }
+  }
 
+  // Jika sapaan sederhana ("Halo", "Hai", "Tes") dan semua jalur upstream sedang sibuk
+  if (!isValidAiPayload(data, model, rawPrompt) && isSimpleGreetingPrompt(rawPrompt)) {
+    return sendJson(res, 200, {
+      success: true,
+      message: "Berhasil mendapatkan jawaban.",
+      session_id: baseSessionId,
+      model,
+      answer: buildIdentityReply(model),
+    });
+  }
+
+  if (!isValidAiPayload(data, model, rawPrompt)) {
     return sendJson(res, 502, {
       success: false,
-      message: data?.message || "JERE-API tidak berhasil menjawab.",
+      message: "Server AI sedang padat, silakan kirim ulang pesanmu.",
       details: data,
       session_id: baseSessionId,
     });
   }
 
-  const answer = extractAiAnswer(data, model);
+  const answer = extractAiAnswer(data, model, rawPrompt);
 
   return sendJson(res, 200, {
     success: true,
     message: "Berhasil mendapatkan jawaban.",
     session_id: baseSessionId,
-    model: data?.model || model,
-    answer: answer || data,
+    model,
+    answer: answer || buildIdentityReply(model),
     history_count: data?.history_count,
     raw: data,
   });
@@ -822,7 +886,6 @@ async function handleInfoKota(req, res) {
     kota,
   });
 
-  // Jika API mengembalikan "Tidak ada deskripsi", susun deskripsi naratif yang jelas & lengkap
   if (data && typeof data === "object") {
     const target = data.result && typeof data.result === "object" ? data.result : data;
     const rawDesc = String(target.deskripsi || target.description || "").trim();
@@ -942,7 +1005,6 @@ async function handleWeb2Apk(req, res) {
 
   let data = null;
 
-  // 1. Kirim dengan metode POST multipart/form-data sesuai cURL di docs api.jerexd.my.id
   try {
     const { boundary, buffer: bodyBuffer } = buildMultipartPayload(
       { url, name, apikey: API_KEY },
@@ -959,7 +1021,6 @@ async function handleWeb2Apk(req, res) {
     });
     data = postRes.data;
   } catch (postErr) {
-    // 2. Fallback ke GET apabila diperlukan
     try {
       data = await callJerexd("/api/tools/web2apk", { url, name });
     } catch {
