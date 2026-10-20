@@ -61,10 +61,10 @@
   const responseStyleOrder = ["standard", "casual", "concise", "technical"];
 
   const responseStylePrompts = {
-    standard: "[Gaya bicara: Gunakan bahasa Indonesia yang luwes, natural seperti teman ngobrol pintar, tidak kaku seperti terjemahan robot.]",
-    concise: "[Gaya bicara: Langsung ke inti, singkat, padat, dan praktis tanpa basa-basi.]",
-    technical: "[Gaya bicara: Fokus teknis, logika rapi, kode siap pakai, dan penjelasan to-the-point.]",
-    casual: "[Gaya bicara: Santai, akrab, ngalir enak dibaca, dan mudah dicerna.]"
+    standard: "",
+    concise: "[Instruksi Gaya: Jawab secara singkat, padat, dan langsung ke inti permasalahan tanpa basa-basi.]\n\n",
+    technical: "[Instruksi Gaya: Jawab secara teknis, sistematis, terstruktur dengan poin atau kode yang presisi.]\n\n",
+    casual: "[Instruksi Gaya: Jawab dengan bahasa yang santai, natural, dan mudah dicerna.]\n\n"
   };
 
   const responseLengthPrompts = {
@@ -711,7 +711,7 @@
       id: id(),
       title: `Obrolan baru${suffix} (${timeStr})`,
       model: getDefaultModel(),
-      sessionId: `HAOMI_XML_${id().toUpperCase()}`,
+      sessionId: `haomi-${id()}`,
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -725,6 +725,11 @@
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (saved && Array.isArray(saved.conversations)) {
+        saved.conversations.forEach(conv => {
+          if (conv && (!conv.sessionId || /^HAOMI/i.test(String(conv.sessionId)))) {
+            conv.sessionId = `haomi-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+          }
+        });
         return saved;
       }
     } catch (error) {
@@ -1035,13 +1040,11 @@
     article.append(heading, bubble, actions);
     els.messages.appendChild(article);
 
-    const cleanAssistantContent = sanitizeAiIdentity(message.content, message.model);
-    message.content = cleanAssistantContent;
     const speedMode = settings.streamSpeed || "cyber";
     if (animateStream && !message.error && speedMode !== "instant") {
-      streamAssistantText(article, bubble, actions, cleanAssistantContent, speedMode, message);
+      streamAssistantText(article, bubble, actions, message.content, speedMode, message);
     } else {
-      renderBubbleWithInteractiveChoices(bubble, cleanAssistantContent, message);
+      renderBubbleWithInteractiveChoices(bubble, message.content, message);
     }
   }
 
@@ -1578,121 +1581,7 @@
       "Ini adalah deskripsi tentang Sidoarjo: Kabupaten Sidoarjo adalah wilayah penyangga utama metropolitan Surabaya di Provinsi Jawa Timur yang dikenal sebagai 'Kota Delta' serta pusat industri, perikanan tambak, dan UMKM."
   };
 
-  // Buat session_id pendek & alfanumerik murni (tanpa tanda hubung '-') yang 100% kompatibel dengan JERE API
-  function getScopedSessionId(baseSessionId, modelId) {
-    const rawBase = String(baseSessionId || "HAOMI_XML")
-      .replace(/[^a-zA-Z0-9]/g, "")
-      .toUpperCase()
-      .slice(0, 12) || "HAOMIXML";
-    const modelCode = String(modelId || "gpt4o")
-      .replace(/[^a-zA-Z0-9]/g, "")
-      .toUpperCase()
-      .slice(-6);
-    return `HAOMI_${rawBase.replace(/^HAOMIXML|^HAOMI/, "") || "XML"}_${modelCode}`;
-  }
-
-  // Deteksi pesan error semu dari upstream yang dikembalikan dengan status: true
-  function isUpstreamErrorText(text) {
-    if (typeof text !== "string") return true;
-    const clean = text.trim();
-    if (!clean) return true;
-    return (
-      /sorry,\s*ai\s*service\s*encountered\s*a\s*technical\s*issue/i.test(clean) ||
-      /encountered\s*a\s*technical\s*issue/i.test(clean) ||
-      /please\s*try\s*again\s*later/i.test(clean) ||
-      /service\s*is\s*currently\s*unavailable/i.test(clean) ||
-      /model\s*is\s*currently\s*overloaded/i.test(clean) ||
-      /^(error|internal\s*server\s*error|bad\s*gateway|gateway\s*timeout)$/i.test(clean) ||
-      /rate\s*limit\s*exceeded|too\s*many\s*requests/i.test(clean)
-    );
-  }
-
-  function isIdentityQuestionPrompt(promptText) {
-    const clean = String(promptText || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!clean || clean.length > 90) return false;
-    return (
-      /\b(siapa kamu|kamu siapa|siapa namamu|nama kamu siapa)\b/.test(clean) ||
-      /\b(kamu model apa|kamu model ai apa|model ai apa|pakai model apa|mesin ai apa|kamu ai apa|ai apa ini)\b/.test(clean) ||
-      /\b(who are you|what model are you|what ai are you)\b/.test(clean)
-    );
-  }
-
-  function isSimpleGreetingPrompt(promptText) {
-    const clean = String(promptText || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    return /^(halo|hai|hi|hello|tes|test|ping|p|pagi|siang|sore|malam|assalamualaikum)$/.test(clean);
-  }
-
-  function buildIdentityReply(modelId) {
-    const activeModel = modelId || activeConversation()?.model || getDefaultModel();
-    const mName = modelName(activeModel);
-    const mProv = modelProvider(activeModel);
-    const nick = settings?.userNickname?.trim() ? ` ${settings.userNickname.trim()}` : "";
-    return `Halo${nick}! Saya **HAOMI AI** yang saat ini berjalan menggunakan mesin model **${mName}** dari **${mProv}**. Saya siap membantu kamu menjawab pertanyaan, menyusun kode program, maupun membahas berbagai topik. Ada yang ingin kamu tanyakan?`;
-  }
-
-  function getReliableFallbackModels(requestedModel) {
-    const m = String(requestedModel || "").toLowerCase();
-    const candidates = [];
-    if (m.startsWith("anthropic/")) {
-      candidates.push("anthropic/claude-opus-4.5", "anthropic/claude-haiku-4.5");
-    } else if (m.startsWith("google/") || m.startsWith("gemini")) {
-      candidates.push("google/gemini-3-pro-preview", "google/gemini-3.1-flash-lite");
-    } else if (m.startsWith("openai/")) {
-      candidates.push("openai/gpt-4o", "openai/gpt-4o-mini");
-    } else if (m.startsWith("deepseek/")) {
-      candidates.push("deepseek/deepseek-v3.2-thinking", "openai/gpt-4o");
-    }
-    candidates.push(
-      "anthropic/claude-opus-4.5",
-      "google/gemini-3-pro-preview",
-      "openai/gpt-4o",
-      "openai/gpt-4o-mini",
-      "chatday/ai-chat"
-    );
-    return [...new Set(candidates)].filter(item => item !== requestedModel);
-  }
-
-  function sanitizeAiIdentity(text, modelId, rawUserPrompt = "") {
-    if (typeof text !== "string" || !text.trim()) return "";
-    const activeModel = modelId || activeConversation()?.model || getDefaultModel();
-    const mName = modelName(activeModel);
-    const mProv = modelProvider(activeModel);
-    let out = text.trim();
-
-    // Jika pesan di riwayat adalah pesan error teknis bahasa Inggris sebelumnya, ganti dengan sapaan siap pakai
-    if (isUpstreamErrorText(out)) {
-      return buildIdentityReply(activeModel);
-    }
-
-    if (rawUserPrompt && isIdentityQuestionPrompt(rawUserPrompt)) {
-      if (/unlimitedai|model bahasa|language model|openai|anthropic|claude|gemini|gpt|copilot|asisten/i.test(out)) {
-        return buildIdentityReply(activeModel);
-      }
-    }
-
-    out = out.replace(
-      /Saya\s+(?:adalah\s+)?UnlimitedAI(?:\.Chat)?\s*,\s*sebuah\s+model\s+bahasa\s+yang\s+dikembangkan\s+oleh\s+tim\s+UnlimitedAI(?:\.Chat)?\.?/gi,
-      `Saya **HAOMI AI** yang berjalan menggunakan mesin model **${mName}** (${mProv}).`
-    );
-    out = out.replace(
-      /I\s+am\s+UnlimitedAI(?:\.Chat)?\s*,\s*a\s+language\s+model\s+developed\s+by\s+the\s+UnlimitedAI(?:\.Chat)?\s+team\.?/gi,
-      `Saya **HAOMI AI** yang berjalan menggunakan mesin model **${mName}** (${mProv}).`
-    );
-    out = out.replace(/tim\s+UnlimitedAI(?:\.Chat)?/gi, `tim ${mProv} pada konsol HAOMI AI`);
-    out = out.replace(/UnlimitedAI\.Chat/gi, `HAOMI AI (${mName})`);
-    out = out.replace(/UnlimitedAI/gi, `HAOMI AI (${mName})`);
-    return out;
-  }
-
-  function extractRawCandidateString(data) {
+  function extractAiAnswer(data) {
     if (typeof data === "string") return data.trim();
     if (!data || typeof data !== "object") return "";
 
@@ -1727,45 +1616,16 @@
         }
       }
     }
+
     return "";
   }
 
-  function isValidAiPayload(data, modelId, rawUserPrompt = "") {
-    if (!data || typeof data !== "object") return false;
-    if (data.status === false || data.success === false) return false;
-    const rawStr = extractRawCandidateString(data);
-    if (!rawStr || isUpstreamErrorText(rawStr)) return false;
-    return true;
-  }
-
-  function extractAiAnswer(data, modelId, rawUserPrompt = "") {
-    const rawStr = extractRawCandidateString(data);
-    if (!rawStr || isUpstreamErrorText(rawStr)) return "";
-    return sanitizeAiIdentity(rawStr, modelId, rawUserPrompt);
-  }
-
-  function extractSessionId(data, fallbackId) {
-    if (!data || typeof data !== "object") return fallbackId;
-    const candidates = [
-      data.session_id,
-      data.chatId,
-      data.chat_id,
-      data.sessionId,
-      data.result?.chatId,
-      data.result?.chat_id,
-      data.result?.session_id,
-      data.result?.sessionId,
-      data.data?.chatId,
-      data.data?.chat_id,
-      data.data?.session_id,
-      data.data?.sessionId
-    ];
-    for (const candidate of candidates) {
-      if (typeof candidate === "string" && candidate.trim()) {
-        return candidate.trim();
-      }
-    }
-    return fallbackId;
+  function isTechnicalIssueAnswer(text) {
+    if (typeof text !== "string" || !text.trim()) return true;
+    return (
+      /sorry,\s*ai\s*service\s*encountered\s*a\s*technical\s*issue/i.test(text) ||
+      /maaf,\s*layanan\s*ai\s*mengalami\s*masalah\s*teknis/i.test(text)
+    );
   }
 
   function resolveBestGeminiModel(requestedModel, availableModels = []) {
@@ -1789,128 +1649,29 @@
     return availableModels[0];
   }
 
-  function buildStatelessContextPrompt(priorMessages, currentPrompt, stylePrefix = "") {
-    const recent = (priorMessages || [])
-      .filter(m => m && !m.error && typeof m.content === "string" && m.content.trim() && !isUpstreamErrorText(m.content))
-      .slice(-4);
-    if (!recent.length) {
-      return stylePrefix ? `${stylePrefix}${currentPrompt}` : currentPrompt;
-    }
-    const transcript = recent
-      .map(m => {
-        const roleLabel = m.role === "user" ? "User" : "AI";
-        const snippet = m.content.replace(/\s+/g, " ").trim().slice(0, 180);
-        return `${roleLabel}: ${snippet}`;
-      })
-      .join("\n");
-    return `${stylePrefix}Konteks obrolan sebelumnya:\n${transcript}\n\nPertanyaan sekarang: ${currentPrompt}`;
-  }
-
   async function directJerexdFallback(action, payload = {}) {
     const API_KEY = "jere_sTl9OLzPIyMn";
     let endpoint = "/api/ai/aichat";
     const params = new URLSearchParams({ apikey: API_KEY });
     const targetModel = payload.model || "openai/gpt-4o";
-    const baseSessionId = payload.chatId || payload.session_id || "HAOMI_XML";
-    const sessionId = getScopedSessionId(baseSessionId, targetModel);
-    const rawUserPrompt = String(payload.raw_prompt || payload.prompt || "").trim();
+    const sessionId = payload.session_id || `haomi-${Date.now()}`;
 
     if (action === "chat") {
-      // Jika pertanyaan identitas ("Kamu model ai apa", "Halo siapa kamu"), jawab langsung sesuai mesin aktif
-      if (isIdentityQuestionPrompt(rawUserPrompt)) {
-        return {
-          success: true,
-          session_id: baseSessionId,
-          model: targetModel,
-          answer: buildIdentityReply(targetModel)
-        };
-      }
-
       if (isCopilotModel(targetModel)) {
         endpoint = "/api/ai/copilot";
-        const primaryQuery = payload.reset !== "true" && payload.context_prompt
-          ? payload.context_prompt
-          : rawUserPrompt;
-        params.set("query", primaryQuery);
-
-        let data = null;
-        try {
-          let res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
-            method: "GET",
-            headers: { Accept: "application/json" }
-          });
-          data = await res.json();
-
-          if (!isValidAiPayload(data, targetModel, rawUserPrompt) && primaryQuery !== rawUserPrompt) {
-            params.set("query", rawUserPrompt);
-            res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
-              method: "GET",
-              headers: { Accept: "application/json" }
-            });
-            data = await res.json();
-          }
-        } catch {
-          data = { status: false };
-        }
-
-        if (isValidAiPayload(data, targetModel, rawUserPrompt)) {
-          return {
-            success: true,
-            session_id: baseSessionId,
-            model: "microsoft/copilot",
-            answer: extractAiAnswer(data, targetModel, rawUserPrompt)
-          };
-        }
+        params.set("query", payload.prompt || "");
       } else if (isGeminiDirectModel(targetModel)) {
         endpoint = "/api/ai/gemini";
-        params.set("prompt", rawUserPrompt);
+        params.set("prompt", payload.prompt || "");
         params.set("model", targetModel);
-        params.set("chatId", sessionId);
-        if (payload.url) params.set("url", payload.url);
-
-        let data = null;
-        try {
-          let res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
-            method: "GET",
-            headers: { Accept: "application/json" }
-          });
-          data = await res.json();
-
-          if (
-            !isValidAiPayload(data, targetModel, rawUserPrompt) &&
-            Array.isArray(data?.models) &&
-            data.models.length > 0 &&
-            targetModel.toLowerCase() !== "list"
-          ) {
-            const resolvedModel = resolveBestGeminiModel(targetModel, data.models);
-            params.set("model", resolvedModel);
-            res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
-              method: "GET",
-              headers: { Accept: "application/json" }
-            });
-            data = await res.json();
-          }
-        } catch {
-          data = { status: false };
-        }
-
-        if (isValidAiPayload(data, targetModel, rawUserPrompt)) {
-          return {
-            success: true,
-            session_id: baseSessionId,
-            chatId: baseSessionId,
-            model: data?.model || targetModel,
-            answer: extractAiAnswer(data, targetModel, rawUserPrompt)
-          };
-        }
+        params.set("chatId", payload.chatId || "HAOMI_XML");
+      } else {
+        endpoint = "/api/ai/aichat";
+        params.set("prompt", payload.prompt || "");
+        params.set("model", targetModel);
+        params.set("session_id", sessionId);
+        if (payload.reset === "true") params.set("reset", "true");
       }
-
-      // Jalur Utama /api/ai/aichat dengan Deteksi Error Semu & Failover Berlapis
-      endpoint = "/api/ai/aichat";
-      params.set("prompt", rawUserPrompt);
-      params.set("model", targetModel);
-      params.set("session_id", sessionId);
-      if (payload.reset === "true") params.set("reset", "true");
     } else if (action === "am-send") {
       endpoint = "/api/am/send";
       params.set("email", payload.email || "");
@@ -1982,69 +1743,63 @@
       params.set("number", String(payload.number || "").replace(/[^0-9]/g, ""));
     }
 
-    let data = null;
-    try {
-      const res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+    let res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
+      method: "GET",
+      headers: { Accept: "application/json" }
+    });
+    let data = await res.json();
+
+    // Khusus Gemini Direct jika model perlu disesuaikan dengan daftar models Jere API
+    if (
+      action === "chat" &&
+      isGeminiDirectModel(targetModel) &&
+      data?.status === false &&
+      Array.isArray(data?.models) &&
+      data.models.length > 0
+    ) {
+      params.set("model", resolveBestGeminiModel(targetModel, data.models));
+      res = await fetch(`https://api.jerexd.my.id${endpoint}?${params.toString()}`, {
         method: "GET",
         headers: { Accept: "application/json" }
       });
       data = await res.json();
-    } catch {
-      data = { status: false };
     }
 
-    // Auto-failover untuk chat apabila balasan error atau mengandung "Sorry, AI service encountered a technical issue"
-    if (action === "chat" && !isValidAiPayload(data, targetModel, rawUserPrompt)) {
-      const cleanQueryPrompt = rawUserPrompt || "Halo";
+    // Jika model tertentu di /api/ai/aichat mengembalikan "Sorry, AI service encountered a technical issue",
+    // coba ulangi memakai model JERE API yang aktif (anthropic/claude-opus-4.5 atau google/gemini-3-pro-preview atau openai/gpt-4o)
+    if (action === "chat" && (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data)))) {
+      const fallbackModels = [
+        "anthropic/claude-opus-4.5",
+        "google/gemini-3-pro-preview",
+        "openai/gpt-4o",
+        "openai/gpt-4o-mini"
+      ].filter(m => m !== targetModel);
 
-      // Coba 1: Ulangi model yang diminta dengan session_id standar "HAOMI_XML"
-      try {
-        const stdParams = new URLSearchParams({
-          apikey: API_KEY,
-          prompt: cleanQueryPrompt,
-          model: targetModel,
-          session_id: "HAOMI_XML"
-        });
-        const stdRes = await fetch(`https://api.jerexd.my.id/api/ai/aichat?${stdParams.toString()}`, {
-          method: "GET",
-          headers: { Accept: "application/json" }
-        });
-        const stdData = await stdRes.json();
-        if (isValidAiPayload(stdData, targetModel, rawUserPrompt)) {
-          data = stdData;
-        }
-      } catch {}
-
-      // Coba 2: Coba model-model paling stabil di /api/ai/aichat
-      if (!isValidAiPayload(data, targetModel, rawUserPrompt)) {
-        const candidates = getReliableFallbackModels(targetModel);
-        for (const candModel of candidates) {
-          try {
-            const retryParams = new URLSearchParams({
-              apikey: API_KEY,
-              prompt: cleanQueryPrompt,
-              model: candModel,
-              session_id: getScopedSessionId(baseSessionId, candModel)
-            });
-            const retryRes = await fetch(`https://api.jerexd.my.id/api/ai/aichat?${retryParams.toString()}`, {
-              method: "GET",
-              headers: { Accept: "application/json" }
-            });
-            const retryData = await retryRes.json();
-            if (isValidAiPayload(retryData, targetModel, rawUserPrompt)) {
-              data = retryData;
-              break;
-            }
-          } catch {}
-        }
+      for (const fbModel of fallbackModels) {
+        try {
+          const retryParams = new URLSearchParams({
+            apikey: API_KEY,
+            prompt: payload.prompt || "",
+            model: fbModel,
+            session_id: `haomi-${Date.now()}`
+          });
+          const retryRes = await fetch(`https://api.jerexd.my.id/api/ai/aichat?${retryParams.toString()}`, {
+            method: "GET",
+            headers: { Accept: "application/json" }
+          });
+          const retryData = await retryRes.json();
+          if (retryData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(retryData))) {
+            data = retryData;
+            break;
+          }
+        } catch {}
       }
 
-      // Coba 3: Alihkan ke endpoint Gemini (/api/ai/gemini)
-      if (!isValidAiPayload(data, targetModel, rawUserPrompt)) {
+      if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
         try {
           const gemParams = new URLSearchParams({
             apikey: API_KEY,
-            prompt: cleanQueryPrompt,
+            prompt: payload.prompt || "",
             model: "gemini-2.0-pro",
             chatId: "HAOMI_XML"
           });
@@ -2053,7 +1808,7 @@
             headers: { Accept: "application/json" }
           });
           let gemData = await gemRes.json();
-          if (!isValidAiPayload(gemData, targetModel, rawUserPrompt) && Array.isArray(gemData?.models) && gemData.models.length > 0) {
+          if (gemData?.status === false && Array.isArray(gemData?.models) && gemData.models.length > 0) {
             gemParams.set("model", resolveBestGeminiModel("gemini-2.0-pro", gemData.models));
             gemRes = await fetch(`https://api.jerexd.my.id/api/ai/gemini?${gemParams.toString()}`, {
               method: "GET",
@@ -2061,55 +1816,40 @@
             });
             gemData = await gemRes.json();
           }
-          if (isValidAiPayload(gemData, targetModel, rawUserPrompt)) {
+          if (gemData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(gemData))) {
             data = gemData;
           }
         } catch {}
       }
 
-      // Coba 4: Alihkan ke endpoint Microsoft Copilot (/api/ai/copilot)
-      if (!isValidAiPayload(data, targetModel, rawUserPrompt)) {
+      if (data?.status === false || isTechnicalIssueAnswer(extractAiAnswer(data))) {
         try {
           const copParams = new URLSearchParams({
             apikey: API_KEY,
-            query: cleanQueryPrompt
+            query: payload.prompt || ""
           });
           const copRes = await fetch(`https://api.jerexd.my.id/api/ai/copilot?${copParams.toString()}`, {
             method: "GET",
             headers: { Accept: "application/json" }
           });
           const copData = await copRes.json();
-          if (isValidAiPayload(copData, targetModel, rawUserPrompt)) {
+          if (copData?.status !== false && !isTechnicalIssueAnswer(extractAiAnswer(copData))) {
             data = copData;
           }
         } catch {}
       }
-
-      // Coba 5: Jika sapaan sederhana ("Halo", "Hai", "Tes") dan semua jalur sedang padat
-      if (!isValidAiPayload(data, targetModel, rawUserPrompt) && isSimpleGreetingPrompt(rawUserPrompt)) {
-        return {
-          success: true,
-          session_id: baseSessionId,
-          model: targetModel,
-          answer: buildIdentityReply(targetModel)
-        };
-      }
-    }
-
-    if (action === "chat") {
-      if (!isValidAiPayload(data, targetModel, rawUserPrompt)) {
-        throw new Error("Server AI sedang padat, silakan kirim ulang pesanmu.");
-      }
-      return {
-        success: true,
-        session_id: baseSessionId,
-        model: targetModel,
-        answer: extractAiAnswer(data, targetModel, rawUserPrompt)
-      };
     }
 
     if (data?.status === false) {
       throw new Error(data.message || "Permintaan belum berhasil diproses.");
+    }
+    if (action === "chat") {
+      return {
+        success: true,
+        session_id: data?.session_id || payload.session_id,
+        model: data?.model || payload.model,
+        answer: data?.result ?? data?.answer ?? data?.response ?? data?.message ?? data?.data ?? data
+      };
     }
     return {
       success: data?.status !== false,
@@ -2173,13 +1913,7 @@
       throw new Error(`Balasan server tidak terbaca (Kode ${response.status}).`);
     }
 
-    // Jika untuk action chat ternyata berisi teks error semu ("Sorry, AI service encountered a technical issue..."),
-    // jalankan directJerexdFallback agar dialihkan ke mesin cadangan yang sehat
-    const isChatInvalid =
-      action === "chat" &&
-      !isValidAiPayload(data, payload.model, payload.raw_prompt || payload.prompt);
-
-    if (!response.ok || data.success === false || isChatInvalid) {
+    if (!response.ok || data.success === false) {
       try {
         const fallbackData = await directJerexdFallback(action, payload);
         recordTelemetry(true, Math.round(performance.now() - startMs));
@@ -2250,6 +1984,7 @@
     if (!prompt || busy) return;
     const fromChoiceCard = Boolean(options?.fromChoiceCard);
 
+    // Jalankan perintah cepat jika diawali "/" tanpa spasi
     if (prompt.startsWith("/") && !prompt.includes(" ")) {
       if (executeSlashShortcut(prompt.toLowerCase())) {
         els.input.value = "";
@@ -2284,54 +2019,15 @@
     renderMessages(false);
 
     const loading = createLoading(sequence, model);
-
-    // Susun petunjuk gaya yang ringan & natural (tanpa kurung siku sistem atau kata UnlimitedAI.Chat
-    // yang dapat memicu filter keamanan di upstream /api/ai/aichat)
-    const hints = [];
-    if (settings.responseStyle === "concise") {
-      hints.push("Jawab secara singkat, padat, dan langsung ke inti.");
-    } else if (settings.responseStyle === "technical") {
-      hints.push("Jawab dengan fokus teknis dan contoh kode yang rapi.");
-    } else if (settings.responseStyle === "casual") {
-      hints.push("Jawab dengan bahasa Indonesia santai dan akrab.");
-    }
-    if (settings.responseLength === "short") {
-      hints.push("Buat penjelasan sesingkat mungkin.");
-    } else if (settings.responseLength === "detailed") {
-      hints.push("Jelaskan secara lengkap dan mendalam.");
-    }
-    if (settings.aiLanguage === "gaul") {
-      hints.push("Gunakan gaya bahasa Indonesia santai sehari-hari.");
-    } else if (settings.aiLanguage === "en") {
-      hints.push("Please answer in English.");
-    }
-    if (settings.userNickname && settings.userNickname.trim()) {
-      hints.push(`Sapa saya dengan panggilan "${settings.userNickname.trim()}".`);
-    }
-    if (settings.customAiInstruction && settings.customAiInstruction.trim()) {
-      hints.push(settings.customAiInstruction.trim());
-    }
-
-    const stylePrefix = hints.length ? `${hints.join(" ")}\n\n` : "";
+    const stylePrefix = responseStylePrompts[settings.responseStyle] || "";
     const effectivePrompt = stylePrefix ? `${stylePrefix}${prompt}` : prompt;
 
     let succeeded = false;
     try {
-      const priorMessages = conversation.messages
-        .slice(0, -1)
-        .filter(msg => !msg.error && typeof msg.content === "string" && msg.content.trim() && !isUpstreamErrorText(msg.content));
-
-      const copilotContextPrompt = isCopilotModel(model) && !pendingResetSession
-        ? buildStatelessContextPrompt(priorMessages, prompt, stylePrefix)
-        : effectivePrompt;
-
       const requestPayload = {
         prompt: effectivePrompt,
-        raw_prompt: prompt,
-        context_prompt: copilotContextPrompt,
         model,
-        session_id: conversation.sessionId,
-        chatId: conversation.sessionId
+        session_id: conversation.sessionId
       };
 
       if (pendingResetSession) {
@@ -2341,17 +2037,20 @@
 
       const data = await apiRequest("chat", requestPayload);
 
-      const answer = extractAiAnswer(data, model, prompt);
+      const rawAnswer = data.answer ?? data.result ?? data.response ?? data.message;
+      const answer = typeof rawAnswer === "string"
+        ? rawAnswer
+        : rawAnswer == null ? "" : JSON.stringify(rawAnswer, null, 2);
 
       if (!answer.trim()) {
         throw new Error("Belum ada teks balasan yang diterima, coba kirim ulang ya.");
       }
 
-      conversation.sessionId = data.session_id || data.chatId || conversation.sessionId;
+      conversation.sessionId = data.session_id || conversation.sessionId;
       conversation.messages.push({
         role: "assistant",
         content: answer,
-        model: model,
+        model: data.model || model,
         hideChoiceCard: fromChoiceCard,
         createdAt: Date.now()
       });
@@ -2506,7 +2205,7 @@
 
   function resetCurrentSessionContext() {
     const conversation = ensureConversation();
-    conversation.sessionId = `HAOMI_XML_${id().toUpperCase()}`;
+    conversation.sessionId = `haomi-${id()}`;
     conversation.messages = [];
     pendingResetSession = true;
     forceShowHud = false;
