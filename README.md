@@ -1,30 +1,35 @@
-<img src="https://capsule-render.vercel.app/api?type=cylinder&color=0:0d1117,50:12261e,100:0d1117&height=150&section=header&text=HAO-AI&fontSize=44&fontColor=e6edf3&fontAlignY=40&desc=ai%20chat%20console%20%E2%80%94%20serverless%20backend&descSize=13&descAlignY=60" width="100%"/>
-
 <div align="center">
-<img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black"/>
-<img src="https://img.shields.io/badge/AI-chat-8B5CF6?style=flat-square&logo=openai&logoColor=white"/>
-<img src="https://img.shields.io/badge/UI-dark_mode-181717?style=flat-square&logo=googlechrome&logoColor=white"/>
-<img src="https://img.shields.io/badge/deploy-Vercel-black?style=flat-square&logo=vercel&logoColor=white"/>
+
+<img src="https://capsule-render.vercel.app/api?type=soft&color=0:000000,50:0f2f0f,100:000000&height=180&section=header&text=HAO-AI&fontSize=46&fontColor=00ff41&fontAlignY=42&desc=%5B%20ai%20console%20%2F%2F%20serverless%20core%20%5D&descSize=13&descAlignY=62&animation=fadeIn" width="100%"/>
+
 </div>
 
-## Features
+```bash
+root@xMSHaomi:~# cat /projects/ai/README
 
-- **Chat console** — clean dark UI, mobile-friendly
-- **Serverless backend** — API endpoint on Vercel, no server to manage
-- **Zero-config deploy** — push and it's live
-
-## Structure
-
-```
-api/index.js     — chat endpoint
-public/          — web console (index.html, script.js, style.css)
+  >> STATUS    : OPERATIONAL
+  >> CORE      : serverless — no server to maintain
+  >> UI        : dark console, mobile-ready
 ```
 
-## Deploy
+## ⚙ Architecture
 
 ```bash
-vercel --prod
+root@xMSHaomi:~# tree
+
+  ├── api/index.js     → chat endpoint (serverless)
+  └── public/
+      ├── index.html   → console UI
+      ├── script.js    → client logic
+      └── style.css    → dark theme
+```
+
+## 🚀 Deploy
+
+```bash
+root@xMSHaomi:~# vercel --prod
+  ▲ done — console live
 ```
 
 ---
-<div align="center"><sub>xMSHaomi</sub></div>
+<div align="center"><sub>root@xMSHaomi — intelligence core</sub></div>
